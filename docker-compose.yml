@@ -1,0 +1,64 @@
+# version: "3.8"
+
+services:
+  # --- BASE DE DATOS (PostgreSQL 16) ---
+  db:
+    image: postgres:16-alpine
+    container_name: hms-db
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: hms_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - hms_pgdata:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - hms-net
+
+  # --- BACKEND (Rust + Axum + Hot Reload) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: hms-backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - cargo_registry:/usr/local/cargo/registry
+      - cargo_target:/app/target
+    environment:
+      DATABASE_URL: postgres://admin:password123@db:5432/hms_core
+      RUST_LOG: debug
+    depends_on:
+      - db
+    networks:
+      - hms-net
+
+  # --- FRONTEND (React + Vite) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: hms-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - hms-net
+
+networks:
+  hms-net:
+    driver: bridge
+
+volumes:
+  hms_pgdata:
+  cargo_registry:
+  cargo_target:
