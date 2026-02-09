@@ -1,78 +1,47 @@
-use axum::{extract::State, routing::get, Json, Router};
-use serde::Serialize;
-use serde_json::{json, Value};
-use sqlx::postgres::{PgPool, PgPoolOptions};
+mod application;
+mod domain;
+mod infrastructure;
+
+use axum::{routing::get, Router};
+use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
 
-// 1. Definimos la estructura de la Habitación (debe coincidir con la DB)
-#[derive(Serialize, sqlx::FromRow)]
-struct Room {
-    id: uuid::Uuid,
-    room_number: String,
-    room_type: String,
-    status: String,
-    price_cents: i64,
-}
+use crate::domain::repositories::RoomRepository;
+use crate::infrastructure::repository::postgres::PostgresRoomRepository;
+use crate::infrastructure::web::handlers::{get_rooms_handler, health_check, root_handler};
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    // 2. Configuración de la conexión a la DB
-    // Host 'db' porque así se llama el servicio en docker-compose
     let db_url = "postgres://admin:password123@db:5432/hms_core";
-
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(db_url)
         .await
-        .expect("🚨 No se pudo conectar a la base de datos. ¿Está el contenedor 'db' arriba?");
+        .expect("🚨 Error conectando a la DB");
 
-    println!("✅ Conexión a Postgres exitosa.");
+    // Inyección de Dependencia:
+    // Creamos el repositorio y lo envolvemos en un Arc para compartirlo entre hilos
+    let room_repo = Arc::new(PostgresRoomRepository::new(pool)) as Arc<dyn RoomRepository>;
 
-    // 3. Configuración de CORS
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
-    // 4. Definición de rutas (Aquí sumamos /api/rooms)
     let app = Router::new()
-        .route("/", get(root))
+        .route("/", get(root_handler))
         .route("/health", get(health_check))
-        .route("/api/rooms", get(get_rooms)) // <--- ESTA ES LA QUE FALTABA
+        .route("/api/rooms", get(get_rooms_handler))
         .layer(cors)
-        .with_state(pool); // Pasamos la DB a los handlers
+        .with_state(room_repo);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
-    println!("🚀 Backend escuchando en {}", addr);
+    println!("🚀 HMS Elite (Hexagonal) escuchando en {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
-}
-
-// Handler para traer las habitaciones de la DB
-async fn get_rooms(State(pool): State<PgPool>) -> Json<Value> {
-    let result = sqlx::query_as::<_, Room>(
-        "SELECT id, room_number, room_type, status, price_cents FROM rooms",
-    )
-    .fetch_all(&pool)
-    .await;
-
-    match result {
-        Ok(rooms) => Json(json!(rooms)),
-        Err(e) => {
-            eprintln!("Error en DB: {}", e);
-            Json(json!({ "error": "No se pudieron obtener las habitaciones" }))
-        }
-    }
-}
-
-async fn root() -> Json<Value> {
-    Json(json!({ "message": "HMS Elite Backend v1.0 running" }))
-}
-
-async fn health_check() -> Json<Value> {
-    Json(json!({ "status": "ok", "system": "operational" }))
 }
