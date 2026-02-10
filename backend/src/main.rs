@@ -134,14 +134,20 @@ async fn main() {
             .unwrap(),
     );
 
-    let auth_router = Router::new()
+    let auth_router_legacy = Router::new()
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/refresh", post(refresh_handler))
         .route("/api/auth/logout", post(logout_handler))
+        .layer(GovernorLayer { config: login_rate.clone() });
+
+    let auth_router_v1 = Router::new()
+        .route("/api/v1/auth/login", post(login_handler))
+        .route("/api/v1/auth/refresh", post(refresh_handler))
+        .route("/api/v1/auth/logout", post(logout_handler))
         .layer(GovernorLayer { config: login_rate });
 
     let api_v1 = Router::new()
-        .merge(auth_router.clone())
+        .merge(auth_router_v1)
         .route("/api/v1/rooms", get(get_rooms_handler))
         .route("/api/v1/rooms/available", get(search_rooms_handler))
         .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
@@ -151,7 +157,7 @@ async fn main() {
         .route("/api/v1/users", get(list_users_handler).post(create_user_handler));
 
     let legacy_api = Router::new()
-        .merge(auth_router)
+        .merge(auth_router_legacy)
         .route("/api/rooms", get(get_rooms_handler))
         .route("/api/rooms/available", get(search_rooms_handler))
         .route("/api/bookings", get(list_bookings_handler).post(create_booking_handler))
@@ -213,6 +219,9 @@ async fn auth_middleware(
         || path == "/api/auth/login"
         || path == "/api/auth/refresh"
         || path == "/api/auth/logout"
+        || path == "/api/v1/auth/login"
+        || path == "/api/v1/auth/refresh"
+        || path == "/api/v1/auth/logout"
     {
         return Ok(next.run(req).await);
     }
