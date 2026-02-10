@@ -33,11 +33,15 @@ services:
       DATABASE_URL: postgres://admin:password123@db:5432/hms_core
       RUST_LOG: debug
       JWT_SECRET: change-me-dev
-      AUTH_REQUIRED: "false"
+      AUTH_REQUIRED: "true"
       CORS_ORIGIN: http://localhost:5173
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin123
       ADMIN_ROLE: admin
+      ACCESS_TTL_MINUTES: "15"
+      REFRESH_TTL_DAYS: "7"
+      RATE_LIMIT_PER_MINUTE: "60"
+      LOGIN_LIMIT_PER_MINUTE: "10"
     depends_on:
       - db
     networks:

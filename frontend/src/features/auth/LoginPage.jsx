@@ -20,7 +20,8 @@ const LoginPage = () => {
     setLoading(true);
     try {
       const data = await login(username, password);
-      localStorage.setItem("hms_token", data.token);
+      localStorage.setItem("hms_token", data.access_token);
+      localStorage.setItem("hms_refresh", data.refresh_token);
       toast({
         title: "Bienvenido",
         description: "Inicio de sesión correcto.",

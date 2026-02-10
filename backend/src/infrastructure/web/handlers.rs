@@ -10,7 +10,6 @@ use chrono::NaiveDate;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 impl IntoResponse for DomainError {
@@ -80,9 +79,17 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+#[derive(Deserialize)]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
 #[derive(serde::Serialize)]
 pub struct LoginResponse {
-    pub token: String,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: usize,
+    pub role: String,
 }
 
 pub async fn get_rooms_handler(
@@ -208,27 +215,96 @@ pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    if payload.username != state.config.admin_user || payload.password != state.config.admin_password {
-        return Err(DomainError::Unauthorized);
+    if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
+        return Err(DomainError::InvalidInput(
+            "Usuario y contraseña son obligatorios".to_string(),
+        ));
     }
 
-    let exp = SystemTime::now()
-        .checked_add(Duration::from_secs(60 * 60 * 8))
-        .unwrap()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as usize;
+    let user = state
+        .auth_service
+        .verify_user(&payload.username, &payload.password)
+        .await?;
+
+    let exp = state.auth_service.access_exp();
 
     let claims = crate::infrastructure::web::jwt::Claims {
-        sub: payload.username,
-        role: state.config.admin_role.clone(),
+        sub: user.id.to_string(),
+        role: user.role.clone(),
         exp,
     };
 
-    let token = crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
-        .map_err(|e| DomainError::InfrastructureError(e))?;
+    let access_token =
+        crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
+            .map_err(DomainError::InfrastructureError)?;
 
-    Ok(Json(json!(LoginResponse { token })))
+    let (refresh_token, _) = state.auth_service.issue_refresh_token(user.id).await?;
+
+    Ok(Json(json!(LoginResponse {
+        access_token,
+        refresh_token,
+        expires_in: state.auth_service.access_ttl_seconds(),
+        role: user.role,
+    })))
+}
+
+pub async fn refresh_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<RefreshRequest>,
+) -> Result<Json<Value>, DomainError> {
+    if payload.refresh_token.trim().is_empty() {
+        return Err(DomainError::InvalidInput(
+            "Refresh token inválido".to_string(),
+        ));
+    }
+
+    let (user_id, new_refresh, _) = state
+        .auth_service
+        .rotate_refresh_token(&payload.refresh_token)
+        .await?;
+
+    let user = state
+        .user_repo
+        .find_by_id(user_id)
+        .await
+        .map_err(DomainError::InfrastructureError)?
+        .ok_or(DomainError::Unauthorized)?;
+
+    let exp = state.auth_service.access_exp();
+    let claims = crate::infrastructure::web::jwt::Claims {
+        sub: user.id.to_string(),
+        role: user.role.clone(),
+        exp,
+    };
+
+    let access_token =
+        crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
+            .map_err(DomainError::InfrastructureError)?;
+
+    Ok(Json(json!(LoginResponse {
+        access_token,
+        refresh_token: new_refresh,
+        expires_in: state.auth_service.access_ttl_seconds(),
+        role: user.role,
+    })))
+}
+
+pub async fn logout_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<RefreshRequest>,
+) -> Result<Json<Value>, DomainError> {
+    if payload.refresh_token.trim().is_empty() {
+        return Err(DomainError::InvalidInput(
+            "Refresh token inválido".to_string(),
+        ));
+    }
+
+    let user_id = state
+        .auth_service
+        .revoke_refresh_token(&payload.refresh_token)
+        .await?;
+    state.auth_service.revoke_user_tokens(user_id).await?;
+    Ok(Json(json!({ "status": "ok" })))
 }
 
 pub async fn health_check() -> Json<Value> {

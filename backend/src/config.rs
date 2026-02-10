@@ -9,6 +9,10 @@ pub struct AppConfig {
     pub admin_user: String,
     pub admin_password: String,
     pub admin_role: String,
+    pub access_ttl_minutes: i64,
+    pub refresh_ttl_days: i64,
+    pub rate_limit_per_minute: u32,
+    pub login_limit_per_minute: u32,
 }
 
 impl AppConfig {
@@ -25,6 +29,22 @@ impl AppConfig {
         let admin_user = env::var("ADMIN_USER").unwrap_or_else(|_| "admin".to_string());
         let admin_password = env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin123".to_string());
         let admin_role = env::var("ADMIN_ROLE").unwrap_or_else(|_| "admin".to_string());
+        let access_ttl_minutes = env::var("ACCESS_TTL_MINUTES")
+            .ok()
+            .and_then(|value| value.parse::<i64>().ok())
+            .unwrap_or(15);
+        let refresh_ttl_days = env::var("REFRESH_TTL_DAYS")
+            .ok()
+            .and_then(|value| value.parse::<i64>().ok())
+            .unwrap_or(7);
+        let rate_limit_per_minute = env::var("RATE_LIMIT_PER_MINUTE")
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(60);
+        let login_limit_per_minute = env::var("LOGIN_LIMIT_PER_MINUTE")
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(10);
 
         Self {
             database_url,
@@ -34,6 +54,10 @@ impl AppConfig {
             admin_user,
             admin_password,
             admin_role,
+            access_ttl_minutes,
+            refresh_ttl_days,
+            rate_limit_per_minute,
+            login_limit_per_minute,
         }
     }
 }

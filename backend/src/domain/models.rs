@@ -120,3 +120,20 @@ pub struct Guest {
     pub email: String,
     pub phone: Option<String>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct User {
+    pub id: Uuid,
+    pub username: String,
+    pub password_hash: String,
+    pub role: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct RefreshToken {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub token_hash: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
+}

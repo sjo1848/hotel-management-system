@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { logout } from "@/features/auth/authService";
 
 const SidebarItem = ({ icon: Icon, label, path }) => {
   const location = useLocation();
@@ -32,7 +33,12 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    const refreshToken = localStorage.getItem("hms_refresh");
+    if (refreshToken) {
+      logout(refreshToken).catch(() => null);
+    }
     localStorage.removeItem("hms_token");
+    localStorage.removeItem("hms_refresh");
     navigate("/login", { replace: true });
   };
 
