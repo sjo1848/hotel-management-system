@@ -7,15 +7,16 @@ edition = "2021"
 # Servidor y Asincronía
 axum = "0.7"
 tokio = { version = "1.0", features = ["full"] }
-
 async-trait = "0.1"
 
-# Serialización (JSON)
+# Serialización y Tiempos
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
 
-# Base de Datos (Postgres + Soporte UUID)
-sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid"] }
+# Base de Datos (Postgres + UUID + Chrono)
+# Importante: Todo en una sola declaración
+sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid", "chrono"] }
 uuid = { version = "1.0", features = ["serde", "v4"] }
 
 # Middleware y Utilidades

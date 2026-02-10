@@ -2,7 +2,7 @@ use crate::domain::models::{Room, RoomStatus};
 use crate::domain::repositories::RoomRepository;
 use async_trait::async_trait;
 use sqlx::PgPool;
-use uuid::Uuid; // Importante
+use uuid::Uuid;
 
 pub struct PostgresRoomRepository {
     pool: PgPool,
@@ -14,7 +14,7 @@ impl PostgresRoomRepository {
     }
 }
 
-#[async_trait] // Aplicar aquí también
+#[async_trait]
 impl RoomRepository for PostgresRoomRepository {
     async fn find_all(&self) -> Result<Vec<Room>, String> {
         let records =
@@ -40,8 +40,26 @@ impl RoomRepository for PostgresRoomRepository {
             .collect())
     }
 
-    async fn find_by_id(&self, _id: Uuid) -> Result<Option<Room>, String> {
-        // Usamos _id para que el compilador no se queje de que no se usa
-        todo!()
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Room>, String> {
+        let record = sqlx::query!(
+            "SELECT id, room_number, room_type, status, price_cents FROM rooms WHERE id = $1",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(record.map(|rec| Room {
+            id: rec.id,
+            room_number: rec.room_number,
+            room_type: rec.room_type,
+            status: match rec.status.as_deref() {
+                Some("AVAILABLE") => RoomStatus::Available,
+                Some("OCCUPIED") => RoomStatus::Occupied,
+                Some("DIRTY") => RoomStatus::Dirty,
+                _ => RoomStatus::Maintenance,
+            },
+            price_cents: rec.price_cents,
+        }))
     }
 }
