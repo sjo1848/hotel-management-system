@@ -36,6 +36,7 @@ impl GuestRepository for PostgresGuestRepository {
     }
 
     async fn create(&self, guest: Guest) -> Result<Guest, String> {
+        let phone = guest.phone.clone();
         sqlx::query(
             "INSERT INTO guests (id, full_name, email, phone)
              VALUES ($1, $2, $3, $4)",
@@ -43,7 +44,7 @@ impl GuestRepository for PostgresGuestRepository {
         .bind(guest.id)
         .bind(&guest.full_name)
         .bind(&guest.email)
-        .bind(guest.phone)
+        .bind(phone)
         .execute(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
