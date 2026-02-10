@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import RoomCard from "./RoomCard";
 import roomService from "../services/roomService";
 // Importamos el Drawer que creaste recién
 import BookingDrawer from "../../bookings/components/BookingDrawer";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 
 type SearchDates = {
   from: string;
@@ -28,13 +29,16 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
   // Estado para manejar el Drawer
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const nights = useMemo(() => {
+    if (!searchDates?.from || !searchDates?.to) return 0;
+    return Math.max(
+      0,
+      differenceInCalendarDays(parseISO(searchDates.to), parseISO(searchDates.from)),
+    );
+  }, [searchDates]);
 
-  useEffect(() => {
+  const loadRooms = (start?: string | null, end?: string | null) => {
     setLoading(true);
-    // Usamos las fechas del buscador o null si no hay
-    const start = searchDates?.from || null;
-    const end = searchDates?.to || null;
-
     roomService
       .getAllRooms(start, end)
       .then(setRooms)
@@ -47,19 +51,39 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
         });
       })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    // Usamos las fechas del buscador o null si no hay
+    const start = searchDates?.from || null;
+    const end = searchDates?.to || null;
+    loadRooms(start, end);
   }, [searchDates, toast]); // Se recarga cuando cambian las fechas
 
   // Handler para abrir el drawer
   const handleBookClick = (room: Room) => {
+    if (!searchDates?.from || !searchDates?.to) {
+      toast({
+        title: "Seleccioná fechas",
+        description: "Elegí un rango de estancia para reservar.",
+        variant: "error",
+      });
+      return;
+    }
     setSelectedRoom(room);
     setIsDrawerOpen(true);
   };
 
   // Handler para cuando la reserva fue exitosa
   const handleBookingSuccess = () => {
-    alert("¡Reserva creada con éxito! 🚀");
-    // Aquí podríamos recargar la lista de habitaciones para actualizar disponibilidad
-    // loadRooms();
+    toast({
+      title: "Reserva creada",
+      description: "La habitación quedó reservada.",
+      variant: "success",
+    });
+    const start = searchDates?.from || null;
+    const end = searchDates?.to || null;
+    loadRooms(start, end);
   };
 
   if (loading)
@@ -74,6 +98,12 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
 
   return (
     <>
+      {!searchDates?.from || !searchDates?.to ? (
+        <div className="border border-dashed border-amber-200 bg-amber-50/60 rounded-xl p-5 text-sm text-amber-700">
+          Seleccioná un rango de fechas para habilitar reservas y ver disponibilidad real.
+        </div>
+      ) : null}
+
       {rooms.length === 0 ? (
         <div className="border border-dashed border-slate-200 rounded-xl p-10 text-center bg-white">
           <p className="text-slate-600 font-medium">
@@ -90,6 +120,8 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
             key={room.id}
             room={room}
             onBook={() => handleBookClick(room)} // Pasamos la función
+            disabled={!searchDates?.from || !searchDates?.to}
+            nights={nights}
           />
         ))}
       </div>

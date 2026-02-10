@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { differenceInCalendarDays, parseISO } from "date-fns";
 
 // Componentes de UI (shadcn)
 import {
@@ -44,13 +45,27 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
     guest_email: "", // Agregaremos email al backend luego, por ahora lo pedimos en UI
   });
   const hasDates = Boolean(dates?.from && dates?.to);
+  const nights = useMemo(() => {
+    if (!dates?.from || !dates?.to) return 0;
+    const start = parseISO(dates.from);
+    const end = parseISO(dates.to);
+    return Math.max(0, differenceInCalendarDays(end, start));
+  }, [dates]);
+  const total = nights > 0 ? (room.price_cents / 100) * nights : 0;
 
   // Si no hay habitación seleccionada, no renderizamos nada útil
   if (!room) return null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!hasDates) return;
+    if (!hasDates || nights <= 0) {
+      toast({
+        title: "Fechas inválidas",
+        description: "Seleccioná un rango válido para reservar.",
+        variant: "error",
+      });
+      return;
+    }
     setLoading(true);
 
     try {
@@ -86,7 +101,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[400px]">
+      <SheetContent className="sm:max-w-[420px]">
         <SheetHeader>
           <SheetTitle>Confirmar Reserva</SheetTitle>
           <SheetDescription>
@@ -112,9 +127,10 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
             </div>
             <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-bold">
               <span>Total Estimado:</span>
-              {/* Cálculo simple de precio (luego lo haremos exacto) */}
               <span>
-                ${(room.price_cents / 100).toLocaleString("es-AR")} / noche
+                {nights > 0
+                  ? `$${total.toLocaleString("es-AR")} (${nights} noches)`
+                  : "Seleccioná fechas"}
               </span>
             </div>
           </div>
@@ -143,14 +159,16 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
               onChange={(e) =>
                 setFormData({ ...formData, guest_email: e.target.value })
               }
-              required
             />
+            <p className="text-xs text-slate-400">
+              Usaremos este email para enviar la confirmación.
+            </p>
           </div>
 
           <SheetFooter>
             <Button
               type="submit"
-              disabled={loading || !hasDates}
+              disabled={loading || !hasDates || nights <= 0}
               className="w-full bg-slate-900"
             >
               {loading ? (

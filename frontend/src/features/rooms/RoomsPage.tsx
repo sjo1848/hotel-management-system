@@ -14,6 +14,10 @@ const RoomsPage = () => {
     setSearchDates({ from, to });
   };
 
+  const handleClear = () => {
+    setSearchDates(null);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,7 +27,7 @@ const RoomsPage = () => {
         </p>
       </div>
 
-      <AvailabilityPicker onSearch={handleSearch} />
+      <AvailabilityPicker onSearch={handleSearch} onClear={handleClear} />
 
       <RoomList searchDates={searchDates} />
     </div>

@@ -1,6 +1,6 @@
 import React from "react";
-import { Calendar as CalendarIcon, Search } from "lucide-react";
-import { format } from "date-fns";
+import { Calendar as CalendarIcon, Search, X } from "lucide-react";
+import { differenceInCalendarDays, format } from "date-fns";
 import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
@@ -15,9 +15,10 @@ import {
 
 type AvailabilityPickerProps = {
   onSearch: (from: string, to: string) => void;
+  onClear?: () => void;
 };
 
-const AvailabilityPicker = ({ onSearch }: AvailabilityPickerProps) => {
+const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
   const [date, setDate] = React.useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
@@ -29,6 +30,22 @@ const AvailabilityPicker = ({ onSearch }: AvailabilityPickerProps) => {
       onSearch(format(date.from, "yyyy-MM-dd"), format(date.to, "yyyy-MM-dd"));
     }
   };
+
+  const handleSelect = (value: DateRange | undefined) => {
+    setDate(value);
+    if (value?.from && value?.to) {
+      onSearch(format(value.from, "yyyy-MM-dd"), format(value.to, "yyyy-MM-dd"));
+    }
+  };
+
+  const handleClear = () => {
+    setDate({ from: undefined, to: undefined });
+    onClear?.();
+  };
+  const nights =
+    date?.from && date?.to
+      ? Math.max(0, differenceInCalendarDays(date.to, date.from))
+      : 0;
 
   return (
     <div className="flex flex-col md:flex-row items-end gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-10 transition-all hover:shadow-md">
@@ -70,22 +87,45 @@ const AvailabilityPicker = ({ onSearch }: AvailabilityPickerProps) => {
               mode="range"
               defaultMonth={date?.from}
               selected={date}
-              onSelect={setDate}
+              onSelect={handleSelect}
               numberOfMonths={2}
               locale={es}
             />
           </PopoverContent>
         </Popover>
+        {date?.from && date?.to ? (
+          <div className="text-xs text-slate-500">
+            Estancia:{" "}
+            <span className="font-semibold text-slate-700">
+              {nights} {nights === 1 ? "noche" : "noches"}
+            </span>
+          </div>
+        ) : (
+          <div className="text-xs text-slate-400">
+            Seleccioná un rango para ver disponibilidad real.
+          </div>
+        )}
       </div>
 
-      <Button
-        onClick={handleSearch}
-        disabled={!date?.from || !date?.to}
-        className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
-      >
-        <Search className="w-4 h-4 mr-2" />
-        Buscar Habitaciones
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          onClick={handleClear}
+          disabled={!date?.from && !date?.to}
+          variant="outline"
+          className="h-12 px-4 rounded-xl border-slate-200"
+        >
+          <X className="w-4 h-4 mr-2" />
+          Limpiar
+        </Button>
+        <Button
+          onClick={handleSearch}
+          disabled={!date?.from || !date?.to}
+          className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
+        >
+          <Search className="w-4 h-4 mr-2" />
+          Buscar Habitaciones
+        </Button>
+      </div>
     </div>
   );
 };

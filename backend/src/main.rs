@@ -136,7 +136,6 @@ async fn main() {
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/refresh", post(refresh_handler))
         .route("/api/auth/logout", post(logout_handler))
-        .route("/api/auth/me", get(me_handler))
         .layer(GovernorLayer { config: login_rate });
 
     let app = Router::new()
@@ -149,6 +148,7 @@ async fn main() {
         .route("/api/bookings", get(list_bookings_handler).post(create_booking_handler))
         .route("/api/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
+        .route("/api/auth/me", get(me_handler))
         .route("/api/users", get(list_users_handler).post(create_user_handler))
         .route_layer(auth_layer)
         .layer(GovernorLayer { config: api_rate })

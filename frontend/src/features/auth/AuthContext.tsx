@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   login as apiLogin,
   logout as apiLogout,
@@ -32,18 +32,28 @@ export const AuthContext = createContext<AuthContextValue>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [user, setUser] = useState<MeResponse | null>(null);
+  const inFlightRef = useRef<Promise<MeResponse> | null>(null);
 
   const refreshUser = useCallback(async () => {
-    try {
-      const data = await apiMe();
-      setUser(data);
-      setStatus("authenticated");
-      return data;
-    } catch (error) {
-      setUser(null);
-      setStatus("unauthenticated");
-      throw error;
+    if (inFlightRef.current) {
+      return inFlightRef.current;
     }
+    const request = apiMe()
+      .then((data) => {
+        setUser(data);
+        setStatus("authenticated");
+        return data;
+      })
+      .catch((error) => {
+        setUser(null);
+        setStatus("unauthenticated");
+        throw error;
+      })
+      .finally(() => {
+        inFlightRef.current = null;
+      });
+    inFlightRef.current = request;
+    return request;
   }, []);
 
   const login = useCallback(async (username: string, password: string) => {
@@ -66,8 +76,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (status !== "loading") return;
+    if (window.location.pathname === "/login") {
+      setStatus("unauthenticated");
+      return;
+    }
     refreshUser().catch(() => null);
-  }, [refreshUser]);
+  }, [refreshUser, status]);
 
   const value = useMemo(
     () => ({
