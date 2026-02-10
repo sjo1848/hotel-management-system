@@ -52,6 +52,16 @@ const RoomList = ({ searchDates }) => {
 
   return (
     <>
+      {rooms.length === 0 ? (
+        <div className="border border-dashed border-slate-200 rounded-xl p-10 text-center bg-white">
+          <p className="text-slate-600 font-medium">
+            No hay habitaciones disponibles para ese rango.
+          </p>
+          <p className="text-sm text-slate-500 mt-1">
+            Probá con otras fechas.
+          </p>
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {rooms.map((room) => (
           <RoomCard
@@ -61,6 +71,7 @@ const RoomList = ({ searchDates }) => {
           />
         ))}
       </div>
+      )}
 
       {/* El Drawer vive aquí, "escondido" hasta que se abre */}
       <BookingDrawer

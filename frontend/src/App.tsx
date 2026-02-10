@@ -2,7 +2,7 @@ import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
 import BookingList from "./features/bookings/components/BookingList.jsx";
-import RoomList from "./features/rooms/components/RoomList.jsx";
+import RoomsPage from "./features/rooms/RoomsPage";
 import React from "react";
 
 const Placeholder = ({ title }) => (
@@ -43,7 +43,7 @@ const router = createBrowserRouter([
       },
       {
         path: "/rooms",
-        element: <RoomList />,
+        element: <RoomsPage />,
       },
       {
         path: "/guests",
