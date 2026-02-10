@@ -140,10 +140,17 @@ async fn main() {
         .route("/api/auth/logout", post(logout_handler))
         .layer(GovernorLayer { config: login_rate });
 
-    let app = Router::new()
-        .route("/", get(root_handler))
-        .route("/health", get(health_check))
-        .route("/ready", get(readiness_check))
+    let api_v1 = Router::new()
+        .merge(auth_router.clone())
+        .route("/api/v1/rooms", get(get_rooms_handler))
+        .route("/api/v1/rooms/available", get(search_rooms_handler))
+        .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
+        .route("/api/v1/bookings/:id", axum::routing::patch(update_booking_handler))
+        .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
+        .route("/api/v1/auth/me", get(me_handler))
+        .route("/api/v1/users", get(list_users_handler).post(create_user_handler));
+
+    let legacy_api = Router::new()
         .merge(auth_router)
         .route("/api/rooms", get(get_rooms_handler))
         .route("/api/rooms/available", get(search_rooms_handler))
@@ -151,7 +158,14 @@ async fn main() {
         .route("/api/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/auth/me", get(me_handler))
-        .route("/api/users", get(list_users_handler).post(create_user_handler))
+        .route("/api/users", get(list_users_handler).post(create_user_handler));
+
+    let app = Router::new()
+        .route("/", get(root_handler))
+        .route("/health", get(health_check))
+        .route("/ready", get(readiness_check))
+        .merge(api_v1)
+        .merge(legacy_api)
         .route_layer(auth_layer)
         .layer(GovernorLayer { config: api_rate })
         .layer(cors)
