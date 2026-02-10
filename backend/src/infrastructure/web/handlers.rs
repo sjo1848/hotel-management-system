@@ -12,20 +12,21 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// Implementación de la conversión automática de Errores de Dominio a Respuestas HTTP
 impl IntoResponse for DomainError {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            DomainError::RoomNotFound => {
-                (StatusCode::NOT_FOUND, "La habitación solicitada no existe")
-            }
+        // Forzamos a que todos los brazos devuelvan (StatusCode, String)
+        let (status, error_message): (StatusCode, String) = match self {
+            DomainError::RoomNotFound => (
+                StatusCode::NOT_FOUND,
+                "La habitación solicitada no existe".to_string(),
+            ),
             DomainError::RoomNotAvailable => (
                 StatusCode::CONFLICT,
-                "La habitación ya está ocupada en esas fechas",
+                "La habitación ya está ocupada en esas fechas".to_string(),
             ),
             DomainError::InvalidBookingDates => (
                 StatusCode::BAD_REQUEST,
-                "Las fechas de reserva no son válidas",
+                "Las fechas de reserva no son válidas".to_string(),
             ),
             DomainError::InfrastructureError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
@@ -76,6 +77,7 @@ pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    // Especificamos el tipo para evitar el error de "never type fallback"
     let booking = state
         .booking_service
         .execute(

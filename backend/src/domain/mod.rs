@@ -1,2 +1,3 @@
+pub mod errors;
 pub mod models;
-pub mod repositories;
+pub mod repositories; // Fundamental: habilita el archivo errors.rs
