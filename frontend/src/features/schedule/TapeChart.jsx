@@ -60,6 +60,15 @@ const TapeChart = () => {
 
   if (loading) return <div className='p-20 flex justify-center'><Loader2 className='animate-spin w-8 h-8' /></div>;
 
+  if (rooms.length === 0) {
+    return (
+      <Card className='p-8 text-center border border-dashed border-slate-200'>
+        <div className='text-slate-600 font-medium'>No hay habitaciones cargadas.</div>
+        <div className='text-sm text-slate-500 mt-1'>Agregá habitaciones para visualizar la ocupación.</div>
+      </Card>
+    );
+  }
+
   return (
     <div className='flex flex-col h-full space-y-4'>
       <div className='flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm'>

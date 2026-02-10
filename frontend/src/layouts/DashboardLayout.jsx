@@ -30,18 +30,21 @@ const SidebarItem = ({ icon: Icon, label, path }) => {
 
 const DashboardLayout = ({ children }) => {
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    <div className="flex h-screen app-shell overflow-hidden font-sans">
       {/* SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex">
         <div className="p-6 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center">
+            <div className="w-9 h-9 bg-gradient-to-br from-slate-900 to-slate-700 rounded-lg flex items-center justify-center shadow-sm">
               <span className="text-white font-bold">H</span>
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">
               HMS Elite
             </span>
           </div>
+          <p className="text-xs text-slate-500 mt-2">
+            Gestión hotelera premium
+          </p>
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
@@ -73,7 +76,7 @@ const DashboardLayout = ({ children }) => {
 
       {/* MAIN CONTENT */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-8">
           <h1 className="text-xl font-semibold text-slate-800">HMS Manager</h1>
           <div className="flex items-center gap-4">
             <Button
@@ -88,7 +91,7 @@ const DashboardLayout = ({ children }) => {
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-8">{children}</div>
+        <div className="flex-1 overflow-auto p-4 md:p-8">{children}</div>
       </main>
     </div>
   );

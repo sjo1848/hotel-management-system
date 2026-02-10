@@ -80,6 +80,7 @@ const BookingList = ({ limit = 5, showActions = false }) => {
 
   return (
     <>
+    <div className='overflow-x-auto'>
     <Table>
       <TableHeader>
         <TableRow className='bg-slate-50'>
@@ -145,6 +146,7 @@ const BookingList = ({ limit = 5, showActions = false }) => {
         )}
       </TableBody>
     </Table>
+    </div>
     <BookingEditDrawer
       booking={selectedBooking}
       isOpen={isEditOpen}
