@@ -36,10 +36,10 @@ const BookingList = () => {
     <Table>
       <TableHeader>
         <TableRow className='bg-slate-50'>
-          <TableHead>ID</TableHead>
-          <TableHead>Huésped</TableHead>
-          <TableHead>Fechas</TableHead>
-          <TableHead className='text-right'>Estado</TableHead>
+          <TableHead className='text-slate-600 font-semibold'>ID</TableHead>
+          <TableHead className='text-slate-600 font-semibold'>Huésped</TableHead>
+          <TableHead className='text-slate-600 font-semibold'>Fechas</TableHead>
+          <TableHead className='text-right text-slate-600 font-semibold'>Estado</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

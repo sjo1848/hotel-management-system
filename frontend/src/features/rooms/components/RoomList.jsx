@@ -4,11 +4,13 @@ import roomService from "../services/roomService";
 // Importamos el Drawer que creaste recién
 import BookingDrawer from "../../bookings/components/BookingDrawer";
 import { Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
 
 const RoomList = ({ searchDates }) => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { toast } = useToast();
 
   // Estado para manejar el Drawer
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -23,9 +25,16 @@ const RoomList = ({ searchDates }) => {
     roomService
       .getAllRooms(start, end)
       .then(setRooms)
-      .catch((err) => setError("Error cargando habitaciones"))
+      .catch(() => {
+        setError("Error cargando habitaciones");
+        toast({
+          title: "Error al cargar habitaciones",
+          description: "Reintentá en unos segundos.",
+          variant: "error",
+        });
+      })
       .finally(() => setLoading(false));
-  }, [searchDates]); // Se recarga cuando cambian las fechas
+  }, [searchDates, toast]); // Se recarga cuando cambian las fechas
 
   // Handler para abrir el drawer
   const handleBookClick = (room) => {

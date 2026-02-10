@@ -14,9 +14,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createBooking } from "../services/bookingService";
+import { useToast } from "@/components/ui/toast";
 
 const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     guest_name: "",
     guest_email: "", // Agregaremos email al backend luego, por ahora lo pedimos en UI
@@ -43,11 +45,20 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
       await createBooking(payload);
 
       // Si todo sale bien:
+      toast({
+        title: "Reserva confirmada",
+        description: "La habitación quedó reservada.",
+        variant: "success",
+      });
       onSuccess(); // Avisamos al padre para refrescar
       onClose(); // Cerramos el drawer
       setFormData({ guest_name: "", guest_email: "" }); // Limpiamos
     } catch (error) {
-      alert("Error: " + error); // Luego lo haremos bonito con Toast
+      toast({
+        title: "No se pudo reservar",
+        description: String(error),
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
