@@ -58,9 +58,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const login = useCallback(async (username: string, password: string) => {
     const data = await apiLogin(username, password);
-    if (data?.access_token) {
-      localStorage.setItem("hms_token", data.access_token);
-    }
     await refreshUser();
     return data;
   }, [refreshUser]);
@@ -69,7 +66,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await apiLogout();
     } finally {
-      localStorage.removeItem("hms_token");
       setUser(null);
       setStatus("unauthenticated");
     }

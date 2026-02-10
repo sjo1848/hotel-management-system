@@ -61,9 +61,6 @@ api.interceptors.response.use(
 
       try {
         const { data } = await authApi.post("/auth/refresh");
-        if (data?.access_token) {
-          localStorage.setItem("hms_token", data.access_token);
-        }
         resolveQueue(null, data.access_token);
         return api(originalRequest);
       } catch (refreshError) {
@@ -92,12 +89,6 @@ api.interceptors.response.use(
   },
 );
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("hms_token");
-  if (token && !config.headers?.Authorization) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+api.interceptors.request.use((config) => config);
 
 export default api;
