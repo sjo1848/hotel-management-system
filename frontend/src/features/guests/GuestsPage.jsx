@@ -74,7 +74,7 @@ const GuestsPage = () => {
         <div>
           <h2 className="text-2xl font-semibold text-slate-900">Huéspedes</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Administra la base de huéspedes frecuentes y nuevos registros.
+            Administrá la base de huéspedes frecuentes y nuevos registros.
           </p>
         </div>
         <Button className="bg-slate-900" onClick={() => setDrawerOpen(true)}>

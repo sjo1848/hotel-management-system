@@ -55,6 +55,11 @@ const BookingList = ({ limit = 5, showActions = false }) => {
   };
 
   const handleCancel = async (booking) => {
+    if (booking.status === 'Cancelled') return;
+    const confirmCancel = window.confirm(
+      '¿Querés cancelar esta reserva? Esta acción no se puede deshacer.',
+    );
+    if (!confirmCancel) return;
     try {
       const updated = await updateBooking(booking.id, { status: 'CANCELLED' });
       toast({
@@ -127,15 +132,17 @@ const BookingList = ({ limit = 5, showActions = false }) => {
                 <TableCell className='text-right space-x-2'>
                   <button
                     type='button'
-                    className='text-sm font-medium text-slate-700 hover:text-slate-900'
+                    className='text-sm font-medium text-slate-700 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed'
                     onClick={() => handleEdit(booking)}
+                    disabled={booking.status === 'Cancelled'}
                   >
                     Editar
                   </button>
                   <button
                     type='button'
-                    className='text-sm font-medium text-rose-600 hover:text-rose-700'
+                    className='text-sm font-medium text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed'
                     onClick={() => handleCancel(booking)}
+                    disabled={booking.status === 'Cancelled'}
                   >
                     Cancelar
                   </button>

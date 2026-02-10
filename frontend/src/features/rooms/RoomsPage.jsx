@@ -14,7 +14,7 @@ const RoomsPage = () => {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Habitaciones</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Busca disponibilidad y reserva en segundos.
+          Buscá disponibilidad y reservá en segundos.
         </p>
       </div>
 

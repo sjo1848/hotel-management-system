@@ -7,7 +7,7 @@ const BookingsPage = () => {
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Reservas</h2>
         <p className="text-sm text-slate-500 mt-1">
-          Gestiona reservas activas y cambios de última hora.
+          Gestioná reservas activas y cambios de última hora.
         </p>
       </div>
 
