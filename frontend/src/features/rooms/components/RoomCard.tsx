@@ -9,9 +9,15 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { Room } from "../services/roomService";
 
 // Agregamos onBook a las props
-const RoomCard = ({ room, onBook }) => {
+type RoomCardProps = {
+  room: Room;
+  onBook: () => void;
+};
+
+const RoomCard = ({ room, onBook }: RoomCardProps) => {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-all border-slate-200 group">
       <div className="relative h-48 bg-slate-100">

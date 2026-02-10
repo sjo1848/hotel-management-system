@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import {
   Sheet,
@@ -11,10 +11,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateBooking } from "../services/bookingService";
+import { Booking, updateBooking } from "../services/bookingService";
 import { useToast } from "@/components/ui/toast";
 
-const BookingEditDrawer = ({ booking, isOpen, onClose, onUpdated }) => {
+type BookingEditDrawerProps = {
+  booking: Booking | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdated: (booking: Booking) => void;
+};
+
+const BookingEditDrawer = ({
+  booking,
+  isOpen,
+  onClose,
+  onUpdated,
+}: BookingEditDrawerProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -24,7 +36,7 @@ const BookingEditDrawer = ({ booking, isOpen, onClose, onUpdated }) => {
     check_out: booking?.check_out || "",
   }));
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (booking) {
       setFormData({
         guest_name: booking.guest_name || "",
@@ -36,7 +48,7 @@ const BookingEditDrawer = ({ booking, isOpen, onClose, onUpdated }) => {
 
   if (!booking) return null;
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     try {

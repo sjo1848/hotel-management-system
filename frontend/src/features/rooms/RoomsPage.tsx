@@ -2,10 +2,15 @@ import React, { useState } from "react";
 import AvailabilityPicker from "./components/AvailabilityPicker";
 import RoomList from "./components/RoomList";
 
-const RoomsPage = () => {
-  const [searchDates, setSearchDates] = useState(null);
+type SearchDates = {
+  from: string;
+  to: string;
+} | null;
 
-  const handleSearch = (from, to) => {
+const RoomsPage = () => {
+  const [searchDates, setSearchDates] = useState<SearchDates>(null);
+
+  const handleSearch = (from: string, to: string) => {
     setSearchDates({ from, to });
   };
 

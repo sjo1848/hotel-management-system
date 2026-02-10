@@ -6,14 +6,27 @@ import BookingDrawer from "../../bookings/components/BookingDrawer";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 
-const RoomList = ({ searchDates }) => {
-  const [rooms, setRooms] = useState([]);
+type SearchDates = {
+  from: string;
+  to: string;
+} | null;
+
+type Room = {
+  id: string;
+  room_number: string;
+  room_type: string;
+  status: string;
+  price_cents: number;
+};
+
+const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const { toast } = useToast();
 
   // Estado para manejar el Drawer
-  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -37,7 +50,7 @@ const RoomList = ({ searchDates }) => {
   }, [searchDates, toast]); // Se recarga cuando cambian las fechas
 
   // Handler para abrir el drawer
-  const handleBookClick = (room) => {
+  const handleBookClick = (room: Room) => {
     setSelectedRoom(room);
     setIsDrawerOpen(true);
   };

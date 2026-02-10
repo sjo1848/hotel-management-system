@@ -1,7 +1,7 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
-import BookingsPage from "./features/bookings/BookingsPage.jsx";
+import BookingsPage from "./features/bookings/BookingsPage";
 import RoomsPage from "./features/rooms/RoomsPage";
 import CalendarPage from "./features/schedule/CalendarPage";
 import GuestsPage from "./features/guests/GuestsPage";

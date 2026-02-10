@@ -12,27 +12,27 @@ import {
   SheetDescription,
   SheetFooter,
 } from "@/components/ui/sheet";
-import { getGuests, createGuest } from "./services/guestService";
+import { User, createUser, getUsers } from "./usersService";
 import { useToast } from "@/components/ui/toast";
 
-const GuestsPage = () => {
-  const [guests, setGuests] = useState([]);
+const UsersPage = () => {
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
+    username: "",
+    password: "",
+    role: "ops",
   });
 
   useEffect(() => {
-    getGuests()
-      .then(setGuests)
+    getUsers()
+      .then(setUsers)
       .catch(() =>
         toast({
-          title: "No se pudieron cargar huéspedes",
+          title: "No se pudieron cargar usuarios",
           description: "Reintentá en unos segundos.",
           variant: "error",
         }),
@@ -40,26 +40,22 @@ const GuestsPage = () => {
       .finally(() => setLoading(false));
   }, [toast]);
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSaving(true);
     try {
-      const created = await createGuest({
-        full_name: formData.full_name,
-        email: formData.email,
-        phone: formData.phone || null,
-      });
-      setGuests((current) => [created, ...current]);
+      const created = await createUser(formData);
+      setUsers((current) => [created, ...current]);
       toast({
-        title: "Huésped creado",
+        title: "Usuario creado",
         description: "Se agregó correctamente.",
         variant: "success",
       });
       setDrawerOpen(false);
-      setFormData({ full_name: "", email: "", phone: "" });
+      setFormData({ username: "", password: "", role: "ops" });
     } catch (error) {
       toast({
-        title: "No se pudo crear huésped",
+        title: "No se pudo crear usuario",
         description: String(error),
         variant: "error",
       });
@@ -72,14 +68,14 @@ const GuestsPage = () => {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-900">Huéspedes</h2>
+          <h2 className="text-2xl font-semibold text-slate-900">Usuarios</h2>
           <p className="text-sm text-slate-500 mt-1">
-            Administrá la base de huéspedes frecuentes y nuevos registros.
+            Gestioná accesos y roles del equipo.
           </p>
         </div>
         <Button className="bg-slate-900" onClick={() => setDrawerOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          Nuevo huésped
+          Nuevo usuario
         </Button>
       </div>
 
@@ -88,24 +84,21 @@ const GuestsPage = () => {
           <div className="flex justify-center p-10 text-slate-400">
             <Loader2 className="animate-spin" />
           </div>
-        ) : guests.length === 0 ? (
+        ) : users.length === 0 ? (
           <div className="text-center text-slate-500 py-10">
-            Todavía no hay huéspedes cargados.
+            Todavía no hay usuarios creados.
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
-            {guests.map((guest) => (
+            {users.map((user) => (
               <div
-                key={guest.id}
+                key={user.id}
                 className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm"
               >
                 <div className="text-sm font-semibold text-slate-900">
-                  {guest.full_name}
+                  {user.username}
                 </div>
-                <div className="text-xs text-slate-500 mt-1">{guest.email}</div>
-                {guest.phone ? (
-                  <div className="text-xs text-slate-400 mt-1">{guest.phone}</div>
-                ) : null}
+                <div className="text-xs text-slate-500 mt-1">{user.role}</div>
               </div>
             ))}
           </div>
@@ -115,47 +108,47 @@ const GuestsPage = () => {
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent className="sm:max-w-[420px]">
           <SheetHeader>
-            <SheetTitle>Nuevo huésped</SheetTitle>
+            <SheetTitle>Nuevo usuario</SheetTitle>
             <SheetDescription>
-              Completá los datos básicos para agregarlo.
+              Definí credenciales y rol de acceso.
             </SheetDescription>
           </SheetHeader>
 
           <form onSubmit={handleSubmit} className="grid gap-6 py-6">
             <div className="grid gap-2">
-              <Label htmlFor="guest-name">Nombre completo</Label>
+              <Label htmlFor="user-name">Usuario</Label>
               <Input
-                id="guest-name"
-                value={formData.full_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, full_name: e.target.value })
+                id="user-name"
+                value={formData.username}
+                onChange={(event) =>
+                  setFormData({ ...formData, username: event.target.value })
                 }
                 required
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="guest-email">Email</Label>
+              <Label htmlFor="user-password">Contraseña</Label>
               <Input
-                id="guest-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) =>
-                  setFormData({ ...formData, email: e.target.value })
+                id="user-password"
+                type="password"
+                value={formData.password}
+                onChange={(event) =>
+                  setFormData({ ...formData, password: event.target.value })
                 }
                 required
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="guest-phone">Teléfono</Label>
+              <Label htmlFor="user-role">Rol</Label>
               <Input
-                id="guest-phone"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
+                id="user-role"
+                value={formData.role}
+                onChange={(event) =>
+                  setFormData({ ...formData, role: event.target.value })
                 }
-                placeholder="+54 11 1234 5678"
+                placeholder="admin u ops"
               />
             </div>
 
@@ -167,7 +160,7 @@ const GuestsPage = () => {
                     Guardando...
                   </>
                 ) : (
-                  "Crear huésped"
+                  "Crear usuario"
                 )}
               </Button>
             </SheetFooter>
@@ -178,4 +171,4 @@ const GuestsPage = () => {
   );
 };
 
-export default GuestsPage;
+export default UsersPage;

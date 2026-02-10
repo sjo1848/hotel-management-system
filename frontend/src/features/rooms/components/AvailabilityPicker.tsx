@@ -2,6 +2,7 @@ import React from "react";
 import { Calendar as CalendarIcon, Search } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const AvailabilityPicker = ({ onSearch }) => {
-  const [date, setDate] = React.useState({
+type AvailabilityPickerProps = {
+  onSearch: (from: string, to: string) => void;
+};
+
+const AvailabilityPicker = ({ onSearch }: AvailabilityPickerProps) => {
+  const [date, setDate] = React.useState<DateRange | undefined>({
     from: undefined,
     to: undefined,
   });

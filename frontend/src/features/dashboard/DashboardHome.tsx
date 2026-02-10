@@ -11,7 +11,16 @@ import {
 // Aquí estaba el error. Usamos @ para ir directo a la fuente sin adivinar carpetas:
 import BookingList from "@/features/bookings/components/BookingList";
 
-const KPICard = ({ title, value, subtext, trend, icon: Icon, accent }) => (
+type KPICardProps = {
+  title: string;
+  value: string;
+  subtext: string;
+  trend: "up" | "down";
+  icon: React.ElementType;
+  accent: string;
+};
+
+const KPICard = ({ title, value, subtext, trend, icon: Icon, accent }: KPICardProps) => (
   <Card className="border-slate-200 shadow-sm">
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-semibold text-slate-600">

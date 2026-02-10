@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
 
 const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
@@ -19,9 +19,13 @@ const authApi = axios.create({
 });
 
 let isRefreshing = false;
-let pendingQueue = [];
+type PendingRequest = {
+  resolve: (token: string | null) => void;
+  reject: (error: unknown) => void;
+};
+let pendingQueue: PendingRequest[] = [];
 
-const resolveQueue = (error, token = null) => {
+const resolveQueue = (error: unknown, token: string | null = null) => {
   pendingQueue.forEach((promise) => {
     if (error) {
       promise.reject(error);
@@ -34,9 +38,9 @@ const resolveQueue = (error, token = null) => {
 
 // Interceptor para manejar los Errores de Dominio (Sprint 5) de forma global
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -67,7 +71,8 @@ api.interceptors.response.use(
 
     // Si el backend mandó un error tipado (400, 409, 404)
     const message =
-      error.response?.data?.error || "Error inesperado en el servidor";
+      (error.response?.data as { error?: string } | undefined)?.error ||
+      "Error inesperado en el servidor";
 
     // Aquí podrías disparar un Toast o notificación global más adelante
     console.error(`🚨 HMS Error [${error.response?.status}]:`, message);

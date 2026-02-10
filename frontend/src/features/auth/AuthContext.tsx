@@ -1,17 +1,37 @@
 import React, { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { login as apiLogin, logout as apiLogout, me as apiMe } from "./authService";
+import {
+  login as apiLogin,
+  logout as apiLogout,
+  me as apiMe,
+  LoginResponse,
+  MeResponse,
+} from "./authService";
 
-export const AuthContext = createContext({
+export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
+
+export type AuthContextValue = {
+  status: AuthStatus;
+  user: MeResponse | null;
+  login: (username: string, password: string) => Promise<LoginResponse>;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<MeResponse>;
+};
+
+export const AuthContext = createContext<AuthContextValue>({
   status: "loading",
   user: null,
-  login: async () => {},
+  login: async () => {
+    throw new Error("AuthContext not ready");
+  },
   logout: async () => {},
-  refreshUser: async () => {},
+  refreshUser: async () => {
+    throw new Error("AuthContext not ready");
+  },
 });
 
-export const AuthProvider = ({ children }) => {
-  const [status, setStatus] = useState("loading");
-  const [user, setUser] = useState(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [status, setStatus] = useState<AuthStatus>("loading");
+  const [user, setUser] = useState<MeResponse | null>(null);
 
   const refreshUser = useCallback(async () => {
     try {
@@ -26,7 +46,7 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (username: string, password: string) => {
     const data = await apiLogin(username, password);
     if (data?.access_token) {
       localStorage.setItem("hms_token", data.access_token);

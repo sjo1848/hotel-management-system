@@ -16,7 +16,27 @@ import { Label } from "@/components/ui/label";
 import { createBooking } from "../services/bookingService";
 import { useToast } from "@/components/ui/toast";
 
-const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
+type Room = {
+  id: string;
+  room_number: string;
+  room_type: string;
+  price_cents: number;
+};
+
+type SearchDates = {
+  from: string;
+  to: string;
+} | null;
+
+type BookingDrawerProps = {
+  room: Room | null;
+  dates: SearchDates;
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+};
+
+const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawerProps) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [formData, setFormData] = useState({
@@ -28,7 +48,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
   // Si no hay habitación seleccionada, no renderizamos nada útil
   if (!room) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!hasDates) return;
     setLoading(true);

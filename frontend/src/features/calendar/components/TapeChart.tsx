@@ -5,10 +5,12 @@ import client from '@/api/client';
 import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import type { Room } from '@/features/rooms/services/roomService';
+import type { Booking } from '@/features/bookings/services/bookingService';
 
 const TapeChart = () => {
-  const [rooms, setRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [startDate, setStartDate] = useState(startOfToday());
 
@@ -25,8 +27,8 @@ const TapeChart = () => {
           client.get('/rooms'),
           client.get('/bookings')
         ]);
-        setRooms(roomsRes.data);
-        setBookings(bookingsRes.data);
+        setRooms(roomsRes.data as Room[]);
+        setBookings(bookingsRes.data as Booking[]);
       } catch (error) {
         console.error('Error cargando datos:', error);
       } finally {
@@ -36,10 +38,9 @@ const TapeChart = () => {
     fetchData();
   }, []);
 
-  const getBookingStatus = (roomId, date) => {
+  const getBookingStatus = (roomId: string, date: Date) => {
     const booking = bookings.find(b => 
       b.room_id === roomId && 
-      b.status !== 'Cancelled' &&
       isWithinInterval(date, { start: parseISO(b.check_in), end: parseISO(b.check_out) })
     );
 
@@ -54,20 +55,11 @@ const TapeChart = () => {
     return null;
   };
 
-  const moveDate = (days) => {
+  const moveDate = (days: number) => {
     setStartDate(prev => addDays(prev, days));
   };
 
   if (loading) return <div className='p-20 flex justify-center'><Loader2 className='animate-spin w-8 h-8' /></div>;
-
-  if (rooms.length === 0) {
-    return (
-      <Card className='p-8 text-center border border-dashed border-slate-200'>
-        <div className='text-slate-600 font-medium'>No hay habitaciones cargadas.</div>
-        <div className='text-sm text-slate-500 mt-1'>Agregá habitaciones para visualizar la ocupación.</div>
-      </Card>
-    );
-  }
 
   return (
     <div className='flex flex-col h-full space-y-4'>

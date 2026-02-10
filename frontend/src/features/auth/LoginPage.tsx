@@ -16,7 +16,7 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { login } = useAuth();
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     try {

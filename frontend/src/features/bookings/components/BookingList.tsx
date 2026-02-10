@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getBookings, updateBooking } from '../services/bookingService';
+import { Booking, getBookings, updateBooking } from '../services/bookingService';
 import {
   Table,
   TableBody,
@@ -15,12 +15,12 @@ import { Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
 import BookingEditDrawer from './BookingEditDrawer';
 
-const BookingList = ({ limit = 5, showActions = false }) => {
-  const [bookings, setBookings] = useState([]);
+const BookingList = ({ limit = 5, showActions = false }: { limit?: number; showActions?: boolean }) => {
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { toast } = useToast();
-  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   useEffect(() => {
@@ -43,18 +43,18 @@ const BookingList = ({ limit = 5, showActions = false }) => {
       .finally(() => setLoading(false));
   }, [toast]);
 
-  const handleEdit = (booking) => {
+  const handleEdit = (booking: Booking) => {
     setSelectedBooking(booking);
     setIsEditOpen(true);
   };
 
-  const handleUpdated = (updated) => {
+  const handleUpdated = (updated: Booking) => {
     setBookings((current) =>
       current.map((item) => (item.id === updated.id ? updated : item)),
     );
   };
 
-  const handleCancel = async (booking) => {
+  const handleCancel = async (booking: Booking) => {
     if (booking.status === 'Cancelled') return;
     const confirmCancel = window.confirm(
       '¿Querés cancelar esta reserva? Esta acción no se puede deshacer.',
@@ -122,7 +122,7 @@ const BookingList = ({ limit = 5, showActions = false }) => {
                 {format(new Date(booking.check_in), 'dd/MM', { locale: es })} - {format(new Date(booking.check_out), 'dd/MM', { locale: es })}
               </TableCell>
               <TableCell className='text-right'>
-                {booking.status === 'Cancelled' ? (
+              {booking.status === 'Cancelled' || booking.status === 'CANCELLED' ? (
                   <Badge variant='outline' className='bg-rose-50 text-rose-700 border-rose-200'>Cancelada</Badge>
                 ) : (
                   <Badge variant='outline' className='bg-emerald-50 text-emerald-700 border-emerald-200'>Confirmada</Badge>
@@ -134,7 +134,7 @@ const BookingList = ({ limit = 5, showActions = false }) => {
                     type='button'
                     className='text-sm font-medium text-slate-700 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed'
                     onClick={() => handleEdit(booking)}
-                    disabled={booking.status === 'Cancelled'}
+                    disabled={booking.status === 'Cancelled' || booking.status === 'CANCELLED'}
                   >
                     Editar
                   </button>
@@ -142,7 +142,7 @@ const BookingList = ({ limit = 5, showActions = false }) => {
                     type='button'
                     className='text-sm font-medium text-rose-600 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed'
                     onClick={() => handleCancel(booking)}
-                    disabled={booking.status === 'Cancelled'}
+                    disabled={booking.status === 'Cancelled' || booking.status === 'CANCELLED'}
                   >
                     Cancelar
                   </button>
