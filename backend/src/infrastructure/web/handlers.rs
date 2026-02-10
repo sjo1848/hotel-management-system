@@ -299,19 +299,15 @@ pub async fn refresh_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
-    if !csrf_valid(&headers) {
-        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
-    }
-
+    // CSRF check removed for refresh endpoint to allow session restoration
+    
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
         .unwrap_or_default();
 
     if refresh_token.trim().is_empty() {
-        return Err(DomainError::InvalidInput(
-            "Refresh token inválido".to_string(),
-        ));
+        return Err(DomainError::Unauthorized);
     }
 
     let (user_id, new_refresh, _): (Uuid, String, crate::domain::models::RefreshToken) = state
@@ -363,19 +359,28 @@ pub async fn logout_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
-    if !csrf_valid(&headers) {
-        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
-    }
-
+    // CSRF check removed for logout to ensure users can always sign out
+    
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
         .unwrap_or_default();
 
     if refresh_token.trim().is_empty() {
-        return Err(DomainError::InvalidInput(
-            "Refresh token inválido".to_string(),
-        ));
+        // If no token, just clear cookies and return OK (idempotent logout)
+        let expired_cookie = clear_refresh_cookie(&state.config);
+        let expired_access = clear_access_cookie(&state.config);
+        let expired_csrf = clear_csrf_cookie(&state.config);
+        return Ok((
+            StatusCode::OK,
+            [
+                (header::SET_COOKIE, expired_cookie),
+                (header::SET_COOKIE, expired_access),
+                (header::SET_COOKIE, expired_csrf),
+            ],
+            Json(json!({ "status": "ok" })),
+        )
+            .into_response());
     }
 
     let user_id = state

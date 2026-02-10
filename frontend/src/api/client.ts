@@ -44,8 +44,7 @@ api.interceptors.response.use(
     const requestUrl = originalRequest?.url || "";
     const isAuthEndpoint =
       requestUrl.includes("/auth/login") ||
-      requestUrl.includes("/auth/refresh") ||
-      requestUrl.includes("/auth/me");
+      requestUrl.includes("/auth/refresh");
 
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
@@ -75,9 +74,8 @@ api.interceptors.response.use(
     }
 
     // Si el backend mandó un error tipado (400, 409, 404)
-    const message =
-      (error.response?.data as { error?: string } | undefined)?.error ||
-      "Error inesperado en el servidor";
+    const errorData = error.response?.data as { error?: string; message?: string } | undefined;
+    const message = errorData?.message || errorData?.error || "Error inesperado en el servidor";
 
     // Aquí podrías disparar un Toast o notificación global más adelante
     console.error(`🚨 HMS Error [${error.response?.status}]:`, message);
