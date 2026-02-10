@@ -13,33 +13,57 @@ use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 use base64::Engine;
+use tokio::task_local;
+
+task_local! {
+    pub static REQUEST_ID: String;
+}
 
 impl IntoResponse for DomainError {
     fn into_response(self) -> Response {
-        // Forzamos a que todos los brazos devuelvan (StatusCode, String)
-        let (status, error_message): (StatusCode, String) = match self {
+        let (status, error_code, error_message): (StatusCode, &str, String) = match self {
             DomainError::RoomNotFound => (
                 StatusCode::NOT_FOUND,
+                "ROOM_NOT_FOUND",
                 "La habitación solicitada no existe".to_string(),
             ),
             DomainError::RoomNotAvailable => (
                 StatusCode::CONFLICT,
+                "ROOM_NOT_AVAILABLE",
                 "La habitación ya está ocupada en esas fechas".to_string(),
             ),
             DomainError::InvalidBookingDates => (
                 StatusCode::BAD_REQUEST,
+                "INVALID_BOOKING_DATES",
                 "Las fechas de reserva no son válidas".to_string(),
             ),
             DomainError::BookingNotFound => (
                 StatusCode::NOT_FOUND,
+                "BOOKING_NOT_FOUND",
                 "La reserva solicitada no existe".to_string(),
             ),
-            DomainError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, msg),
-            DomainError::Unauthorized => (StatusCode::UNAUTHORIZED, "No autorizado".to_string()),
-            DomainError::InfrastructureError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            DomainError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
+            DomainError::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "UNAUTHORIZED",
+                "No autorizado".to_string(),
+            ),
+            DomainError::InfrastructureError(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INFRA_ERROR",
+                msg,
+            ),
         };
 
-        let body = Json(json!({ "error": error_message }));
+        let request_id = REQUEST_ID
+            .try_with(|value| value.clone())
+            .unwrap_or_else(|_| "unknown".to_string());
+        let body = Json(json!({
+            "error_code": error_code,
+            "message": error_message,
+            "request_id": request_id,
+            "details": {}
+        }));
         (status, body).into_response()
     }
 }

@@ -18,6 +18,7 @@ Objetivo: eliminar riesgos críticos de sobreventa y sesión insegura.
 #### Ticket S1-1: Exclusion constraint anti-overbooking
 Estimación: M
 Descripción: agregar constraint en `bookings` con `daterange` y `btree_gist`, excluyendo `status='CANCELLED'`.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. Dos inserts concurrentes para misma habitación y rango fallan en uno con error de constraint.
 2. Reservas `CANCELLED` no bloquean disponibilidad.
@@ -28,6 +29,7 @@ Tests: integración con concurrencia.
 #### Ticket S1-2: Manejo de error de overlap
 Estimación: S
 Descripción: mapear error DB a `DomainError::RoomNotAvailable` con código específico.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. Respuesta HTTP estandarizada ante overlap.
 2. Frontend muestra mensaje coherente.
@@ -36,6 +38,7 @@ Archivos: `backend/src/infrastructure/repository/postgres_booking.rs`, `backend/
 #### Ticket S1-3: Auth cookie-only (eliminar localStorage)
 Estimación: M
 Descripción: no persistir access token en `localStorage`, depender de HttpOnly cookie + refresh.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. No hay tokens en `localStorage`.
 2. Login/refresh/logout funcionan.
@@ -46,6 +49,7 @@ Tests: E2E login/refresh/logout.
 #### Ticket S1-4: Protección CSRF
 Estimación: M
 Descripción: implementar CSRF token (double-submit) en mutaciones.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. POST/PATCH/DELETE rechazan requests sin token.
 2. Token se inyecta desde frontend.
@@ -54,6 +58,7 @@ Archivos: `backend/src/infrastructure/web/*`, `frontend/src/api/client.ts`
 #### Ticket S1-5: Defaults inseguros (fail-fast)
 Estimación: S
 Descripción: fallar arranque si `JWT_SECRET` o `ADMIN_PASSWORD` son defaults en prod.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. En `ENV=prod`, arranque falla con mensaje explícito.
 2. En `ENV=dev`, se permiten defaults.

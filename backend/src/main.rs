@@ -16,6 +16,7 @@ use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
+use uuid::Uuid;
 
 use hms_backend::app_state::AppState;
 use hms_backend::application::auth_service::AuthService;
@@ -37,6 +38,7 @@ use hms_backend::infrastructure::web::handlers::{
     list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
 };
+use hms_backend::infrastructure::web::handlers::REQUEST_ID;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 #[tokio::main]
@@ -155,6 +157,7 @@ async fn main() {
         .layer(cors)
         .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(TraceLayer::new_for_http())
+        .layer(middleware::from_fn(request_id_middleware))
         .with_state(shared_state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
@@ -164,6 +167,20 @@ async fn main() {
     axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
+}
+
+async fn request_id_middleware(
+    req: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> Result<axum::response::Response, DomainError> {
+    let request_id = Uuid::new_v4().to_string();
+    let mut response = REQUEST_ID
+        .scope(request_id.clone(), async { next.run(req).await })
+        .await;
+    if let Ok(value) = HeaderValue::from_str(&request_id) {
+        response.headers_mut().insert("x-request-id", value);
+    }
+    Ok(response)
 }
 
 async fn auth_middleware(
