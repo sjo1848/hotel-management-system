@@ -1,7 +1,7 @@
 use axum::{
     extract::{DefaultBodyLimit, State},
     http::{
-        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, COOKIE},
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, COOKIE, HeaderName},
         HeaderValue, Method,
     },
     middleware,
@@ -109,7 +109,7 @@ async fn main() {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT, COOKIE])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT, COOKIE, HeaderName::from_static("x-csrf-token")])
         .allow_credentials(true);
 
     let auth_layer = middleware::from_fn_with_state(shared_state.clone(), auth_middleware);
