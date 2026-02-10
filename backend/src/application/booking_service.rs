@@ -64,7 +64,7 @@ impl BookingService {
         self.booking_repo
             .save(new_booking)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_repo_error)
     }
 
     pub async fn update_booking(
@@ -129,10 +129,18 @@ impl BookingService {
         self.booking_repo
             .update(booking)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_repo_error)
     }
 
     pub async fn list_bookings(&self) -> Result<Vec<Booking>, String> {
         self.booking_repo.find_all().await
+    }
+}
+
+fn map_repo_error(message: String) -> DomainError {
+    if message == "BOOKING_OVERLAP" {
+        DomainError::RoomNotAvailable
+    } else {
+        DomainError::InfrastructureError(message)
     }
 }

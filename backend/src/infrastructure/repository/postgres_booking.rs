@@ -36,7 +36,7 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(status)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(booking)
     }
@@ -116,7 +116,7 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(booking.id)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(booking)
     }
@@ -163,6 +163,7 @@ impl BookingRepository for PostgresBookingRepository {
             SELECT EXISTS (
                 SELECT 1 FROM bookings
                 WHERE room_id = $1
+                AND status != 'CANCELLED'
                 AND check_in < $3
                 AND check_out > $2
             ) as has_overlap
@@ -192,6 +193,7 @@ impl BookingRepository for PostgresBookingRepository {
                 SELECT 1 FROM bookings
                 WHERE room_id = $1
                 AND id != $2
+                AND status != 'CANCELLED'
                 AND check_in < $4
                 AND check_out > $3
             ) as has_overlap
@@ -208,4 +210,15 @@ impl BookingRepository for PostgresBookingRepository {
         let has_overlap: Option<bool> = overlap.try_get("has_overlap").ok();
         Ok(!has_overlap.unwrap_or(false))
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23P01" {
+                return "BOOKING_OVERLAP".to_string();
+            }
+        }
+    }
+    error.to_string()
 }
