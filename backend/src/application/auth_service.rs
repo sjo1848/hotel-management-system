@@ -1,7 +1,7 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{RefreshToken, User};
 use crate::domain::repositories::{RefreshTokenRepository, UserRepository};
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{Duration, Utc};
 use rand::RngCore;
 use sha2::{Digest, Sha256};
 use std::sync::Arc;

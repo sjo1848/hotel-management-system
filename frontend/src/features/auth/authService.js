@@ -5,6 +5,11 @@ export const login = async (username, password) => {
   return response.data;
 };
 
+export const me = async () => {
+  const response = await client.get("/auth/me");
+  return response.data;
+};
+
 export const refresh = async () => {
   const response = await client.post("/auth/refresh");
   return response.data;

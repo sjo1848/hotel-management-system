@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { logout } from "@/features/auth/authService";
+import { useAuth } from "@/features/auth/useAuth";
 
 const SidebarItem = ({ icon: Icon, label, path }) => {
   const location = useLocation();
@@ -31,10 +31,10 @@ const SidebarItem = ({ icon: Icon, label, path }) => {
 
 const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout().catch(() => null);
-    localStorage.removeItem("hms_token");
     navigate("/login", { replace: true });
   };
 
@@ -97,7 +97,17 @@ const DashboardLayout = ({ children }) => {
               <Bell className="w-4 h-4 text-slate-600" />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </Button>
-            <div className="w-8 h-8 bg-slate-200 rounded-full border border-slate-300"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-slate-200 rounded-full border border-slate-300"></div>
+              <div className="text-right">
+                <div className="text-sm font-semibold text-slate-800">
+                  {user?.username || "Usuario"}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {user?.role || "sesion"}
+                </div>
+              </div>
+            </div>
           </div>
         </header>
 

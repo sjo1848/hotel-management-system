@@ -2,8 +2,7 @@ use crate::application::auth_service::AuthService;
 use crate::application::booking_service::BookingService;
 use crate::config::AppConfig;
 use crate::domain::repositories::{
-    AuditRepository, BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository,
-    UserRepository,
+    AuditRepository, GuestRepository, RefreshTokenRepository, RoomRepository, UserRepository,
 };
 use std::sync::Arc;
 

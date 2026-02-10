@@ -1,7 +1,9 @@
 import axios from "axios";
 
+const baseURL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:3000/api", // Nuestra base de Rust
+  baseURL, // Nuestra base de Rust
   headers: {
     "Content-Type": "application/json",
   },
@@ -9,7 +11,7 @@ const api = axios.create({
 });
 
 const authApi = axios.create({
-  baseURL: "http://localhost:3000/api",
+  baseURL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -49,6 +51,9 @@ api.interceptors.response.use(
 
       try {
         const { data } = await authApi.post("/auth/refresh");
+        if (data?.access_token) {
+          localStorage.setItem("hms_token", data.access_token);
+        }
         resolveQueue(null, data.access_token);
         return api(originalRequest);
       } catch (refreshError) {
@@ -73,5 +78,13 @@ api.interceptors.response.use(
     });
   },
 );
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("hms_token");
+  if (token && !config.headers?.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
 export default api;

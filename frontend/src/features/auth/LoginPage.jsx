@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { login } from "./authService";
+import { useAuth } from "./useAuth";
 import { useToast } from "@/components/ui/toast";
 
 const LoginPage = () => {
@@ -14,13 +14,13 @@ const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     try {
-      const data = await login(username, password);
-      localStorage.setItem("hms_token", data.access_token);
+      await login(username, password);
       toast({
         title: "Bienvenido",
         description: "Inicio de sesión correcto.",

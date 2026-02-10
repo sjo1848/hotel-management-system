@@ -34,7 +34,7 @@ services:
       RUST_LOG: debug
       JWT_SECRET: change-me-dev
       AUTH_REQUIRED: "true"
-      CORS_ORIGIN: http://localhost:5173
+      CORS_ORIGIN: http://localhost:5173,https://app.tudominio.com
       ADMIN_USER: admin
       ADMIN_PASSWORD: admin123
       ADMIN_ROLE: admin

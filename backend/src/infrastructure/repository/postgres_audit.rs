@@ -1,7 +1,7 @@
 use crate::domain::models::AuditEvent;
 use crate::domain::repositories::AuditRepository;
 use async_trait::async_trait;
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 
 pub struct PostgresAuditRepository {
     pool: PgPool,

@@ -2,7 +2,6 @@ use crate::domain::models::Guest;
 use crate::domain::repositories::GuestRepository;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
-use uuid::Uuid;
 
 pub struct PostgresGuestRepository {
     pool: PgPool,

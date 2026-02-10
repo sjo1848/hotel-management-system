@@ -1,10 +1,9 @@
-mod application;
-mod config;
-mod domain;
-mod infrastructure;
-
 use axum::{
     extract::{DefaultBodyLimit, State},
+    http::{
+        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, COOKIE},
+        HeaderValue, Method,
+    },
     middleware,
     routing::{get, post},
     Router,
@@ -12,31 +11,32 @@ use axum::{
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tower_http::{
-    cors::{Any, CorsLayer},
+    cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
 
-use crate::application::auth_service::AuthService;
-use crate::application::booking_service::BookingService;
 use hms_backend::app_state::AppState;
-use crate::domain::errors::DomainError;
-use crate::domain::repositories::{
+use hms_backend::application::auth_service::AuthService;
+use hms_backend::application::booking_service::BookingService;
+use hms_backend::config::AppConfig;
+use hms_backend::domain::errors::DomainError;
+use hms_backend::domain::repositories::{
     AuditRepository, BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository,
     UserRepository,
 };
-use crate::infrastructure::repository::postgres::PostgresRoomRepository;
-use crate::infrastructure::repository::postgres_audit::PostgresAuditRepository;
-use crate::infrastructure::repository::postgres_booking::PostgresBookingRepository;
-use crate::infrastructure::repository::postgres_guest::PostgresGuestRepository;
-use crate::infrastructure::repository::postgres_refresh_token::PostgresRefreshTokenRepository;
-use crate::infrastructure::repository::postgres_user::PostgresUserRepository;
-use crate::infrastructure::web::handlers::{
+use hms_backend::infrastructure::repository::postgres::PostgresRoomRepository;
+use hms_backend::infrastructure::repository::postgres_audit::PostgresAuditRepository;
+use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
+use hms_backend::infrastructure::repository::postgres_guest::PostgresGuestRepository;
+use hms_backend::infrastructure::repository::postgres_refresh_token::PostgresRefreshTokenRepository;
+use hms_backend::infrastructure::repository::postgres_user::PostgresUserRepository;
+use hms_backend::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, get_rooms_handler, health_check, list_bookings_handler,
     list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
 };
-use crate::config::AppConfig;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 #[tokio::main]
@@ -90,38 +90,54 @@ async fn main() {
 
     bootstrap_admin_user(&config, user_repo.clone()).await;
 
-    let cors_origin = config
-        .cors_origin
-        .parse::<axum::http::HeaderValue>()
-        .map(|value| value.into())
-        .unwrap_or(Any.into());
+    let cors_origins = parse_cors_origins(&config.cors_origin);
+    let cors_origin = if cors_origins.is_empty() {
+        AllowOrigin::list(vec![HeaderValue::from_static("http://localhost:5173")])
+    } else {
+        AllowOrigin::list(cors_origins)
+    };
 
     let cors = CorsLayer::new()
         .allow_origin(cors_origin)
-        .allow_methods(Any)
-        .allow_headers(Any)
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::PUT,
+            Method::DELETE,
+            Method::OPTIONS,
+        ])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT, COOKIE])
         .allow_credentials(true);
 
     let auth_layer = middleware::from_fn_with_state(shared_state.clone(), auth_middleware);
 
-    let api_rate = GovernorConfigBuilder::default()
-        .per_minute(config.rate_limit_per_minute)
-        .burst_size(config.rate_limit_per_minute)
-        .finish()
-        .unwrap();
+    let api_rate = Arc::new(
+        GovernorConfigBuilder::default()
+            .period(Duration::from_millis(per_minute_to_period_ms(
+                config.rate_limit_per_minute,
+            )))
+            .burst_size(config.rate_limit_per_minute.max(1))
+            .finish()
+            .unwrap(),
+    );
 
-    let login_rate = GovernorConfigBuilder::default()
-        .per_minute(config.login_limit_per_minute)
-        .burst_size(config.login_limit_per_minute)
-        .finish()
-        .unwrap();
+    let login_rate = Arc::new(
+        GovernorConfigBuilder::default()
+            .period(Duration::from_millis(per_minute_to_period_ms(
+                config.login_limit_per_minute,
+            )))
+            .burst_size(config.login_limit_per_minute.max(1))
+            .finish()
+            .unwrap(),
+    );
 
     let auth_router = Router::new()
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/refresh", post(refresh_handler))
         .route("/api/auth/logout", post(logout_handler))
         .route("/api/auth/me", get(me_handler))
-        .layer(GovernorLayer::configured(login_rate));
+        .layer(GovernorLayer { config: login_rate });
 
     let app = Router::new()
         .route("/", get(root_handler))
@@ -135,7 +151,7 @@ async fn main() {
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/users", get(list_users_handler).post(create_user_handler))
         .route_layer(auth_layer)
-        .layer(GovernorLayer::configured(api_rate))
+        .layer(GovernorLayer { config: api_rate })
         .layer(cors)
         .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(TraceLayer::new_for_http())
@@ -145,7 +161,9 @@ async fn main() {
     println!("🚀 HMS Elite (Hexagonal) escuchando en {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
+        .await
+        .unwrap();
 }
 
 async fn auth_middleware(
@@ -159,11 +177,11 @@ async fn auth_middleware(
 
     let path = req.uri().path();
     if path == "/health"
+        || path == "/ready"
         || path == "/"
         || path == "/api/auth/login"
         || path == "/api/auth/refresh"
         || path == "/api/auth/logout"
-        || path == "/api/auth/me"
     {
         return Ok(next.run(req).await);
     }
@@ -193,7 +211,7 @@ async fn auth_middleware(
             .ok_or(DomainError::Unauthorized)?
     };
 
-    let claims = crate::infrastructure::web::jwt::decode_token(&token, &state.config.jwt_secret)
+    let claims = hms_backend::infrastructure::web::jwt::decode_token(&token, &state.config.jwt_secret)
         .map_err(|_| DomainError::Unauthorized)?;
 
     if claims.role != "admin" && claims.role != "ops" {
@@ -210,17 +228,31 @@ async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserReposit
         return;
     }
 
-    let hash = match crate::infrastructure::web::passwords::hash_password(&config.admin_password) {
+    let hash = match hms_backend::infrastructure::web::passwords::hash_password(&config.admin_password) {
         Ok(value) => value,
         Err(_) => return,
     };
 
     let _ = user_repo
-        .create(crate::domain::models::User {
+        .create(hms_backend::domain::models::User {
             id: uuid::Uuid::new_v4(),
             username: config.admin_user.clone(),
             password_hash: hash,
             role: config.admin_role.clone(),
         })
         .await;
+}
+
+fn per_minute_to_period_ms(per_minute: u32) -> u64 {
+    let per_minute = per_minute.max(1);
+    let ms = 60_000u64 / per_minute as u64;
+    if ms == 0 { 1 } else { ms }
+}
+
+fn parse_cors_origins(raw: &str) -> Vec<HeaderValue> {
+    raw.split(',')
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .filter_map(|value| HeaderValue::from_str(value).ok())
+        .collect()
 }

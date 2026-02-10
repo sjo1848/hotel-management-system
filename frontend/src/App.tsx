@@ -1,5 +1,4 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
 import BookingsPage from "./features/bookings/BookingsPage.jsx";
@@ -9,6 +8,8 @@ import GuestsPage from "./features/guests/GuestsPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
 import React from "react";
+import { AuthProvider } from "./features/auth/AuthContext";
+import { useAuth } from "./features/auth/useAuth";
 
 const Placeholder = ({ title }) => (
   <div className="p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -35,21 +36,7 @@ const AppLayout = () => (
 );
 
 const RequireAuth = ({ children }) => {
-  const [status, setStatus] = useState("loading");
-
-  useEffect(() => {
-    fetch("http://localhost:3000/api/auth/me", {
-      credentials: "include",
-    })
-      .then((res) => {
-        if (res.ok) {
-          setStatus("ok");
-        } else {
-          setStatus("unauthorized");
-        }
-      })
-      .catch(() => setStatus("unauthorized"));
-  }, []);
+  const { status } = useAuth();
 
   if (status === "loading") {
     return (
@@ -59,7 +46,7 @@ const RequireAuth = ({ children }) => {
     );
   }
 
-  if (status === "unauthorized") {
+  if (status === "unauthenticated") {
     return <Navigate to="/login" replace />;
   }
 
@@ -111,7 +98,11 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
 
 export default App;
