@@ -26,17 +26,28 @@ pub struct Booking {
     pub guest_name: String,
     pub check_in: NaiveDate,
     pub check_out: NaiveDate,
+    pub total_price_cents: i64,
 }
 
 impl Booking {
-    /// Lógica pura de dominio: ¿Se solapa esta reserva con un rango de fechas dado?
-    /// La regla matemática de colisión de intervalos es:
-    /// (InicioA < FinB) AND (FinA > InicioB)
+    pub fn nights(&self) -> i64 {
+        let duration = self.check_out - self.check_in;
+        let days = duration.num_days();
+        if days <= 0 {
+            1
+        } else {
+            days
+        } // Política: mínimo 1 noche
+    }
+
+    pub fn calculate_total_price(&mut self, room_price_cents: i64) {
+        self.total_price_cents = self.nights() * room_price_cents;
+    }
+
     pub fn overlaps_with(&self, start: NaiveDate, end: NaiveDate) -> bool {
         self.check_in < end && self.check_out > start
     }
 
-    /// Valida si la reserva es consistente (el check-out no puede ser antes o igual al check-in)
     pub fn is_valid(&self) -> bool {
         self.check_out > self.check_in
     }

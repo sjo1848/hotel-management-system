@@ -19,12 +19,14 @@ impl PostgresBookingRepository {
 impl BookingRepository for PostgresBookingRepository {
     async fn save(&self, booking: Booking) -> Result<Booking, String> {
         sqlx::query!(
-            "INSERT INTO bookings (id, room_id, guest_name, check_in, check_out) VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO bookings (id, room_id, guest_name, check_in, check_out, total_price_cents)
+             VALUES ($1, $2, $3, $4, $5, $6)",
             booking.id,
             booking.room_id,
             booking.guest_name,
             booking.check_in,
-            booking.check_out
+            booking.check_out,
+            booking.total_price_cents
         )
         .execute(&self.pool)
         .await
@@ -36,7 +38,7 @@ impl BookingRepository for PostgresBookingRepository {
     async fn find_by_room(&self, room_id: Uuid) -> Result<Vec<Booking>, String> {
         let records = sqlx::query_as!(
             Booking,
-            "SELECT id, room_id, guest_name, check_in, check_out FROM bookings WHERE room_id = $1",
+            "SELECT id, room_id, guest_name, check_in, check_out, total_price_cents FROM bookings WHERE room_id = $1",
             room_id
         )
         .fetch_all(&self.pool)
@@ -52,7 +54,6 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<bool, String> {
-        // Si existe alguna fila que se solape, el resultado es FALSE (no disponible)
         let overlap = sqlx::query!(
             r#"
             SELECT EXISTS (
