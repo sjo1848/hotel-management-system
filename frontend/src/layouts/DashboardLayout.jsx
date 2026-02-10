@@ -69,7 +69,7 @@ const DashboardLayout = ({ children }) => {
           <p className="px-4 text-xs font-semibold text-slate-400 mt-8 mb-2 uppercase tracking-wider">
             Sistema
           </p>
-          <SidebarItem icon={Settings} label="Configuración" path="/settings" />
+          <SidebarItem icon={Settings} label="Usuarios" path="/users" />
         </nav>
 
         <div className="p-4 border-t border-slate-100">

@@ -16,14 +16,6 @@ const authApi = axios.create({
   withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("hms_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
 let isRefreshing = false;
 let pendingQueue = [];
 
@@ -44,17 +36,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
-      if (!localStorage.getItem("hms_token")) {
-        localStorage.removeItem("hms_token");
-        window.location.href = "/login";
-        return Promise.reject(error);
-      }
-
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({ resolve, reject });
         }).then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`;
           return api(originalRequest);
         });
       }
@@ -64,13 +49,10 @@ api.interceptors.response.use(
 
       try {
         const { data } = await authApi.post("/auth/refresh");
-        localStorage.setItem("hms_token", data.access_token);
         resolveQueue(null, data.access_token);
-        originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
         resolveQueue(refreshError, null);
-        localStorage.removeItem("hms_token");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

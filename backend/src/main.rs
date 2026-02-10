@@ -21,17 +21,19 @@ use crate::application::booking_service::BookingService;
 use crate::application::auth_service::AuthService;
 use crate::domain::errors::DomainError;
 use crate::domain::repositories::{
-    BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository, UserRepository,
+    AuditRepository, BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository,
+    UserRepository,
 };
 use crate::infrastructure::repository::postgres::PostgresRoomRepository;
+use crate::infrastructure::repository::postgres_audit::PostgresAuditRepository;
 use crate::infrastructure::repository::postgres_booking::PostgresBookingRepository;
 use crate::infrastructure::repository::postgres_guest::PostgresGuestRepository;
 use crate::infrastructure::repository::postgres_refresh_token::PostgresRefreshTokenRepository;
 use crate::infrastructure::repository::postgres_user::PostgresUserRepository;
 use crate::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, get_rooms_handler, health_check, list_bookings_handler,
-    list_guests_handler, login_handler, logout_handler, readiness_check, refresh_handler, root_handler,
-    search_rooms_handler, update_booking_handler,
+    list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
+    root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
 };
 use crate::config::AppConfig;
 use tower_governor::{GovernorConfigBuilder, GovernorLayer};
@@ -42,6 +44,7 @@ pub struct AppState {
     pub guest_repo: Arc<dyn GuestRepository>,
     pub user_repo: Arc<dyn UserRepository>,
     pub refresh_repo: Arc<dyn RefreshTokenRepository>,
+    pub audit_repo: Arc<dyn AuditRepository>,
     pub auth_service: Arc<AuthService>,
     pub config: AppConfig,
 }
@@ -75,6 +78,7 @@ async fn main() {
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone())) as Arc<dyn UserRepository>;
     let refresh_repo =
         Arc::new(PostgresRefreshTokenRepository::new(pool.clone())) as Arc<dyn RefreshTokenRepository>;
+    let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
     let booking_service = Arc::new(BookingService::new(booking_repo.clone(), room_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
@@ -89,6 +93,7 @@ async fn main() {
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,
+        audit_repo,
         auth_service: auth_service.clone(),
         config: config.clone(),
     });
@@ -125,6 +130,7 @@ async fn main() {
         .route("/api/auth/login", post(login_handler))
         .route("/api/auth/refresh", post(refresh_handler))
         .route("/api/auth/logout", post(logout_handler))
+        .route("/api/auth/me", get(me_handler))
         .layer(GovernorLayer::new(login_rate));
 
     let app = Router::new()
@@ -137,6 +143,7 @@ async fn main() {
         .route("/api/bookings", get(list_bookings_handler).post(create_booking_handler))
         .route("/api/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
+        .route("/api/users", get(list_users_handler).post(create_user_handler))
         .route_layer(auth_layer)
         .layer(GovernorLayer::new(api_rate))
         .layer(cors)
@@ -166,6 +173,7 @@ async fn auth_middleware(
         || path == "/api/auth/login"
         || path == "/api/auth/refresh"
         || path == "/api/auth/logout"
+        || path == "/api/auth/me"
     {
         return Ok(next.run(req).await);
     }
@@ -175,9 +183,24 @@ async fn auth_middleware(
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok());
 
-    let token = match auth_header {
-        Some(value) if value.starts_with("Bearer ") => value.trim_start_matches("Bearer ").trim(),
-        _ => return Err(DomainError::Unauthorized),
+    let token = if let Some(value) = auth_header {
+        if value.starts_with("Bearer ") {
+            value.trim_start_matches("Bearer ").trim().to_string()
+        } else {
+            return Err(DomainError::Unauthorized);
+        }
+    } else {
+        let cookie_header = req
+            .headers()
+            .get(axum::http::header::COOKIE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("");
+        cookie_header
+            .split(';')
+            .map(|cookie| cookie.trim())
+            .find(|cookie| cookie.starts_with("access_token="))
+            .map(|cookie| cookie.trim_start_matches("access_token=").to_string())
+            .ok_or(DomainError::Unauthorized)?
     };
 
     let claims = crate::infrastructure::web::jwt::decode_token(token, &state.config.jwt_secret)
@@ -187,6 +210,8 @@ async fn auth_middleware(
         return Err(DomainError::Unauthorized);
     }
 
+    let mut req = req;
+    req.extensions_mut().insert(claims);
     Ok(next.run(req).await)
 }
 

@@ -1,4 +1,4 @@
-use crate::domain::models::{Booking, Guest, RefreshToken, Room, User};
+use crate::domain::models::{AuditEvent, Booking, Guest, RefreshToken, Room, User};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use uuid::Uuid;
@@ -44,6 +44,7 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_username(&self, username: &str) -> Result<Option<User>, String>;
     async fn create(&self, user: User) -> Result<User, String>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, String>;
+    async fn find_all(&self) -> Result<Vec<User>, String>;
 }
 
 #[async_trait]
@@ -52,4 +53,9 @@ pub trait RefreshTokenRepository: Send + Sync {
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String>;
     async fn revoke(&self, token_id: Uuid) -> Result<(), String>;
     async fn revoke_all_for_user(&self, user_id: Uuid) -> Result<(), String>;
+}
+
+#[async_trait]
+pub trait AuditRepository: Send + Sync {
+    async fn record(&self, event: AuditEvent) -> Result<(), String>;
 }

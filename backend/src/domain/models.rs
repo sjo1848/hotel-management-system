@@ -137,3 +137,12 @@ pub struct RefreshToken {
     pub expires_at: chrono::NaiveDateTime,
     pub revoked_at: Option<chrono::NaiveDateTime>,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct AuditEvent {
+    pub id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub action: String,
+    pub ip_address: Option<String>,
+    pub created_at: chrono::NaiveDateTime,
+}
