@@ -3,13 +3,17 @@ import client from "@/api/client";
 // Función individual
 const getAllRooms = async (startDate, endDate) => {
   try {
-    // Construimos la query string si hay fechas
-    let query = "";
     if (startDate && endDate) {
-      query = `?start_date=${startDate}&end_date=${endDate}`;
+      const response = await client.get("/rooms/available", {
+        params: {
+          start: startDate,
+          end: endDate,
+        },
+      });
+      return response.data;
     }
 
-    const response = await client.get(`/rooms${query}`);
+    const response = await client.get("/rooms");
     return response.data;
   } catch (error) {
     console.error("Error fetching rooms:", error);

@@ -2,6 +2,7 @@ import React from "react";
 import {
   LayoutDashboard,
   CalendarDays,
+  ClipboardList,
   BedDouble,
   Users,
   Settings,
@@ -48,7 +49,8 @@ const DashboardLayout = ({ children }) => {
             Operaciones
           </p>
           <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" />
-          <SidebarItem icon={CalendarDays} label="Reservas" path="/bookings" />
+          <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" />
+          <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" />
           <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" />
           <SidebarItem icon={Users} label="Huéspedes" path="/guests" />
 

@@ -1,8 +1,10 @@
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
-import BookingList from "./features/bookings/components/BookingList.jsx";
+import BookingsPage from "./features/bookings/BookingsPage.jsx";
 import RoomsPage from "./features/rooms/RoomsPage";
+import CalendarPage from "./features/schedule/CalendarPage";
+import GuestsPage from "./features/guests/GuestsPage";
 import React from "react";
 
 const Placeholder = ({ title }) => (
@@ -39,15 +41,19 @@ const router = createBrowserRouter([
       },
       {
         path: "/bookings",
-        element: <BookingList />,
+        element: <BookingsPage />,
       },
       {
         path: "/rooms",
         element: <RoomsPage />,
       },
       {
+        path: "/calendar",
+        element: <CalendarPage />,
+      },
+      {
         path: "/guests",
-        element: <Placeholder title="Huéspedes" />,
+        element: <GuestsPage />,
       },
       {
         path: "/settings",

@@ -38,8 +38,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
       const payload = {
         room_id: room.id,
         guest_name: formData.guest_name,
-        start_date: dates.from, // Vienen del buscador
-        end_date: dates.to,
+        check_in: dates.from, // Vienen del buscador
+        check_out: dates.to,
       };
 
       await createBooking(payload);
