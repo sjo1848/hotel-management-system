@@ -1,17 +1,32 @@
-import api from "../../../api/client";
+import client from "@/api/client";
 
-export const roomService = {
-  // Obtener todas las habitaciones
-  getAll: async () => {
-    const { data } = await api.get("/rooms");
-    return data;
-  },
+// Función individual
+const getAllRooms = async (startDate, endDate) => {
+  try {
+    // Construimos la query string si hay fechas
+    let query = "";
+    if (startDate && endDate) {
+      query = `?start_date=${startDate}&end_date=${endDate}`;
+    }
 
-  // Buscar disponibles (lo que hicimos en el Sprint 3)
-  getAvailable: async (start, end) => {
-    const { data } = await api.get(
-      `/rooms/available?start=${start}&end=${end}`,
-    );
-    return data;
-  },
+    const response = await client.get(`/rooms${query}`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching rooms:", error);
+    throw error;
+  }
 };
+
+const getRoomById = async (id) => {
+  const response = await client.get(`/rooms/${id}`);
+  return response.data;
+};
+
+// --- LA SOLUCIÓN ESTÁ AQUÍ ABAJO ---
+// Agrupamos todo en un objeto y lo exportamos por defecto
+const roomService = {
+  getAllRooms,
+  getRoomById,
+};
+
+export default roomService;
