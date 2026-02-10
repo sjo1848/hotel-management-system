@@ -1,17 +1,26 @@
-use crate::AppState; // Importamos el estado del main
-use axum::{extract::State, Json};
+use crate::AppState;
+use axum::{
+    extract::{Query, State},
+    Json,
+};
 use chrono::NaiveDate;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
 
-// DTO: Objeto de transferencia para recibir el JSON del cliente
-#[derive(serde::Deserialize)]
+#[derive(Deserialize)]
 pub struct CreateBookingRequest {
     pub room_id: Uuid,
     pub guest_name: String,
     pub check_in: NaiveDate,
     pub check_out: NaiveDate,
+}
+
+#[derive(Deserialize)]
+pub struct SearchParams {
+    pub start: NaiveDate,
+    pub end: NaiveDate,
 }
 
 pub async fn get_rooms_handler(State(state): State<Arc<AppState>>) -> Json<Value> {
@@ -21,11 +30,24 @@ pub async fn get_rooms_handler(State(state): State<Arc<AppState>>) -> Json<Value
     }
 }
 
+pub async fn search_rooms_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<SearchParams>,
+) -> Json<Value> {
+    match state
+        .room_repo
+        .find_available(params.start, params.end)
+        .await
+    {
+        Ok(rooms) => Json(json!(rooms)),
+        Err(e) => Json(json!({ "error": e })),
+    }
+}
+
 pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateBookingRequest>,
 ) -> Json<Value> {
-    // Llamamos al servicio de aplicación (coordinador)
     let result = state
         .booking_service
         .execute(
