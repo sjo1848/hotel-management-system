@@ -4,11 +4,11 @@ mod domain;
 mod infrastructure;
 
 use axum::{
+    extract::{DefaultBodyLimit, State},
     middleware,
     routing::{get, post},
     Router,
 };
-use axum::extract::DefaultBodyLimit;
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ use tower_http::{
 
 use crate::application::auth_service::AuthService;
 use crate::application::booking_service::BookingService;
-use crate::app_state::AppState;
+use hms_backend::app_state::AppState;
 use crate::domain::errors::DomainError;
 use crate::domain::repositories::{
     AuditRepository, BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository,
@@ -37,7 +37,7 @@ use crate::infrastructure::web::handlers::{
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
 };
 use crate::config::AppConfig;
-use tower_governor::{GovernorConfigBuilder, GovernorLayer};
+use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
 #[tokio::main]
 async fn main() {
@@ -121,7 +121,7 @@ async fn main() {
         .route("/api/auth/refresh", post(refresh_handler))
         .route("/api/auth/logout", post(logout_handler))
         .route("/api/auth/me", get(me_handler))
-        .layer(GovernorLayer::new(login_rate));
+        .layer(GovernorLayer::configured(login_rate));
 
     let app = Router::new()
         .route("/", get(root_handler))
@@ -135,7 +135,7 @@ async fn main() {
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/users", get(list_users_handler).post(create_user_handler))
         .route_layer(auth_layer)
-        .layer(GovernorLayer::new(api_rate))
+        .layer(GovernorLayer::configured(api_rate))
         .layer(cors)
         .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(TraceLayer::new_for_http())
@@ -193,7 +193,7 @@ async fn auth_middleware(
             .ok_or(DomainError::Unauthorized)?
     };
 
-    let claims = crate::infrastructure::web::jwt::decode_token(token, &state.config.jwt_secret)
+    let claims = crate::infrastructure::web::jwt::decode_token(&token, &state.config.jwt_secret)
         .map_err(|_| DomainError::Unauthorized)?;
 
     if claims.role != "admin" && claims.role != "ops" {

@@ -283,7 +283,7 @@ pub async fn refresh_handler(
         .rotate_refresh_token(&refresh_token)
         .await?;
 
-    let user = state
+    let user: crate::domain::models::User = state
         .user_repo
         .find_by_id(user_id)
         .await
