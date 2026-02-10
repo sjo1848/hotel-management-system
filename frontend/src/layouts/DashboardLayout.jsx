@@ -33,12 +33,8 @@ const DashboardLayout = ({ children }) => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    const refreshToken = localStorage.getItem("hms_refresh");
-    if (refreshToken) {
-      logout(refreshToken).catch(() => null);
-    }
+    logout().catch(() => null);
     localStorage.removeItem("hms_token");
-    localStorage.removeItem("hms_refresh");
     navigate("/login", { replace: true });
   };
 

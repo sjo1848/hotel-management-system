@@ -1,0 +1,49 @@
+name: backend-ci
+
+on:
+  push:
+    paths:
+      - "backend/**"
+      - "scripts/ci-backend.sh"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    paths:
+      - "backend/**"
+      - "scripts/ci-backend.sh"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: password123
+          POSTGRES_DB: hms_core
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U admin -d hms_core"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://admin:password123@localhost:5432/hms_core
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Run CI
+        run: ./scripts/ci-backend.sh

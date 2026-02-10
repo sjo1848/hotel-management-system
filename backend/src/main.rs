@@ -104,7 +104,8 @@ async fn main() {
     let cors = CorsLayer::new()
         .allow_origin(cors_origin)
         .allow_methods(Any)
-        .allow_headers(Any);
+        .allow_headers(Any)
+        .allow_credentials(true);
 
     let auth_layer = middleware::from_fn_with_state(shared_state.clone(), auth_middleware);
 

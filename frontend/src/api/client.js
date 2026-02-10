@@ -5,6 +5,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 const authApi = axios.create({
@@ -12,6 +13,7 @@ const authApi = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -42,10 +44,8 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken = localStorage.getItem("hms_refresh");
-      if (!refreshToken) {
+      if (!localStorage.getItem("hms_token")) {
         localStorage.removeItem("hms_token");
-        localStorage.removeItem("hms_refresh");
         window.location.href = "/login";
         return Promise.reject(error);
       }
@@ -63,18 +63,14 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await authApi.post("/auth/refresh", {
-          refresh_token: refreshToken,
-        });
+        const { data } = await authApi.post("/auth/refresh");
         localStorage.setItem("hms_token", data.access_token);
-        localStorage.setItem("hms_refresh", data.refresh_token);
         resolveQueue(null, data.access_token);
         originalRequest.headers.Authorization = `Bearer ${data.access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
         resolveQueue(refreshError, null);
         localStorage.removeItem("hms_token");
-        localStorage.removeItem("hms_refresh");
         window.location.href = "/login";
         return Promise.reject(refreshError);
       } finally {

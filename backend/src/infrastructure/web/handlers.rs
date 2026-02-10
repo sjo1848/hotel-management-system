@@ -2,7 +2,7 @@ use crate::domain::errors::DomainError;
 use crate::AppState;
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -81,13 +81,12 @@ pub struct LoginRequest {
 
 #[derive(Deserialize)]
 pub struct RefreshRequest {
-    pub refresh_token: String,
+    pub refresh_token: Option<String>,
 }
 
 #[derive(serde::Serialize)]
 pub struct LoginResponse {
     pub access_token: String,
-    pub refresh_token: String,
     pub expires_in: usize,
     pub role: String,
 }
@@ -214,7 +213,7 @@ pub async fn create_guest_handler(
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginRequest>,
-) -> Result<Json<Value>, DomainError> {
+) -> Result<Response, DomainError> {
     if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
         return Err(DomainError::InvalidInput(
             "Usuario y contraseña son obligatorios".to_string(),
@@ -239,20 +238,31 @@ pub async fn login_handler(
             .map_err(DomainError::InfrastructureError)?;
 
     let (refresh_token, _) = state.auth_service.issue_refresh_token(user.id).await?;
+    let cookie = build_refresh_cookie(&refresh_token, &state.config);
 
-    Ok(Json(json!(LoginResponse {
-        access_token,
-        refresh_token,
-        expires_in: state.auth_service.access_ttl_seconds(),
-        role: user.role,
-    })))
+    Ok((
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(json!(LoginResponse {
+            access_token,
+            expires_in: state.auth_service.access_ttl_seconds(),
+            role: user.role,
+        })),
+    )
+        .into_response())
 }
 
 pub async fn refresh_handler(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<RefreshRequest>,
-) -> Result<Json<Value>, DomainError> {
-    if payload.refresh_token.trim().is_empty() {
+    headers: HeaderMap,
+    payload: Option<Json<RefreshRequest>>,
+) -> Result<Response, DomainError> {
+    let refresh_token = payload
+        .and_then(|value| value.0.refresh_token)
+        .or_else(|| extract_refresh_cookie(&headers))
+        .unwrap_or_default();
+
+    if refresh_token.trim().is_empty() {
         return Err(DomainError::InvalidInput(
             "Refresh token inválido".to_string(),
         ));
@@ -260,7 +270,7 @@ pub async fn refresh_handler(
 
     let (user_id, new_refresh, _) = state
         .auth_service
-        .rotate_refresh_token(&payload.refresh_token)
+        .rotate_refresh_token(&refresh_token)
         .await?;
 
     let user = state
@@ -281,19 +291,31 @@ pub async fn refresh_handler(
         crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
             .map_err(DomainError::InfrastructureError)?;
 
-    Ok(Json(json!(LoginResponse {
-        access_token,
-        refresh_token: new_refresh,
-        expires_in: state.auth_service.access_ttl_seconds(),
-        role: user.role,
-    })))
+    let cookie = build_refresh_cookie(&new_refresh, &state.config);
+
+    Ok((
+        StatusCode::OK,
+        [(header::SET_COOKIE, cookie)],
+        Json(json!(LoginResponse {
+            access_token,
+            expires_in: state.auth_service.access_ttl_seconds(),
+            role: user.role,
+        })),
+    )
+        .into_response())
 }
 
 pub async fn logout_handler(
     State(state): State<Arc<AppState>>,
-    Json(payload): Json<RefreshRequest>,
-) -> Result<Json<Value>, DomainError> {
-    if payload.refresh_token.trim().is_empty() {
+    headers: HeaderMap,
+    payload: Option<Json<RefreshRequest>>,
+) -> Result<Response, DomainError> {
+    let refresh_token = payload
+        .and_then(|value| value.0.refresh_token)
+        .or_else(|| extract_refresh_cookie(&headers))
+        .unwrap_or_default();
+
+    if refresh_token.trim().is_empty() {
         return Err(DomainError::InvalidInput(
             "Refresh token inválido".to_string(),
         ));
@@ -301,10 +323,55 @@ pub async fn logout_handler(
 
     let user_id = state
         .auth_service
-        .revoke_refresh_token(&payload.refresh_token)
+        .revoke_refresh_token(&refresh_token)
         .await?;
     state.auth_service.revoke_user_tokens(user_id).await?;
-    Ok(Json(json!({ "status": "ok" })))
+    let expired_cookie = clear_refresh_cookie(&state.config);
+    Ok((
+        StatusCode::OK,
+        [(header::SET_COOKIE, expired_cookie)],
+        Json(json!({ "status": "ok" })),
+    )
+        .into_response())
+}
+
+fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|cookies| {
+            cookies
+                .split(';')
+                .map(|cookie| cookie.trim())
+                .find(|cookie| cookie.starts_with("refresh_token="))
+                .map(|cookie| cookie.trim_start_matches("refresh_token=").to_string())
+        })
+}
+
+fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
+    let mut cookie = format!(
+        "refresh_token={}; HttpOnly; Path=/; SameSite={}; Max-Age={}",
+        token,
+        config.cookie_samesite,
+        config.refresh_ttl_days * 24 * 60 * 60
+    );
+
+    if config.cookie_secure {
+        cookie.push_str("; Secure");
+    }
+
+    cookie
+}
+
+fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
+    let mut cookie = format!(
+        "refresh_token=; HttpOnly; Path=/; SameSite={}; Max-Age=0",
+        config.cookie_samesite
+    );
+    if config.cookie_secure {
+        cookie.push_str("; Secure");
+    }
+    cookie
 }
 
 pub async fn health_check() -> Json<Value> {

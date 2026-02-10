@@ -42,6 +42,8 @@ services:
       REFRESH_TTL_DAYS: "7"
       RATE_LIMIT_PER_MINUTE: "60"
       LOGIN_LIMIT_PER_MINUTE: "10"
+      COOKIE_SECURE: "false"
+      COOKIE_SAMESITE: "Lax"
     depends_on:
       - db
     networks:

@@ -13,6 +13,8 @@ pub struct AppConfig {
     pub refresh_ttl_days: i64,
     pub rate_limit_per_minute: u32,
     pub login_limit_per_minute: u32,
+    pub cookie_secure: bool,
+    pub cookie_samesite: String,
 }
 
 impl AppConfig {
@@ -45,6 +47,12 @@ impl AppConfig {
             .ok()
             .and_then(|value| value.parse::<u32>().ok())
             .unwrap_or(10);
+        let cookie_secure = env::var("COOKIE_SECURE")
+            .unwrap_or_else(|_| "false".to_string())
+            .to_lowercase()
+            == "true";
+        let cookie_samesite =
+            env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
 
         Self {
             database_url,
@@ -58,6 +66,8 @@ impl AppConfig {
             refresh_ttl_days,
             rate_limit_per_minute,
             login_limit_per_minute,
+            cookie_secure,
+            cookie_samesite,
         }
     }
 }
