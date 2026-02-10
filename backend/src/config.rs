@@ -19,6 +19,8 @@ pub struct AppConfig {
 
 impl AppConfig {
     pub fn from_env() -> Self {
+        let app_env = env::var("APP_ENV").unwrap_or_else(|_| "dev".to_string());
+        let is_prod = app_env.to_lowercase() == "prod";
         let database_url =
             env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password123@db:5432/hms_core".to_string());
         let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
@@ -53,6 +55,18 @@ impl AppConfig {
             == "true";
         let cookie_samesite =
             env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
+
+        if is_prod {
+            if jwt_secret == "dev-secret-change-me" {
+                panic!("JWT_SECRET must be set to a strong value in production.");
+            }
+            if admin_password == "admin123" {
+                panic!("ADMIN_PASSWORD must be set to a strong value in production.");
+            }
+            if !cookie_secure {
+                panic!("COOKIE_SECURE must be true in production.");
+            }
+        }
 
         Self {
             database_url,
