@@ -10,6 +10,7 @@ use chrono::NaiveDate;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 impl IntoResponse for DomainError {
@@ -32,6 +33,8 @@ impl IntoResponse for DomainError {
                 StatusCode::NOT_FOUND,
                 "La reserva solicitada no existe".to_string(),
             ),
+            DomainError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, msg),
+            DomainError::Unauthorized => (StatusCode::UNAUTHORIZED, "No autorizado".to_string()),
             DomainError::InfrastructureError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 
@@ -71,6 +74,17 @@ pub struct CreateGuestRequest {
     pub phone: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct LoginRequest {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(serde::Serialize)]
+pub struct LoginResponse {
+    pub token: String,
+}
+
 pub async fn get_rooms_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
@@ -98,6 +112,12 @@ pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    if payload.guest_name.trim().is_empty() {
+        return Err(DomainError::InvalidInput(
+            "El nombre del huésped es obligatorio".to_string(),
+        ));
+    }
+
     // Especificamos el tipo para evitar el error de "never type fallback"
     let booking = state
         .booking_service
@@ -129,7 +149,7 @@ pub async fn update_booking_handler(
     Json(payload): Json<UpdateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let status = payload.status.as_deref().map(|value| match value {
-        "CANCELLED" => crate::domain::models::BookingStatus::Cancelled,
+        "CANCELLED" | "Cancelled" => crate::domain::models::BookingStatus::Cancelled,
         _ => crate::domain::models::BookingStatus::Confirmed,
     });
 
@@ -162,6 +182,12 @@ pub async fn create_guest_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateGuestRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    if payload.full_name.trim().is_empty() || payload.email.trim().is_empty() {
+        return Err(DomainError::InvalidInput(
+            "Nombre completo y email son obligatorios".to_string(),
+        ));
+    }
+
     let guest = crate::domain::models::Guest {
         id: Uuid::new_v4(),
         full_name: payload.full_name,
@@ -178,8 +204,46 @@ pub async fn create_guest_handler(
     Ok(Json(json!(created)))
 }
 
+pub async fn login_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<LoginRequest>,
+) -> Result<Json<Value>, DomainError> {
+    if payload.username != state.config.admin_user || payload.password != state.config.admin_password {
+        return Err(DomainError::Unauthorized);
+    }
+
+    let exp = SystemTime::now()
+        .checked_add(Duration::from_secs(60 * 60 * 8))
+        .unwrap()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as usize;
+
+    let claims = crate::infrastructure::web::jwt::Claims {
+        sub: payload.username,
+        role: state.config.admin_role.clone(),
+        exp,
+    };
+
+    let token = crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
+        .map_err(|e| DomainError::InfrastructureError(e))?;
+
+    Ok(Json(json!(LoginResponse { token })))
+}
+
 pub async fn health_check() -> Json<Value> {
     Json(json!({ "status": "operational" }))
+}
+
+pub async fn readiness_check(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    state
+        .room_repo
+        .find_all()
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+    Ok(Json(json!({ "status": "ready" })))
 }
 
 pub async fn root_handler() -> Json<Value> {

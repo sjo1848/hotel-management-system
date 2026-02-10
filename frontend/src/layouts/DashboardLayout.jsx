@@ -10,7 +10,7 @@ import {
   Bell,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const SidebarItem = ({ icon: Icon, label, path }) => {
   const location = useLocation();
@@ -29,6 +29,13 @@ const SidebarItem = ({ icon: Icon, label, path }) => {
 };
 
 const DashboardLayout = ({ children }) => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("hms_token");
+    navigate("/login", { replace: true });
+  };
+
   return (
     <div className="flex h-screen app-shell overflow-hidden font-sans">
       {/* SIDEBAR */}
@@ -67,6 +74,7 @@ const DashboardLayout = ({ children }) => {
           <Button
             variant="ghost"
             className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+            onClick={handleLogout}
           >
             <LogOut className="w-4 h-4 mr-2" />
             Cerrar Sesión

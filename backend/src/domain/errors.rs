@@ -6,5 +6,7 @@ pub enum DomainError {
     RoomNotAvailable,
     BookingNotFound,
     InvalidBookingDates,
+    InvalidInput(String),
+    Unauthorized,
     InfrastructureError(String),
 }

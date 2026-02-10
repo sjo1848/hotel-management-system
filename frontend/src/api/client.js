@@ -7,6 +7,14 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("hms_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Interceptor para manejar los Errores de Dominio (Sprint 5) de forma global
 api.interceptors.response.use(
   (response) => response,

@@ -60,6 +60,59 @@ impl Booking {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    #[test]
+    fn booking_validates_dates() {
+        let booking = Booking {
+            id: Uuid::new_v4(),
+            room_id: Uuid::new_v4(),
+            guest_name: "Test".to_string(),
+            check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
+            check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),
+            total_price_cents: 0,
+            status: BookingStatus::Confirmed,
+        };
+
+        assert!(booking.is_valid());
+    }
+
+    #[test]
+    fn booking_rejects_invalid_dates() {
+        let booking = Booking {
+            id: Uuid::new_v4(),
+            room_id: Uuid::new_v4(),
+            guest_name: "Test".to_string(),
+            check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
+            check_out: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
+            total_price_cents: 0,
+            status: BookingStatus::Confirmed,
+        };
+
+        assert!(!booking.is_valid());
+    }
+
+    #[test]
+    fn booking_overlap_detection() {
+        let booking = Booking {
+            id: Uuid::new_v4(),
+            room_id: Uuid::new_v4(),
+            guest_name: "Test".to_string(),
+            check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
+            check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),
+            total_price_cents: 0,
+            status: BookingStatus::Confirmed,
+        };
+
+        let start = NaiveDate::from_ymd_opt(2025, 1, 11).unwrap();
+        let end = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
+        assert!(booking.overlaps_with(start, end));
+    }
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Guest {
     pub id: Uuid,

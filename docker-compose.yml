@@ -14,7 +14,6 @@ services:
       - "5432:5432"
     volumes:
       - hms_pgdata:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - hms-net
 
@@ -33,6 +32,12 @@ services:
     environment:
       DATABASE_URL: postgres://admin:password123@db:5432/hms_core
       RUST_LOG: debug
+      JWT_SECRET: change-me-dev
+      AUTH_REQUIRED: "false"
+      CORS_ORIGIN: http://localhost:5173
+      ADMIN_USER: admin
+      ADMIN_PASSWORD: admin123
+      ADMIN_ROLE: admin
     depends_on:
       - db
     networks:

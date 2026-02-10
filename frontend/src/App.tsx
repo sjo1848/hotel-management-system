@@ -1,10 +1,11 @@
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
 import BookingsPage from "./features/bookings/BookingsPage.jsx";
 import RoomsPage from "./features/rooms/RoomsPage";
 import CalendarPage from "./features/schedule/CalendarPage";
 import GuestsPage from "./features/guests/GuestsPage";
+import LoginPage from "./features/auth/LoginPage";
 import React from "react";
 
 const Placeholder = ({ title }) => (
@@ -31,9 +32,25 @@ const AppLayout = () => (
   </DashboardLayout>
 );
 
+const RequireAuth = ({ children }) => {
+  const token = localStorage.getItem("hms_token");
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 const router = createBrowserRouter([
   {
-    element: <AppLayout />,
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    element: (
+      <RequireAuth>
+        <AppLayout />
+      </RequireAuth>
+    ),
     children: [
       {
         path: "/",
