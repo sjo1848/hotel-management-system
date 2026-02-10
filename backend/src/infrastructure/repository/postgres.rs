@@ -2,7 +2,7 @@ use crate::domain::models::{Room, RoomStatus};
 use crate::domain::repositories::RoomRepository;
 use async_trait::async_trait;
 use chrono::NaiveDate;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
 pub struct PostgresRoomRepository {
@@ -18,52 +18,59 @@ impl PostgresRoomRepository {
 #[async_trait]
 impl RoomRepository for PostgresRoomRepository {
     async fn find_all(&self) -> Result<Vec<Room>, String> {
-        let records =
-            sqlx::query!("SELECT id, room_number, room_type, status, price_cents FROM rooms")
-                .fetch_all(&self.pool)
-                .await
-                .map_err(|e| e.to_string())?;
+        let records = sqlx::query(
+            "SELECT id, room_number, room_type, status, price_cents FROM rooms",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
-            .map(|rec| Room {
-                id: rec.id,
-                room_number: rec.room_number,
-                room_type: rec.room_type,
-                status: match rec.status.as_deref() {
-                    Some("AVAILABLE") => RoomStatus::Available,
-                    Some("OCCUPIED") => RoomStatus::Occupied,
-                    Some("DIRTY") => RoomStatus::Dirty,
-                    _ => RoomStatus::Maintenance,
-                },
-                price_cents: rec.price_cents,
+            .map(|rec| {
+                let status: Option<String> = rec.try_get("status").ok();
+                Room {
+                    id: rec.try_get("id").unwrap(),
+                    room_number: rec.try_get("room_number").unwrap(),
+                    room_type: rec.try_get("room_type").unwrap(),
+                    status: match status.as_deref() {
+                        Some("AVAILABLE") => RoomStatus::Available,
+                        Some("OCCUPIED") => RoomStatus::Occupied,
+                        Some("DIRTY") => RoomStatus::Dirty,
+                        _ => RoomStatus::Maintenance,
+                    },
+                    price_cents: rec.try_get("price_cents").unwrap(),
+                }
             })
             .collect())
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Room>, String> {
-        let record = sqlx::query!(
+        let record = sqlx::query(
             "SELECT id, room_number, room_type, status, price_cents FROM rooms WHERE id = $1",
-            id
         )
+        .bind(id)
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
 
-        Ok(record.map(|rec| Room {
-            id: rec.id,
-            room_number: rec.room_number,
-            room_type: rec.room_type,
-            status: match rec.status.as_deref() {
-                Some("AVAILABLE") => RoomStatus::Available,
-                _ => RoomStatus::Maintenance,
-            },
-            price_cents: rec.price_cents,
+        Ok(record.map(|rec| {
+            let status: Option<String> = rec.try_get("status").ok();
+            Room {
+                id: rec.try_get("id").unwrap(),
+                room_number: rec.try_get("room_number").unwrap(),
+                room_type: rec.try_get("room_type").unwrap(),
+                status: match status.as_deref() {
+                    Some("AVAILABLE") => RoomStatus::Available,
+                    _ => RoomStatus::Maintenance,
+                },
+                price_cents: rec.try_get("price_cents").unwrap(),
+            }
         }))
     }
 
     async fn find_available(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
-        let records = sqlx::query!(
+        let records = sqlx::query(
             r#"
             SELECT id, room_number, room_type, status, price_cents
             FROM rooms
@@ -73,9 +80,9 @@ impl RoomRepository for PostgresRoomRepository {
             )
             AND status = 'AVAILABLE'
             "#,
-            start,
-            end
         )
+        .bind(start)
+        .bind(end)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -83,11 +90,11 @@ impl RoomRepository for PostgresRoomRepository {
         Ok(records
             .into_iter()
             .map(|rec| Room {
-                id: rec.id,
-                room_number: rec.room_number,
-                room_type: rec.room_type,
+                id: rec.try_get("id").unwrap(),
+                room_number: rec.try_get("room_number").unwrap(),
+                room_type: rec.try_get("room_type").unwrap(),
                 status: RoomStatus::Available,
-                price_cents: rec.price_cents,
+                price_cents: rec.try_get("price_cents").unwrap(),
             })
             .collect())
     }
