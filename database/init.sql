@@ -25,11 +25,26 @@ CREATE TABLE IF NOT EXISTS bookings (
     guest_name VARCHAR(100) NOT NULL,
     check_in DATE NOT NULL,
     check_out DATE NOT NULL,
+    total_price_cents BIGINT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'CONFIRMED',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
     -- Validación para que el check_out sea después del check_in
     CONSTRAINT valid_dates CHECK (check_out > check_in)
 );
+
+-- Tabla de Huéspedes
+CREATE TABLE IF NOT EXISTS guests (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    phone VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Backfill: columnas nuevas si ya existe la tabla
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_price_cents BIGINT DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'CONFIRMED';
 
 -- Una reserva de prueba para la habitación 101
 INSERT INTO bookings (room_id, guest_name, check_in, check_out)

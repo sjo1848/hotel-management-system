@@ -20,6 +20,12 @@ pub struct Room {
 }
 
 #[derive(Debug, Clone, Serialize)]
+pub enum BookingStatus {
+    Confirmed,
+    Cancelled,
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct Booking {
     pub id: Uuid,
     pub room_id: Uuid,
@@ -27,6 +33,7 @@ pub struct Booking {
     pub check_in: NaiveDate,
     pub check_out: NaiveDate,
     pub total_price_cents: i64,
+    pub status: BookingStatus,
 }
 
 impl Booking {
@@ -51,4 +58,12 @@ impl Booking {
     pub fn is_valid(&self) -> bool {
         self.check_out > self.check_in
     }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct Guest {
+    pub id: Uuid,
+    pub full_name: String,
+    pub email: String,
+    pub phone: Option<String>,
 }

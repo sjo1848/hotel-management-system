@@ -1,7 +1,7 @@
 use crate::domain::errors::DomainError;
 use crate::AppState;
 use axum::{
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -28,6 +28,10 @@ impl IntoResponse for DomainError {
                 StatusCode::BAD_REQUEST,
                 "Las fechas de reserva no son válidas".to_string(),
             ),
+            DomainError::BookingNotFound => (
+                StatusCode::NOT_FOUND,
+                "La reserva solicitada no existe".to_string(),
+            ),
             DomainError::InfrastructureError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 
@@ -40,7 +44,9 @@ impl IntoResponse for DomainError {
 pub struct CreateBookingRequest {
     pub room_id: Uuid,
     pub guest_name: String,
+    #[serde(alias = "start_date")]
     pub check_in: NaiveDate,
+    #[serde(alias = "end_date")]
     pub check_out: NaiveDate,
 }
 
@@ -48,6 +54,21 @@ pub struct CreateBookingRequest {
 pub struct SearchParams {
     pub start: NaiveDate,
     pub end: NaiveDate,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateBookingRequest {
+    pub guest_name: Option<String>,
+    pub check_in: Option<NaiveDate>,
+    pub check_out: Option<NaiveDate>,
+    pub status: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct CreateGuestRequest {
+    pub full_name: String,
+    pub email: String,
+    pub phone: Option<String>,
 }
 
 pub async fn get_rooms_handler(
@@ -89,6 +110,72 @@ pub async fn create_booking_handler(
         .await?;
 
     Ok(Json(json!(booking)))
+}
+
+pub async fn list_bookings_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let bookings = state
+        .booking_service
+        .list_bookings()
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+    Ok(Json(json!(bookings)))
+}
+
+pub async fn update_booking_handler(
+    State(state): State<Arc<AppState>>,
+    Path(booking_id): Path<Uuid>,
+    Json(payload): Json<UpdateBookingRequest>,
+) -> Result<Json<Value>, DomainError> {
+    let status = payload.status.as_deref().map(|value| match value {
+        "CANCELLED" => crate::domain::models::BookingStatus::Cancelled,
+        _ => crate::domain::models::BookingStatus::Confirmed,
+    });
+
+    let booking = state
+        .booking_service
+        .update_booking(
+            booking_id,
+            payload.guest_name,
+            payload.check_in,
+            payload.check_out,
+            status,
+        )
+        .await?;
+
+    Ok(Json(json!(booking)))
+}
+
+pub async fn list_guests_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let guests = state
+        .guest_repo
+        .find_all()
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+    Ok(Json(json!(guests)))
+}
+
+pub async fn create_guest_handler(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreateGuestRequest>,
+) -> Result<Json<Value>, DomainError> {
+    let guest = crate::domain::models::Guest {
+        id: Uuid::new_v4(),
+        full_name: payload.full_name,
+        email: payload.email,
+        phone: payload.phone,
+    };
+
+    let created = state
+        .guest_repo
+        .create(guest)
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+
+    Ok(Json(json!(created)))
 }
 
 pub async fn health_check() -> Json<Value> {

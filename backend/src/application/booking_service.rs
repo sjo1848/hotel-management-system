@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::Booking;
+use crate::domain::models::{Booking, BookingStatus};
 use crate::domain::repositories::{BookingRepository, RoomRepository};
 use chrono::NaiveDate;
 use std::sync::Arc;
@@ -52,6 +52,7 @@ impl BookingService {
             check_in,
             check_out,
             total_price_cents: 0,
+            status: BookingStatus::Confirmed,
         };
 
         if !new_booking.is_valid() {
@@ -64,5 +65,74 @@ impl BookingService {
             .save(new_booking)
             .await
             .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn update_booking(
+        &self,
+        booking_id: Uuid,
+        guest_name: Option<String>,
+        check_in: Option<NaiveDate>,
+        check_out: Option<NaiveDate>,
+        status: Option<BookingStatus>,
+    ) -> Result<Booking, DomainError> {
+        let mut booking = self
+            .booking_repo
+            .find_by_id(booking_id)
+            .await
+            .map_err(DomainError::InfrastructureError)?
+            .ok_or(DomainError::BookingNotFound)?;
+
+        if let Some(name) = guest_name {
+            booking.guest_name = name;
+        }
+
+        if let Some(new_check_in) = check_in {
+            booking.check_in = new_check_in;
+        }
+
+        if let Some(new_check_out) = check_out {
+            booking.check_out = new_check_out;
+        }
+
+        if let Some(new_status) = status {
+            booking.status = new_status;
+        }
+
+        if !booking.is_valid() {
+            return Err(DomainError::InvalidBookingDates);
+        }
+
+        let is_available = self
+            .booking_repo
+            .check_availability_excluding(
+                booking.id,
+                booking.room_id,
+                booking.check_in,
+                booking.check_out,
+            )
+            .await
+            .map_err(DomainError::InfrastructureError)?;
+
+        if !is_available {
+            return Err(DomainError::RoomNotAvailable);
+        }
+
+        let room = self
+            .room_repo
+            .find_by_id(booking.room_id)
+            .await
+            .map_err(DomainError::InfrastructureError)?
+            .ok_or(DomainError::RoomNotFound)?;
+
+        booking.calculate_total_price(room.price_cents);
+
+        self.booking_repo
+            .update(booking)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn list_bookings(&self) -> Result<Vec<Booking>, String> {
+        self.booking_repo.find_all().await
     }
 }
