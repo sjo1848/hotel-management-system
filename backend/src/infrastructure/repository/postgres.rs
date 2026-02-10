@@ -17,6 +17,27 @@ impl PostgresRoomRepository {
 
 #[async_trait]
 impl RoomRepository for PostgresRoomRepository {
+    async fn create(&self, room: Room) -> Result<Room, String> {
+        sqlx::query(
+            "INSERT INTO rooms (id, room_number, room_type, status, price_cents) VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(room.id)
+        .bind(&room.room_number)
+        .bind(&room.room_type)
+        .bind(match room.status {
+            RoomStatus::Available => "AVAILABLE",
+            RoomStatus::Occupied => "OCCUPIED",
+            RoomStatus::Dirty => "DIRTY",
+            RoomStatus::Maintenance => "MAINTENANCE",
+        })
+        .bind(room.price_cents)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(room)
+    }
+
     async fn find_all(&self) -> Result<Vec<Room>, String> {
         let records = sqlx::query(
             "SELECT id, room_number, room_type, status, price_cents FROM rooms",

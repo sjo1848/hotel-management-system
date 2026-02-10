@@ -5,6 +5,7 @@ use uuid::Uuid;
 
 #[async_trait]
 pub trait RoomRepository: Send + Sync {
+    async fn create(&self, room: Room) -> Result<Room, String>;
     async fn find_all(&self) -> Result<Vec<Room>, String>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Room>, String>;
     // Nuevo puerto para búsqueda por fechas

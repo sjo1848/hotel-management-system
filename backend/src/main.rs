@@ -23,6 +23,7 @@ use hms_backend::application::auth_service::AuthService;
 use hms_backend::application::booking_service::BookingService;
 use hms_backend::config::AppConfig;
 use hms_backend::domain::errors::DomainError;
+use hms_backend::domain::models::{Room, RoomStatus};
 use hms_backend::domain::repositories::{
     AuditRepository, BookingRepository, GuestRepository, RefreshTokenRepository, RoomRepository,
     UserRepository,
@@ -80,7 +81,7 @@ async fn main() {
     ));
 
     let shared_state = Arc::new(AppState {
-        room_repo,
+        room_repo: room_repo.clone(),
         booking_service,
         guest_repo,
         user_repo: user_repo.clone(),
@@ -91,6 +92,7 @@ async fn main() {
     });
 
     bootstrap_admin_user(&config, user_repo.clone()).await;
+    seed_rooms_if_empty(room_repo.clone()).await;
 
     let cors_origins = parse_cors_origins(&config.cors_origin);
     let cors_origin = if cors_origins.is_empty() {
@@ -334,4 +336,38 @@ fn parse_cors_origins(raw: &str) -> Vec<HeaderValue> {
         .filter(|value| !value.is_empty())
         .filter_map(|value| HeaderValue::from_str(value).ok())
         .collect()
+}
+
+async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
+    if let Ok(rooms) = room_repo.find_all().await {
+        if !rooms.is_empty() {
+            println!("ℹ️  Habitaciones ya existen, saltando seed.");
+            return;
+        }
+    }
+
+    println!("🌱 Seeding initial rooms...");
+    let rooms = vec![
+        ("101", "SINGLE", 5000),
+        ("102", "SINGLE", 5000),
+        ("103", "DOUBLE", 8000),
+        ("104", "DOUBLE", 8000),
+        ("201", "SUITE", 15000),
+        ("202", "SUITE", 15000),
+        ("301", "DELUXE", 25000),
+    ];
+
+    for (num, rtype, price) in rooms {
+        let room = Room {
+            id: Uuid::new_v4(),
+            room_number: num.to_string(),
+            room_type: rtype.to_string(),
+            status: RoomStatus::Available,
+            price_cents: price,
+        };
+        if let Err(e) = room_repo.create(room).await {
+            eprintln!("🚨 Error creating seed room {}: {}", num, e);
+        }
+    }
+    println!("✅ Seed complete.");
 }
