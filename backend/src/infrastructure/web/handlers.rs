@@ -352,7 +352,7 @@ pub async fn me_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
     let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
-    let user = state
+    let user: crate::domain::models::User = state
         .user_repo
         .find_by_id(user_id)
         .await
@@ -377,7 +377,7 @@ pub async fn list_users_handler(
         return Err(DomainError::Unauthorized);
     }
 
-    let users = state
+    let users: Vec<crate::domain::models::User> = state
         .user_repo
         .find_all()
         .await
@@ -414,7 +414,7 @@ pub async fn create_user_handler(
         role: payload.role,
     };
 
-    let created = state
+    let created: crate::domain::models::User = state
         .user_repo
         .create(user)
         .await
@@ -514,7 +514,7 @@ pub async fn health_check() -> Json<Value> {
 pub async fn readiness_check(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    state
+    let _: Vec<crate::domain::models::Room> = state
         .room_repo
         .find_all()
         .await
