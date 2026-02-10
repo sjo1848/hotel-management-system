@@ -80,6 +80,7 @@ Archivos: `backend/src/infrastructure/web/handlers.rs`, middleware.
 #### Ticket S2-2: Versionado `/api/v1`
 Estimación: S
 Descripción: añadir prefijo de versión sin romper rutas actuales.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. `/api/v1/*` funciona igual que `/api/*`.
 2. Frontend migrado a `/api/v1`.
@@ -88,6 +89,7 @@ Archivos: `backend/src/main.rs`, `frontend/src/api/client.ts`
 #### Ticket S2-3: OpenAPI inicial
 Estimación: M
 Descripción: OpenAPI v1 con auth, rooms, bookings, guests, users.
+Cambio realizado: ✅ Completado (2026-02-10)
 Criterios de aceptación:
 1. Archivo generado y validado.
 2. Incluye modelos y errores estándar.
