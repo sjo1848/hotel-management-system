@@ -7,10 +7,12 @@ use axum::{
     Extension, Json,
 };
 use chrono::NaiveDate;
+use rand::RngCore;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::sync::Arc;
 use uuid::Uuid;
+use base64::Engine;
 
 impl IntoResponse for DomainError {
     fn into_response(self) -> Response {
@@ -241,6 +243,8 @@ pub async fn login_handler(
         state.auth_service.issue_refresh_token(user.id).await?;
     let refresh_cookie = build_refresh_cookie(&refresh_token, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
+    let csrf_token = generate_csrf_token();
+    let csrf_cookie = build_csrf_cookie(&csrf_token, &state.config);
 
     record_audit(
         &state,
@@ -252,7 +256,11 @@ pub async fn login_handler(
 
     Ok((
         StatusCode::OK,
-        [(header::SET_COOKIE, refresh_cookie), (header::SET_COOKIE, access_cookie)],
+        [
+            (header::SET_COOKIE, refresh_cookie),
+            (header::SET_COOKIE, access_cookie),
+            (header::SET_COOKIE, csrf_cookie),
+        ],
         Json(json!(LoginResponse {
             access_token,
             expires_in: state.auth_service.access_ttl_seconds(),
@@ -267,6 +275,10 @@ pub async fn refresh_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
+    if !csrf_valid(&headers) {
+        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
+    }
+
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
@@ -303,10 +315,16 @@ pub async fn refresh_handler(
 
     let refresh_cookie = build_refresh_cookie(&new_refresh, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
+    let csrf_token = generate_csrf_token();
+    let csrf_cookie = build_csrf_cookie(&csrf_token, &state.config);
 
     Ok((
         StatusCode::OK,
-        [(header::SET_COOKIE, refresh_cookie), (header::SET_COOKIE, access_cookie)],
+        [
+            (header::SET_COOKIE, refresh_cookie),
+            (header::SET_COOKIE, access_cookie),
+            (header::SET_COOKIE, csrf_cookie),
+        ],
         Json(json!(LoginResponse {
             access_token,
             expires_in: state.auth_service.access_ttl_seconds(),
@@ -321,6 +339,10 @@ pub async fn logout_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
+    if !csrf_valid(&headers) {
+        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
+    }
+
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
@@ -339,10 +361,15 @@ pub async fn logout_handler(
     state.auth_service.revoke_user_tokens(user_id).await?;
     let expired_cookie = clear_refresh_cookie(&state.config);
     let expired_access = clear_access_cookie(&state.config);
+    let expired_csrf = clear_csrf_cookie(&state.config);
     record_audit(&state, Some(user_id), "auth.logout", None).await;
     Ok((
         StatusCode::OK,
-        [(header::SET_COOKIE, expired_cookie), (header::SET_COOKIE, expired_access)],
+        [
+            (header::SET_COOKIE, expired_cookie),
+            (header::SET_COOKIE, expired_access),
+            (header::SET_COOKIE, expired_csrf),
+        ],
         Json(json!({ "status": "ok" })),
     )
         .into_response())
@@ -439,6 +466,29 @@ fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
         })
 }
 
+fn csrf_valid(headers: &HeaderMap) -> bool {
+    let header_token = headers
+        .get("x-csrf-token")
+        .and_then(|value| value.to_str().ok())
+        .map(|value| value.trim().to_string());
+
+    let cookie_token = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|cookies| {
+            cookies
+                .split(';')
+                .map(|cookie| cookie.trim())
+                .find(|cookie| cookie.starts_with("csrf_token="))
+                .map(|cookie| cookie.trim_start_matches("csrf_token=").to_string())
+        });
+
+    match (header_token, cookie_token) {
+        (Some(header_token), Some(cookie_token)) => header_token == cookie_token,
+        _ => false,
+    }
+}
+
 fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
     let mut cookie = format!(
         "refresh_token={}; HttpOnly; Path=/; SameSite={}; Max-Age={}",
@@ -483,6 +533,36 @@ fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> String
 fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
     let mut cookie = format!(
         "access_token=; HttpOnly; Path=/; SameSite={}; Max-Age=0",
+        config.cookie_samesite
+    );
+    if config.cookie_secure {
+        cookie.push_str("; Secure");
+    }
+    cookie
+}
+
+fn generate_csrf_token() -> String {
+    let mut bytes = [0u8; 32];
+    rand::thread_rng().fill_bytes(&mut bytes);
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+}
+
+fn build_csrf_cookie(token: &str, config: &crate::config::AppConfig) -> String {
+    let mut cookie = format!(
+        "csrf_token={}; Path=/; SameSite={}; Max-Age={}",
+        token,
+        config.cookie_samesite,
+        config.refresh_ttl_days * 24 * 60 * 60
+    );
+    if config.cookie_secure {
+        cookie.push_str("; Secure");
+    }
+    cookie
+}
+
+fn clear_csrf_cookie(config: &crate::config::AppConfig) -> String {
+    let mut cookie = format!(
+        "csrf_token=; Path=/; SameSite={}; Max-Age=0",
         config.cookie_samesite
     );
     if config.cookie_secure {

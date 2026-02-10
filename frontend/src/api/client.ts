@@ -89,6 +89,28 @@ api.interceptors.response.use(
   },
 );
 
-api.interceptors.request.use((config) => config);
+const getCookie = (name: string) => {
+  const match = document.cookie
+    .split(";")
+    .map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${name}=`));
+  if (!match) return null;
+  return match.substring(name.length + 1);
+};
+
+const attachCsrf = (config: AxiosRequestConfig) => {
+  const method = (config.method || "get").toLowerCase();
+  if (["post", "put", "patch", "delete"].includes(method)) {
+    const csrfToken = getCookie("csrf_token");
+    if (csrfToken) {
+      config.headers = config.headers || {};
+      config.headers["x-csrf-token"] = csrfToken;
+    }
+  }
+  return config;
+};
+
+api.interceptors.request.use(attachCsrf);
+authApi.interceptors.request.use(attachCsrf);
 
 export default api;
