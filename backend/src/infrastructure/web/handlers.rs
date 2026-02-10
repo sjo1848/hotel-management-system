@@ -94,7 +94,7 @@ pub struct LoginResponse {
 pub async fn get_rooms_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let rooms = state
+    let rooms: Vec<crate::domain::models::Room> = state
         .room_repo
         .find_all()
         .await
@@ -106,7 +106,7 @@ pub async fn search_rooms_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<SearchParams>,
 ) -> Result<Json<Value>, DomainError> {
-    let rooms = state
+    let rooms: Vec<crate::domain::models::Room> = state
         .room_repo
         .find_available(params.start, params.end)
         .await
@@ -125,7 +125,7 @@ pub async fn create_booking_handler(
     }
 
     // Especificamos el tipo para evitar el error de "never type fallback"
-    let booking = state
+    let booking: crate::domain::models::Booking = state
         .booking_service
         .execute(
             payload.room_id,
@@ -141,7 +141,7 @@ pub async fn create_booking_handler(
 pub async fn list_bookings_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let bookings = state
+    let bookings: Vec<crate::domain::models::Booking> = state
         .booking_service
         .list_bookings()
         .await
@@ -159,7 +159,7 @@ pub async fn update_booking_handler(
         _ => crate::domain::models::BookingStatus::Confirmed,
     });
 
-    let booking = state
+    let booking: crate::domain::models::Booking = state
         .booking_service
         .update_booking(
             booking_id,
@@ -176,7 +176,7 @@ pub async fn update_booking_handler(
 pub async fn list_guests_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let guests = state
+    let guests: Vec<crate::domain::models::Guest> = state
         .guest_repo
         .find_all()
         .await
@@ -201,7 +201,7 @@ pub async fn create_guest_handler(
         phone: payload.phone,
     };
 
-    let created = state
+    let created: crate::domain::models::Guest = state
         .guest_repo
         .create(guest)
         .await
@@ -237,7 +237,8 @@ pub async fn login_handler(
         crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
             .map_err(DomainError::InfrastructureError)?;
 
-    let (refresh_token, _) = state.auth_service.issue_refresh_token(user.id).await?;
+    let (refresh_token, _): (String, crate::domain::models::RefreshToken) =
+        state.auth_service.issue_refresh_token(user.id).await?;
     let refresh_cookie = build_refresh_cookie(&refresh_token, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
 
@@ -277,7 +278,7 @@ pub async fn refresh_handler(
         ));
     }
 
-    let (user_id, new_refresh, _) = state
+    let (user_id, new_refresh, _): (Uuid, String, crate::domain::models::RefreshToken) = state
         .auth_service
         .rotate_refresh_token(&refresh_token)
         .await?;
