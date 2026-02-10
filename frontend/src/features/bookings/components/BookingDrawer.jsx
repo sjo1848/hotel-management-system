@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 
 // Componentes de UI (shadcn)
@@ -22,12 +21,14 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
     guest_name: "",
     guest_email: "", // Agregaremos email al backend luego, por ahora lo pedimos en UI
   });
+  const hasDates = Boolean(dates?.from && dates?.to);
 
   // Si no hay habitación seleccionada, no renderizamos nada útil
   if (!room) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!hasDates) return;
     setLoading(true);
 
     try {
@@ -68,11 +69,15 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
           <div className="p-4 bg-slate-50 rounded-lg border border-slate-100 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Check-in:</span>
-              <span className="font-medium">{dates.from}</span>
+              <span className="font-medium">
+                {hasDates ? dates.from : "Selecciona fechas"}
+              </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Check-out:</span>
-              <span className="font-medium">{dates.to}</span>
+              <span className="font-medium">
+                {hasDates ? dates.to : "Selecciona fechas"}
+              </span>
             </div>
             <div className="border-t border-slate-200 pt-2 mt-2 flex justify-between font-bold">
               <span>Total Estimado:</span>
@@ -114,7 +119,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }) => {
           <SheetFooter>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || !hasDates}
               className="w-full bg-slate-900"
             >
               {loading ? (

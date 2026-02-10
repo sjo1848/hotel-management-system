@@ -38,7 +38,7 @@ const AvailabilityPicker = ({ onSearch }) => {
               variant={"outline"}
               className={cn(
                 "w-full md:w-[400px] justify-start text-left font-medium h-12 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white transition-colors",
-                !date && "text-muted-foreground",
+                !date?.from && "text-muted-foreground",
               )}
             >
               <CalendarIcon className="mr-3 h-5 w-5 text-slate-400" />
