@@ -83,11 +83,31 @@ impl RoomRepository for PostgresRoomRepository {
                 room_type: rec.try_get("room_type").unwrap(),
                 status: match status.as_deref() {
                     Some("AVAILABLE") => RoomStatus::Available,
+                    Some("OCCUPIED") => RoomStatus::Occupied,
+                    Some("DIRTY") => RoomStatus::Dirty,
                     _ => RoomStatus::Maintenance,
                 },
                 price_cents: rec.try_get("price_cents").unwrap(),
             }
         }))
+    }
+
+    async fn update_status(&self, id: Uuid, status: RoomStatus) -> Result<(), String> {
+        let status_str = match status {
+            RoomStatus::Available => "AVAILABLE",
+            RoomStatus::Occupied => "OCCUPIED",
+            RoomStatus::Dirty => "DIRTY",
+            RoomStatus::Maintenance => "MAINTENANCE",
+        };
+
+        sqlx::query("UPDATE rooms SET status = $1 WHERE id = $2")
+            .bind(status_str)
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(())
     }
 
     async fn find_available(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
@@ -110,12 +130,20 @@ impl RoomRepository for PostgresRoomRepository {
 
         Ok(records
             .into_iter()
-            .map(|rec| Room {
-                id: rec.try_get("id").unwrap(),
-                room_number: rec.try_get("room_number").unwrap(),
-                room_type: rec.try_get("room_type").unwrap(),
-                status: RoomStatus::Available,
-                price_cents: rec.try_get("price_cents").unwrap(),
+            .map(|rec| {
+                let status: Option<String> = rec.try_get("status").ok();
+                Room {
+                    id: rec.try_get("id").unwrap(),
+                    room_number: rec.try_get("room_number").unwrap(),
+                    room_type: rec.try_get("room_type").unwrap(),
+                    status: match status.as_deref() {
+                        Some("AVAILABLE") => RoomStatus::Available,
+                        Some("OCCUPIED") => RoomStatus::Occupied,
+                        Some("DIRTY") => RoomStatus::Dirty,
+                        _ => RoomStatus::Maintenance,
+                    },
+                    price_cents: rec.try_get("price_cents").unwrap(),
+                }
             })
             .collect())
     }

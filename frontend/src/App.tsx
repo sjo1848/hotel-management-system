@@ -5,6 +5,7 @@ import BookingsPage from "./features/bookings/BookingsPage";
 import RoomsPage from "./features/rooms/RoomsPage";
 import CalendarPage from "./features/schedule/CalendarPage";
 import GuestsPage from "./features/guests/GuestsPage";
+import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
 import React from "react";
@@ -84,6 +85,10 @@ const router = createBrowserRouter([
       {
         path: "/guests",
         element: <GuestsPage />,
+      },
+      {
+        path: "/housekeeping",
+        element: <HousekeepingPage />,
       },
       {
         path: "/users",

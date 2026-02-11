@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { format, addDays, startOfToday, eachDayOfInterval, isSameDay, isWithinInterval, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, AlertTriangle, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import roomService, { type Room } from '@/features/rooms/services/roomService';
@@ -111,9 +111,19 @@ const TapeChart = () => {
             {rooms.map((room) => (
               <tr key={room.id} className='hover:bg-slate-50 transition-colors group'>
                 <td className='p-4 border-b border-r font-bold text-slate-700 sticky left-0 bg-white z-20 shadow-[2px_0_10px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 transition-colors'>
-                  <div className='flex flex-col'>
-                    <span>{room.room_number}</span>
-                    <span className='text-[10px] text-slate-400 font-medium uppercase tracking-wider'>{room.room_type}</span>
+                  <div className='flex items-center justify-between'>
+                    <div className='flex flex-col'>
+                      <span>{room.room_number}</span>
+                      <span className='text-[10px] text-slate-400 font-medium uppercase tracking-wider'>{room.room_type}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {room.status === 'DIRTY' && (
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" title="Requiere Limpieza" />
+                      )}
+                      {room.status === 'MAINTENANCE' && (
+                        <Wrench className="w-3.5 h-3.5 text-amber-500" title="En Mantenimiento" />
+                      )}
+                    </div>
                   </div>
                 </td>
 

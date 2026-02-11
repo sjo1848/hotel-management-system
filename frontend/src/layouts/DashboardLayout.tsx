@@ -5,6 +5,7 @@ import {
   ClipboardList,
   BedDouble,
   Users,
+  Brush,
   Settings,
   LogOut,
   Bell,
@@ -73,6 +74,7 @@ const DashboardLayout = ({ children }) => {
               <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" />
               <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" />
               <SidebarItem icon={Users} label="Huéspedes" path="/guests" />
+              <SidebarItem icon={Brush} label="Housekeeping" path="/housekeeping" />
             </div>
           </div>
 

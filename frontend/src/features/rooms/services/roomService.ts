@@ -34,11 +34,17 @@ const getRoomById = async (id: string) => {
   return response.data as Room;
 };
 
+const updateRoomStatus = async (id: string, status: string) => {
+  const response = await client.patch(`/rooms/${id}/status`, { status });
+  return response.data;
+};
+
 // --- LA SOLUCIÓN ESTÁ AQUÍ ABAJO ---
 // Agrupamos todo en un objeto y lo exportamos por defecto
 const roomService = {
   getAllRooms,
   getRoomById,
+  updateRoomStatus,
 };
 
 export default roomService;

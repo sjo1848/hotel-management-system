@@ -22,6 +22,7 @@ use hms_backend::app_state::AppState;
 use hms_backend::application::auth_service::AuthService;
 use hms_backend::application::booking_service::BookingService;
 use hms_backend::application::analytics_service::AnalyticsService;
+use hms_backend::application::room_service::RoomService;
 use hms_backend::config::AppConfig;
 use hms_backend::domain::errors::DomainError;
 use hms_backend::domain::models::{Room, RoomStatus};
@@ -39,7 +40,7 @@ use hms_backend::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, get_rooms_handler, health_check, list_bookings_handler,
     list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
-    get_dashboard_kpis_handler,
+    get_dashboard_kpis_handler, update_room_status_handler,
 };
 use hms_backend::infrastructure::web::utils::{csrf_valid, requires_csrf};
 use hms_backend::infrastructure::web::handlers::REQUEST_ID;
@@ -77,6 +78,7 @@ async fn main() {
     let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
     let booking_service = Arc::new(BookingService::new(booking_repo.clone(), room_repo.clone()));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
+    let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -88,6 +90,7 @@ async fn main() {
         room_repo: room_repo.clone(),
         booking_service,
         analytics_service,
+        room_service,
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,
@@ -157,6 +160,7 @@ async fn main() {
         .merge(auth_router_v1)
         .route("/api/v1/rooms", get(get_rooms_handler))
         .route("/api/v1/rooms/available", get(search_rooms_handler))
+        .route("/api/v1/rooms/:id/status", axum::routing::patch(update_room_status_handler))
         .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
         .route("/api/v1/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))

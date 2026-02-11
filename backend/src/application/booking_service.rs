@@ -133,10 +133,23 @@ impl BookingService {
 
         booking.calculate_total_price(room.price_cents);
 
-        self.booking_repo
+        let updated_booking = self.booking_repo
             .update(booking)
             .await
-            .map_err(map_repo_error)
+            .map_err(map_repo_error)?;
+
+        // Side effect: Update room status based on booking status
+        match updated_booking.status {
+            BookingStatus::CheckedIn => {
+                let _ = self.room_repo.update_status(updated_booking.room_id, crate::domain::models::RoomStatus::Occupied).await;
+            },
+            BookingStatus::CheckedOut => {
+                let _ = self.room_repo.update_status(updated_booking.room_id, crate::domain::models::RoomStatus::Dirty).await;
+            },
+            _ => {}
+        }
+
+        Ok(updated_booking)
     }
 
     pub async fn list_bookings(&self) -> Result<Vec<Booking>, String> {

@@ -8,6 +8,7 @@ pub trait RoomRepository: Send + Sync {
     async fn create(&self, room: Room) -> Result<Room, String>;
     async fn find_all(&self) -> Result<Vec<Room>, String>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Room>, String>;
+    async fn update_status(&self, id: Uuid, status: crate::domain::models::RoomStatus) -> Result<(), String>;
     // Nuevo puerto para búsqueda por fechas
     async fn find_available(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String>;
 }

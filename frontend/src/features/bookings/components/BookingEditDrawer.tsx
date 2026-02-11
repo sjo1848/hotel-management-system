@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, LogOut, XCircle } from "lucide-react";
+import { Loader2, CheckCircle2, LogOut, XCircle, AlertTriangle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Booking, updateBooking, BookingStatus } from "../services/bookingService";
+import roomService, { type Room } from "@/features/rooms/services/roomService";
 import { useToast } from "@/components/ui/toast";
 
 type BookingEditDrawerProps = {
@@ -28,6 +29,7 @@ const BookingEditDrawer = ({
   onUpdated,
 }: BookingEditDrawerProps) => {
   const [loading, setLoading] = useState(false);
+  const [room, setRoom] = useState<Room | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -37,18 +39,38 @@ const BookingEditDrawer = ({
   });
 
   useEffect(() => {
-    if (booking) {
+    if (booking && isOpen) {
       setFormData({
         guest_name: booking.guest_name || "",
         check_in: booking.check_in || "",
         check_out: booking.check_out || "",
       });
+      // Fetch room status
+      roomService.getRoomById(booking.room_id).then(setRoom).catch(console.error);
     }
-  }, [booking]);
+  }, [booking, isOpen]);
 
   if (!booking) return null;
 
   const handleStatusChange = async (newStatus: BookingStatus) => {
+    if (newStatus === 'CHECKED_IN' && room?.status === 'DIRTY') {
+      toast({
+        title: "Habitación Sucia",
+        description: "No se puede realizar el check-in. La habitación debe estar limpia primero.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (newStatus === 'CHECKED_IN' && room?.status === 'MAINTENANCE') {
+      toast({
+        title: "En Mantenimiento",
+        description: "No se puede realizar el check-in. La habitación está bloqueada.",
+        variant: "error",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const updated = await updateBooking(booking.id, { status: newStatus });
@@ -104,6 +126,17 @@ const BookingEditDrawer = ({
         </SheetHeader>
 
         <div className="py-6 space-y-6">
+          {/* Room Status Warning */}
+          {room?.status === 'DIRTY' && (
+            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-black text-rose-900 leading-tight">Habitación Sucia</p>
+                <p className="text-xs font-medium text-rose-700 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
+              </div>
+            </div>
+          )}
+
           {/* Quick Actions */}
           <div className="space-y-3">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>

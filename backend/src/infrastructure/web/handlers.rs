@@ -125,6 +125,11 @@ pub struct LoginResponse {
     pub role: String,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateRoomStatusRequest {
+    pub status: String,
+}
+
 pub async fn get_rooms_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
@@ -134,6 +139,23 @@ pub async fn get_rooms_handler(
         .await
         .map_err(DomainError::InfrastructureError)?;
     Ok(Json(json!(rooms)))
+}
+
+pub async fn update_room_status_handler(
+    State(state): State<Arc<AppState>>,
+    Path(room_id): Path<Uuid>,
+    Json(payload): Json<UpdateRoomStatusRequest>,
+) -> Result<Json<Value>, DomainError> {
+    let status = match payload.status.to_uppercase().as_str() {
+        "AVAILABLE" => crate::domain::models::RoomStatus::Available,
+        "OCCUPIED" => crate::domain::models::RoomStatus::Occupied,
+        "DIRTY" => crate::domain::models::RoomStatus::Dirty,
+        "MAINTENANCE" => crate::domain::models::RoomStatus::Maintenance,
+        _ => return Err(DomainError::InvalidInput("Estado de habitación inválido".to_string())),
+    };
+
+    state.room_service.update_room_status(room_id, status).await?;
+    Ok(Json(json!({ "status": "ok" })))
 }
 
 pub async fn search_rooms_handler(

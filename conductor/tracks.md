@@ -10,3 +10,5 @@ This file tracks all major tracks for the project. Each track has its own detail
   *Link: [./tracks/booking_ops_20260211/](./tracks/booking_ops_20260211/)*
 - [ ] **Track: Dashboard de Informes y Análisis**
   *Link: [./tracks/dashboard_analytics_20260211/](./tracks/dashboard_analytics_20260211/)*
+- [ ] **Track: Gestión de Limpieza y Mantenimiento**
+  *Link: [./tracks/housekeeping_ops_20260211/](./tracks/housekeeping_ops_20260211/)*
