@@ -35,6 +35,8 @@ pub trait BookingRepository: Send + Sync {
         end: NaiveDate,
     ) -> Result<bool, String>;
     async fn get_dashboard_stats(&self) -> Result<crate::domain::models::DashboardKpis, String>;
+    async fn get_revenue_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String>;
+    async fn get_occupancy_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String>;
 }
 
 #[async_trait]

@@ -101,6 +101,12 @@ pub struct UpdateBookingRequest {
     pub status: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct DateRangeParams {
+    pub start: Option<chrono::NaiveDate>,
+    pub end: Option<chrono::NaiveDate>,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct CreateGuestRequest {
     pub full_name: String,
@@ -719,4 +725,106 @@ pub async fn get_invoice_by_booking_handler(
         Some(inv) => Ok(Json(json!(inv))),
         None => Err(DomainError::InfrastructureError("Factura no encontrada para esta reserva".to_string())),
     }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/housekeeping/dirty",
+    responses(
+        (status = 200, description = "Lista de habitaciones que requieren limpieza", body = [Room])
+    ),
+    tag = "Housekeeping"
+)]
+pub async fn list_dirty_rooms_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let rooms = state.housekeeping_service.list_dirty_rooms().await?;
+    Ok(Json(json!(rooms)))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/housekeeping/{room_id}/start",
+    responses(
+        (status = 200, description = "Limpieza iniciada")
+    ),
+    params(
+        ("room_id" = Uuid, Path, description = "ID de la habitación")
+    ),
+    tag = "Housekeeping"
+)]
+pub async fn start_cleaning_handler(
+    State(state): State<Arc<AppState>>,
+    Path(room_id): Path<Uuid>,
+) -> Result<Json<Value>, DomainError> {
+    state.housekeeping_service.start_cleaning(room_id).await?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/housekeeping/{room_id}/finish",
+    responses(
+        (status = 200, description = "Limpieza finalizada e habitación disponible")
+    ),
+    params(
+        ("room_id" = Uuid, Path, description = "ID de la habitación")
+    ),
+    tag = "Housekeeping"
+)]
+pub async fn finish_cleaning_handler(
+    State(state): State<Arc<AppState>>,
+    Path(room_id): Path<Uuid>,
+) -> Result<Json<Value>, DomainError> {
+    state.housekeeping_service.finish_cleaning(room_id).await?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+#[utoipa::path(
+    get,
+    path = "/api/v1/reports/revenue",
+    responses(
+        (status = 200, description = "Reporte de ingresos por día", body = [RevenueReport])
+    ),
+    params(
+        ("start" = Option<NaiveDate>, Query, description = "Fecha de inicio (YYYY-MM-DD)"),
+        ("end" = Option<NaiveDate>, Query, description = "Fecha de fin (YYYY-MM-DD)")
+    ),
+    tag = "Análisis"
+)]
+pub async fn get_revenue_report_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<DateRangeParams>,
+) -> Result<Json<Value>, DomainError> {
+    let start = params.start.unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
+    let end = params.end.unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    
+    let report = state.reporting_service.get_revenue_report(start, end).await
+        .map_err(DomainError::InfrastructureError)?;
+    
+    Ok(Json(json!(report)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/reports/occupancy",
+    responses(
+        (status = 200, description = "Reporte de ocupación por día", body = [OccupancyReport])
+    ),
+    params(
+        ("start" = Option<NaiveDate>, Query, description = "Fecha de inicio (YYYY-MM-DD)"),
+        ("end" = Option<NaiveDate>, Query, description = "Fecha de fin (YYYY-MM-DD)")
+    ),
+    tag = "Análisis"
+)]
+pub async fn get_occupancy_report_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<DateRangeParams>,
+) -> Result<Json<Value>, DomainError> {
+    let start = params.start.unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
+    let end = params.end.unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    
+    let report = state.reporting_service.get_occupancy_report(start, end).await
+        .map_err(DomainError::InfrastructureError)?;
+    
+    Ok(Json(json!(report)))
 }

@@ -8,6 +8,7 @@ pub enum RoomStatus {
     Available,
     Occupied,
     Dirty,
+    Cleaning,
     Maintenance,
 }
 
@@ -164,6 +165,20 @@ pub struct DashboardKpis {
     pub departures_today: Vec<BookingAlert>,
     pub rev_par_cents: i64,
     pub adr_cents: i64,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RevenueReport {
+    pub date: chrono::NaiveDate,
+    pub revenue_cents: i64,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct OccupancyReport {
+    pub date: chrono::NaiveDate,
+    pub occupied_rooms: i64,
+    pub total_rooms: i64,
+    pub occupancy_rate: f64,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

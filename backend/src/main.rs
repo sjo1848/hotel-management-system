@@ -5,7 +5,7 @@ use hms_backend::app_state::AppState;
 use hms_backend::application::{
     analytics_service::AnalyticsService, auth_service::AuthService, booking_service::BookingService,
     room_service::RoomService, reporting_service::ReportingService,
-    guest_service::GuestService,
+    guest_service::GuestService, housekeeping_service::HousekeepingService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
@@ -63,6 +63,7 @@ async fn main() {
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
+    let housekeeping_service = Arc::new(HousekeepingService::new(room_repo.clone(), audit_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -82,6 +83,7 @@ async fn main() {
         reporting_service,
         guest_service,
         room_service,
+        housekeeping_service,
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,

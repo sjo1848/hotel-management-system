@@ -381,6 +381,71 @@ impl BookingRepository for PostgresBookingRepository {
             adr_cents: 0,
         })
     }
+
+    async fn get_revenue_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+        let records = sqlx::query(
+            "SELECT check_in as date, SUM(total_price_cents) as revenue_cents 
+             FROM bookings 
+             WHERE status != 'CANCELLED' AND check_in >= $1 AND check_in <= $2 
+             GROUP BY check_in 
+             ORDER BY check_in ASC"
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(records.into_iter().map(|row| {
+            crate::domain::models::RevenueReport {
+                date: row.try_get("date").unwrap(),
+                revenue_cents: row.try_get("revenue_cents").unwrap(),
+            }
+        }).collect())
+    }
+
+    async fn get_occupancy_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+        let records = sqlx::query(
+            r#"
+            WITH dates AS (
+                SELECT generate_series($1::date, $2::date, '1 day'::interval)::date as day
+            ),
+            room_counts AS (
+                SELECT count(*) as total FROM rooms
+            )
+            SELECT 
+                d.day as date,
+                (SELECT count(DISTINCT room_id) FROM bookings 
+                 WHERE status IN ('CONFIRMED', 'CHECKED_IN') 
+                 AND check_in <= d.day AND check_out > d.day) as occupied_rooms,
+                rc.total as total_rooms
+            FROM dates d, room_counts rc
+            ORDER BY d.day ASC
+            "#
+        )
+        .bind(start)
+        .bind(end)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(records.into_iter().map(|row| {
+            let occupied_rooms: i64 = row.try_get("occupied_rooms").unwrap_or(0);
+            let total_rooms: i64 = row.try_get("total_rooms").unwrap_or(0);
+            let occupancy_rate = if total_rooms > 0 {
+                (occupied_rooms as f64 / total_rooms as f64) * 100.0
+            } else {
+                0.0
+            };
+
+            crate::domain::models::OccupancyReport {
+                date: row.try_get("date").unwrap(),
+                occupied_rooms,
+                total_rooms,
+                occupancy_rate,
+            }
+        }).collect())
+    }
 }
 
 fn map_db_error(error: sqlx::Error) -> String {

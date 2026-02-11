@@ -28,6 +28,7 @@ impl RoomRepository for PostgresRoomRepository {
             RoomStatus::Available => "AVAILABLE",
             RoomStatus::Occupied => "OCCUPIED",
             RoomStatus::Dirty => "DIRTY",
+            RoomStatus::Cleaning => "CLEANING",
             RoomStatus::Maintenance => "MAINTENANCE",
         })
         .bind(room.price_cents)
@@ -85,6 +86,7 @@ impl RoomRepository for PostgresRoomRepository {
                     Some("AVAILABLE") => RoomStatus::Available,
                     Some("OCCUPIED") => RoomStatus::Occupied,
                     Some("DIRTY") => RoomStatus::Dirty,
+                    Some("CLEANING") => RoomStatus::Cleaning,
                     _ => RoomStatus::Maintenance,
                 },
                 price_cents: rec.try_get("price_cents").unwrap(),
@@ -97,6 +99,7 @@ impl RoomRepository for PostgresRoomRepository {
             RoomStatus::Available => "AVAILABLE",
             RoomStatus::Occupied => "OCCUPIED",
             RoomStatus::Dirty => "DIRTY",
+            RoomStatus::Cleaning => "CLEANING",
             RoomStatus::Maintenance => "MAINTENANCE",
         };
 

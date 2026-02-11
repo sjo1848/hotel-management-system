@@ -22,10 +22,11 @@ use tower_http::{
 use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, create_user_handler, get_dashboard_kpis_handler,
-    get_invoice_by_booking_handler, get_rooms_handler, health_check, list_bookings_handler,
-    list_guests_handler, list_invoices_handler, list_users_handler, login_handler, logout_handler,
-    me_handler, readiness_check, refresh_handler, root_handler, search_rooms_handler,
-    update_booking_handler, update_room_status_handler,
+    finish_cleaning_handler, get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
+    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler, list_guests_handler,
+    list_invoices_handler, list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
+    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler, update_booking_handler,
+    update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
     auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware,
@@ -102,7 +103,12 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler));
+        .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler))
+        .route("/api/v1/housekeeping/dirty", get(list_dirty_rooms_handler))
+        .route("/api/v1/housekeeping/:id/start", post(start_cleaning_handler))
+        .route("/api/v1/housekeeping/:id/finish", post(finish_cleaning_handler))
+        .route("/api/v1/reports/revenue", get(get_revenue_report_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/reports/occupancy", get(get_occupancy_report_handler).layer(middleware::from_fn(admin_only)));
 
     let legacy_api = Router::new()
         .merge(auth_router_legacy)

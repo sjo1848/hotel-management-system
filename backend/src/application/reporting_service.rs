@@ -28,4 +28,12 @@ impl ReportingService {
 
         Ok(kpis)
     }
+
+    pub async fn get_revenue_report(&self, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+        self.booking_repo.get_revenue_report(start, end).await
+    }
+
+    pub async fn get_occupancy_report(&self, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+        self.booking_repo.get_occupancy_report(start, end).await
+    }
 }
