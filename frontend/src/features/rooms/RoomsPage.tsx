@@ -19,17 +19,21 @@ const RoomsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Habitaciones</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Buscá disponibilidad y reservá en segundos.
+    <div className="space-y-10">
+      <div className="flex flex-col">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Inventario de Habitaciones</h2>
+        <p className="text-slate-500 font-medium mt-3">
+          Verificá la disponibilidad y gestioná el estado de limpieza del hotel.
         </p>
       </div>
 
-      <AvailabilityPicker onSearch={handleSearch} onClear={handleClear} />
+      <div className="relative z-30">
+        <AvailabilityPicker onSearch={handleSearch} onClear={handleClear} />
+      </div>
 
-      <RoomList searchDates={searchDates} />
+      <div className="relative z-10">
+        <RoomList searchDates={searchDates} />
+      </div>
     </div>
   );
 };

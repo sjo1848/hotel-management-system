@@ -639,3 +639,14 @@ pub async fn readiness_check(
 pub async fn root_handler() -> Json<Value> {
     Json(json!({ "message": "HMS Elite Backend (Hexagonal) activo" }))
 }
+
+pub async fn get_dashboard_kpis_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let kpis = state
+        .analytics_service
+        .get_dashboard_kpis()
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+    Ok(Json(json!(kpis)))
+}

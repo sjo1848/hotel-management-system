@@ -1,7 +1,7 @@
 use crate::domain::models::{Booking, BookingStatus};
 use crate::domain::repositories::BookingRepository;
 use async_trait::async_trait;
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -261,6 +261,123 @@ impl BookingRepository for PostgresBookingRepository {
 
         let has_overlap: Option<bool> = overlap.try_get("has_overlap").ok();
         Ok(!has_overlap.unwrap_or(false))
+    }
+
+    async fn get_dashboard_stats(&self) -> Result<crate::domain::models::DashboardKpis, String> {
+        let now = chrono::Utc::now().naive_utc().date();
+        let start_of_month = NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
+        
+        // 1. Revenue this month
+        let revenue: (i64,) = sqlx::query_as(
+            "SELECT COALESCE(SUM(total_price_cents), 0) FROM bookings 
+             WHERE status != 'CANCELLED' AND check_in >= $1"
+        )
+        .bind(start_of_month)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // 2. Today's check-ins
+        let check_ins: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM bookings WHERE status = 'CONFIRMED' AND check_in = $1"
+        )
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // 3. Active bookings
+        let active: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*) FROM bookings WHERE status IN ('CONFIRMED', 'CHECKED_IN')"
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        // 4. Occupancy Rate
+        let total_rooms: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM rooms")
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let occupied_today: (i64,) = sqlx::query_as(
+            "SELECT COUNT(DISTINCT room_id) FROM bookings 
+             WHERE status IN ('CONFIRMED', 'CHECKED_IN') 
+             AND check_in <= $1 AND check_out > $1"
+        )
+        .bind(now)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let occupancy_rate = if total_rooms.0 > 0 {
+            (occupied_today.0 as f64 / total_rooms.0 as f64) * 100.0
+        } else {
+            0.0
+        };
+
+        // 5. Arrivals Today
+        let arrivals_records = sqlx::query(
+            "SELECT b.id, b.guest_name, r.room_number, b.status 
+             FROM bookings b 
+             JOIN rooms r ON b.room_id = r.id 
+             WHERE b.check_in = $1 AND b.status = 'CONFIRMED'"
+        )
+        .bind(now)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let arrivals_today = arrivals_records.into_iter().map(|row| {
+            let status_str: String = row.try_get("status").unwrap();
+            crate::domain::models::BookingAlert {
+                booking_id: row.try_get("id").unwrap(),
+                guest_name: row.try_get("guest_name").unwrap(),
+                room_number: row.try_get("room_number").unwrap(),
+                status: match status_str.as_str() {
+                    "CHECKED_IN" => BookingStatus::CheckedIn,
+                    "CHECKED_OUT" => BookingStatus::CheckedOut,
+                    "CANCELLED" => BookingStatus::Cancelled,
+                    _ => BookingStatus::Confirmed,
+                },
+            }
+        }).collect();
+
+        // 6. Departures Today
+        let departures_records = sqlx::query(
+            "SELECT b.id, b.guest_name, r.room_number, b.status 
+             FROM bookings b 
+             JOIN rooms r ON b.room_id = r.id 
+             WHERE b.check_out = $1 AND b.status = 'CHECKED_IN'"
+        )
+        .bind(now)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let departures_today = departures_records.into_iter().map(|row| {
+            let status_str: String = row.try_get("status").unwrap();
+            crate::domain::models::BookingAlert {
+                booking_id: row.try_get("id").unwrap(),
+                guest_name: row.try_get("guest_name").unwrap(),
+                room_number: row.try_get("room_number").unwrap(),
+                status: match status_str.as_str() {
+                    "CHECKED_IN" => BookingStatus::CheckedIn,
+                    "CHECKED_OUT" => BookingStatus::CheckedOut,
+                    "CANCELLED" => BookingStatus::Cancelled,
+                    _ => BookingStatus::Confirmed,
+                },
+            }
+        }).collect();
+
+        Ok(crate::domain::models::DashboardKpis {
+            revenue_month_cents: revenue.0,
+            occupancy_rate,
+            today_check_ins: check_ins.0,
+            active_bookings_count: active.0,
+            arrivals_today,
+            departures_today,
+        })
     }
 }
 

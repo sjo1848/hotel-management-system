@@ -33,6 +33,7 @@ pub trait BookingRepository: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<bool, String>;
+    async fn get_dashboard_stats(&self) -> Result<crate::domain::models::DashboardKpis, String>;
 }
 
 #[async_trait]

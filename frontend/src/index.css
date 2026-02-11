@@ -9,8 +9,16 @@
     --color-foreground: var(--foreground);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
     --color-accent: var(--accent);
     --color-accent-foreground: var(--accent-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
 
     --radius-lg: var(--radius);
     --radius-md: calc(var(--radius) - 2px);
@@ -21,19 +29,42 @@
     :root {
         --background: 210 40% 98%;
         --foreground: 222.2 84% 4.9%;
+        
+        --card: 0 0% 100%;
+        --card-foreground: 222.2 84% 4.9%;
+        
+        --popover: 0 0% 100%;
+        --popover-foreground: 222.2 84% 4.9%;
+        
         --primary: 217 32% 17%;
         --primary-foreground: 210 40.2% 98%;
+        
+        --secondary: 210 40% 96.1%;
+        --secondary-foreground: 222.2 47.4% 11.2%;
+        
+        --muted: 210 40% 96.1%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        
         --accent: 35 85% 92%;
         --accent-foreground: 24 25% 25%;
-        --border: 214 30% 91%;
-        --radius: 0.85rem;
+        
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 210 40.2% 98%;
+        
+        --border: 214 32% 91%;
+        --input: 214 32% 91%;
+        --ring: 222.2 84% 4.9%;
+        
+        --radius: 0.75rem;
         --brand: 28 88% 55%;
     }
 
     body {
-        font-family: "Manrope", "IBM Plex Sans", "Source Sans 3", sans-serif;
-        background: hsl(var(--background));
+        font-family: "Inter", "Manrope", "IBM Plex Sans", sans-serif;
+        background-color: #f8fafc;
         color: hsl(var(--foreground));
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
     }
 
     #root {
@@ -42,8 +73,8 @@
 }
 
 .app-shell {
-    background:
-        radial-gradient(1200px 600px at -10% -10%, hsl(var(--accent)) 0%, transparent 55%),
-        radial-gradient(900px 500px at 110% -20%, rgba(15, 23, 42, 0.08) 0%, transparent 60%),
-        linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    background-color: #f1f5f9;
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(249, 115, 22, 0.05) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(30, 41, 59, 0.05) 0px, transparent 50%);
 }

@@ -22,74 +22,85 @@ type RoomCardProps = {
 const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps) => {
   const pricePerNight = room.price_cents / 100;
   const total = nights > 0 ? pricePerNight * nights : 0;
+  
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all border-slate-200 group bg-white">
-      <div className="relative h-48 bg-slate-100">
+    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 group bg-white hover:-translate-y-1 transition-all duration-300">
+      <div className="relative h-56 bg-slate-100 overflow-hidden">
         <img
           src={`https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000`}
           alt={room.room_type}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
-        <Badge className="absolute top-4 right-4 bg-white/90 text-slate-900 hover:bg-white">
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <Badge className="absolute top-4 right-4 bg-white text-slate-900 border-none font-bold uppercase text-[10px] tracking-widest shadow-lg">
           {room.status}
         </Badge>
+        <div className="absolute bottom-4 left-4 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em]">Disponibilidad</p>
+          <p className="text-sm font-bold">Confirmada Hoy</p>
+        </div>
       </div>
 
-      <CardHeader>
+      <CardHeader className="space-y-4">
         <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="text-xl font-bold text-slate-800">
-              Habitación {room.room_number}
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+              Habs. {room.room_number}
             </CardTitle>
-            <p className="text-sm text-slate-500 capitalize">
-              {room.room_type}
-            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+                {room.room_type}
+              </span>
+            </div>
           </div>
           <div className="text-right">
-            <span className="text-2xl font-bold text-slate-900">
+            <div className="text-2xl font-black text-slate-900 tracking-tighter">
               ${pricePerNight.toLocaleString("es-AR")}
-            </span>
-            <span className="text-xs text-slate-500 block">/ noche</span>
+            </div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block -mt-1">/ noche</span>
           </div>
         </div>
-        {nights > 0 ? (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600">
-            Total por {nights} noches:{" "}
-            <span className="font-semibold text-slate-900">
-              ${total.toLocaleString("es-AR")}
-            </span>
+        
+        {nights > 0 && (
+          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estancia {nights} noches</span>
+            <span className="text-sm font-black text-slate-900">${total.toLocaleString("es-AR")}</span>
           </div>
-        ) : null}
+        )}
       </CardHeader>
 
       <CardContent>
-        <div className="flex gap-4 text-slate-500 text-sm">
-          <div className="flex items-center gap-1">
-            <Users className="w-4 h-4" /> 2
+        <div className="flex justify-between items-center py-2 border-t border-slate-100">
+          <div className="flex gap-4">
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Users className="w-4 h-4" />
+              <span className="text-xs font-bold">2 Pers</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-slate-500">
+              <Wifi className="w-4 h-4" />
+              <span className="text-xs font-bold">Fibra</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Wifi className="w-4 h-4" /> Wifi
-          </div>
-          <div className="flex items-center gap-1">
-            <Wind className="w-4 h-4" /> A/C
+          <div className="flex items-center gap-1.5 text-emerald-600">
+            <Coffee className="w-4 h-4" />
+            <span className="text-xs font-bold">Premium</span>
           </div>
         </div>
       </CardContent>
 
-      <CardFooter className="pt-2">
+      <CardFooter className="pb-6">
         <Button
-          className="w-full bg-slate-900 hover:bg-slate-800 group-hover:bg-blue-600 transition-colors disabled:bg-slate-300 disabled:text-slate-600"
+          className={`w-full h-12 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
+            disabled 
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+              : "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-200"
+          }`}
           disabled={disabled}
-          onClick={onBook} // <--- ACÁ ESTÁ LA CLAVE
+          onClick={onBook}
         >
-          Reservar Ahora
-          <ArrowRight className="w-4 h-4 ml-2" />
+          {disabled ? "Seleccionar Fechas" : "Reservar Ahora"}
+          <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
         </Button>
-        {disabled ? (
-          <p className="text-xs text-slate-400 mt-2">
-            Seleccioná fechas para habilitar la reserva.
-          </p>
-        ) : null}
       </CardFooter>
     </Card>
   );

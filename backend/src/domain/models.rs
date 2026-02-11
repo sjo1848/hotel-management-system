@@ -152,3 +152,21 @@ pub struct AuditEvent {
     pub ip_address: Option<String>,
     pub created_at: chrono::NaiveDateTime,
 }
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DashboardKpis {
+    pub revenue_month_cents: i64,
+    pub occupancy_rate: f64,
+    pub today_check_ins: i64,
+    pub active_bookings_count: i64,
+    pub arrivals_today: Vec<BookingAlert>,
+    pub departures_today: Vec<BookingAlert>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct BookingAlert {
+    pub booking_id: Uuid,
+    pub guest_name: String,
+    pub room_number: String,
+    pub status: BookingStatus,
+}

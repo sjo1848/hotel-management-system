@@ -21,6 +21,7 @@ use uuid::Uuid;
 use hms_backend::app_state::AppState;
 use hms_backend::application::auth_service::AuthService;
 use hms_backend::application::booking_service::BookingService;
+use hms_backend::application::analytics_service::AnalyticsService;
 use hms_backend::config::AppConfig;
 use hms_backend::domain::errors::DomainError;
 use hms_backend::domain::models::{Room, RoomStatus};
@@ -38,6 +39,7 @@ use hms_backend::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, get_rooms_handler, health_check, list_bookings_handler,
     list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
+    get_dashboard_kpis_handler,
 };
 use hms_backend::infrastructure::web::utils::{csrf_valid, requires_csrf};
 use hms_backend::infrastructure::web::handlers::REQUEST_ID;
@@ -74,6 +76,7 @@ async fn main() {
         Arc::new(PostgresRefreshTokenRepository::new(pool.clone())) as Arc<dyn RefreshTokenRepository>;
     let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
     let booking_service = Arc::new(BookingService::new(booking_repo.clone(), room_repo.clone()));
+    let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -84,6 +87,7 @@ async fn main() {
     let shared_state = Arc::new(AppState {
         room_repo: room_repo.clone(),
         booking_service,
+        analytics_service,
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,
@@ -157,7 +161,8 @@ async fn main() {
         .route("/api/v1/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/v1/auth/me", get(me_handler))
-        .route("/api/v1/users", get(list_users_handler).post(create_user_handler));
+        .route("/api/v1/users", get(list_users_handler).post(create_user_handler))
+        .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler));
 
     let legacy_api = Router::new()
         .merge(auth_router_legacy)
@@ -167,7 +172,8 @@ async fn main() {
         .route("/api/bookings/:id", axum::routing::patch(update_booking_handler))
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/auth/me", get(me_handler))
-        .route("/api/users", get(list_users_handler).post(create_user_handler));
+        .route("/api/users", get(list_users_handler).post(create_user_handler))
+        .route("/api/analytics/kpis", get(get_dashboard_kpis_handler));
 
     let app = Router::new()
         .route("/", get(root_handler))

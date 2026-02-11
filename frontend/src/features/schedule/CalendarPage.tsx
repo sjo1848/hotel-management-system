@@ -1,13 +1,13 @@
 import React from "react";
-import TapeChart from "./TapeChart";
+import TapeChart from "../calendar/components/TapeChart";
 
 const CalendarPage = () => {
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Calendario</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Visualizá la ocupación por habitación en las próximas semanas.
+    <div className="space-y-10">
+      <div className="flex flex-col">
+        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none text-slate-900">Plano de Ocupación</h2>
+        <p className="text-slate-500 font-medium mt-3">
+          Control visual de disponibilidad y gestión de estancias activas.
         </p>
       </div>
 
