@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, CheckCircle, Clock, XCircle, MoreVertical, Calendar as CalendarIcon, Filter, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -21,6 +22,7 @@ import BookingDetailsSheet from "@/features/bookings/components/BookingDetailsSh
 import { useToast } from "@/components/ui/toast";
 
 const BookingsPage = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [data, setData] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Record<string, Room>>({});
@@ -230,7 +232,16 @@ const BookingsPage = () => {
             <Download className="w-4 h-4" />
             Exportar
           </Button>
-          <Button className="h-9 gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all">
+          <Button
+            className="h-9 gap-2 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all"
+            onClick={() => {
+              toast({
+                title: "Nueva Reserva",
+                description: "Seleccioná una habitación disponible para comenzar.",
+              });
+              navigate("/rooms");
+            }}
+          >
             <Plus className="w-4 h-4" /> Nueva Reserva
           </Button>
         </div>

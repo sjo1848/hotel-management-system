@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub login_limit_per_minute: u32,
     pub cookie_secure: bool,
     pub cookie_samesite: String,
+    pub port: u16,
 }
 
 impl AppConfig {
@@ -55,6 +56,10 @@ impl AppConfig {
             == "true";
         let cookie_samesite =
             env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
+        let port = env::var("PORT")
+            .ok()
+            .and_then(|value| value.parse::<u16>().ok())
+            .unwrap_or(3001);
 
         if is_prod {
             if jwt_secret == "dev-secret-change-me" {
@@ -82,6 +87,7 @@ impl AppConfig {
             login_limit_per_minute,
             cookie_secure,
             cookie_samesite,
+            port,
         }
     }
 }

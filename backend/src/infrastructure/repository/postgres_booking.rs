@@ -269,7 +269,7 @@ impl BookingRepository for PostgresBookingRepository {
         
         // 1. Revenue this month
         let revenue: (i64,) = sqlx::query_as(
-            "SELECT COALESCE(SUM(total_price_cents), 0) FROM bookings 
+            "SELECT COALESCE(SUM(total_price_cents), 0)::BIGINT FROM bookings 
              WHERE status != 'CANCELLED' AND check_in >= $1"
         )
         .bind(start_of_month)
@@ -384,7 +384,7 @@ impl BookingRepository for PostgresBookingRepository {
 
     async fn get_revenue_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
         let records = sqlx::query(
-            "SELECT check_in as date, SUM(total_price_cents) as revenue_cents 
+            "SELECT check_in as date, SUM(total_price_cents)::BIGINT as revenue_cents 
              FROM bookings 
              WHERE status != 'CANCELLED' AND check_in >= $1 AND check_in <= $2 
              GROUP BY check_in 

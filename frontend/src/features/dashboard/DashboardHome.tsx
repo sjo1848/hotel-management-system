@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,9 +49,8 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
           <Skeleton className="h-4 w-32" />
         ) : (
           <>
-            <div className={`flex items-center text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-              trend === "up" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
-            }`}>
+            <div className={`flex items-center text-[10px] font-black px-1.5 py-0.5 rounded-md ${trend === "up" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+              }`}>
               {trend === "up" ? <ArrowUpRight className="w-3 h-3 mr-0.5" /> : <ArrowDownRight className="w-3 h-3 mr-0.5" />}
               {trend === "up" ? "12%" : "4%"}
             </div>
@@ -65,9 +65,8 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
 const AlertItem = ({ alert, type }: { alert: any, type: 'arrival' | 'departure' }) => (
   <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
     <div className="flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-        type === 'arrival' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
-      }`}>
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${type === 'arrival' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+        }`}>
         {type === 'arrival' ? <LogIn className="w-5 h-5" /> : <LogOutIcon className="w-5 h-5" />}
       </div>
       <div>
@@ -82,6 +81,7 @@ const AlertItem = ({ alert, type }: { alert: any, type: 'arrival' | 'departure' 
 );
 
 const DashboardHome = () => {
+  const navigate = useNavigate();
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -146,7 +146,7 @@ const DashboardHome = () => {
             <h3 className="text-lg font-black text-slate-900 tracking-tight">Alertas de Hoy</h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Llegadas y Salidas</p>
           </div>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Check-ins ({kpis?.arrivals_today.length || 0})</span>
@@ -181,7 +181,14 @@ const DashboardHome = () => {
                   <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Últimas Reservas</CardTitle>
                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Actividad reciente</p>
                 </div>
-                <Button variant="outline" size="sm" className="rounded-xl font-bold text-xs uppercase tracking-widest border-slate-200 bg-white">Ver todo</Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-xl font-bold text-xs uppercase tracking-widest border-slate-200 bg-white"
+                  onClick={() => navigate("/bookings")}
+                >
+                  Ver todo
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-0">

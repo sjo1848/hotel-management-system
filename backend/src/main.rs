@@ -97,7 +97,7 @@ async fn main() {
     let app = create_router(shared_state);
 
     // 10. Start Server
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
     println!("🚀 HMS Elite (Hexagonal) escuchando en {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { getAllRooms, Room } from "@/features/rooms/services/roomService";
+import BookingDrawer from "@/features/bookings/components/BookingDrawer";
+import { useToast } from "@/components/ui/toast";
+import { format, addDays } from "date-fns";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -48,9 +51,18 @@ const getStatusBadge = (status: string) => {
 };
 
 const RoomsPage = () => {
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Booking State
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [bookingDates, setBookingDates] = useState({
+    from: format(new Date(), "yyyy-MM-dd"),
+    to: format(addDays(new Date(), 1), "yyyy-MM-dd"),
+  });
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -65,6 +77,19 @@ const RoomsPage = () => {
     };
     fetchRooms();
   }, []);
+
+  const handleBookingSuccess = () => {
+    // Refresh rooms (ocuupancy might have changed)
+    const fetchRooms = async () => {
+      try {
+        const data = await getAllRooms();
+        setRooms(data);
+      } catch (error) {
+        console.error("Failed to fetch rooms", error);
+      }
+    };
+    fetchRooms();
+  };
 
   const columns: Column<Room>[] = [
     {
@@ -96,21 +121,36 @@ const RoomsPage = () => {
     },
     {
       header: "",
-      cell: () => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4" />
+      cell: (item) => (
+        <div className="flex items-center gap-2">
+          {item.status === "Available" && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs font-bold uppercase bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              onClick={() => {
+                setSelectedRoom(item);
+                setIsDrawerOpen(true);
+              }}
+            >
+              Reservar
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Ver Detalle</DropdownMenuItem>
-            <DropdownMenuItem>Marcar Limpia</DropdownMenuItem>
-            <DropdownMenuItem>Mantenimiento</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>Ver Detalle</DropdownMenuItem>
+              <DropdownMenuItem>Marcar Limpia</DropdownMenuItem>
+              <DropdownMenuItem>Mantenimiento</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       ),
-      className: "w-[50px]",
+      className: "w-[150px]",
     },
   ];
 
@@ -161,7 +201,11 @@ const RoomsPage = () => {
           searchable
           searchPlaceholder="Buscar habitación..."
           actions={
-            <Button size="sm" className="h-9 gap-2 shadow-lg shadow-primary/20">
+            <Button
+              size="sm"
+              className="h-9 gap-2 shadow-lg shadow-primary/20"
+              onClick={() => toast({ title: "Configuración", description: "El módulo de gestión de catálogo está en desarrollo." })}
+            >
               <Plus className="w-4 h-4" /> Añadir Habitación
             </Button>
           }
@@ -201,13 +245,29 @@ const RoomsPage = () => {
                   <span className="text-[10px] text-slate-400 uppercase font-bold">Precio</span>
                   <span className="font-mono font-medium text-slate-700">${(room.price_cents / 100).toLocaleString()}</span>
                 </div>
-                {getStatusBadge(room.status)}
+                {room.status === "Available" ? (
+                  <Button
+                    size="sm"
+                    className="h-8 text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
+                    onClick={() => {
+                      setSelectedRoom(room);
+                      setIsDrawerOpen(true);
+                    }}
+                  >
+                    Reservar
+                  </Button>
+                ) : (
+                  getStatusBadge(room.status)
+                )}
               </div>
             </div>
           ))}
 
           {/* Add New Room Card */}
-          <div className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center text-slate-400 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]">
+          <div
+            className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center text-slate-400 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
+            onClick={() => toast({ title: "Configuración", description: "El módulo de gestión de catálogo está en desarrollo." })}
+          >
             <div className="w-12 h-12 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
               <Plus className="w-6 h-6" />
             </div>
@@ -215,6 +275,14 @@ const RoomsPage = () => {
           </div>
         </div>
       )}
+
+      <BookingDrawer
+        room={selectedRoom}
+        dates={bookingDates}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onSuccess={handleBookingSuccess}
+      />
     </div>
   );
 };
