@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, LogOut, XCircle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Booking, updateBooking } from "../services/bookingService";
+import { Booking, updateBooking, BookingStatus } from "../services/bookingService";
 import { useToast } from "@/components/ui/toast";
 
 type BookingEditDrawerProps = {
@@ -30,11 +30,11 @@ const BookingEditDrawer = ({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState(() => ({
-    guest_name: booking?.guest_name || "",
-    check_in: booking?.check_in || "",
-    check_out: booking?.check_out || "",
-  }));
+  const [formData, setFormData] = useState({
+    guest_name: "",
+    check_in: "",
+    check_out: "",
+  });
 
   useEffect(() => {
     if (booking) {
@@ -47,6 +47,24 @@ const BookingEditDrawer = ({
   }, [booking]);
 
   if (!booking) return null;
+
+  const handleStatusChange = async (newStatus: BookingStatus) => {
+    setLoading(true);
+    try {
+      const updated = await updateBooking(booking.id, { status: newStatus });
+      toast({
+        title: "Estado actualizado",
+        description: `La reserva ahora está ${newStatus.replace('_', ' ').toLowerCase()}.`,
+        variant: "success",
+      });
+      onUpdated(updated);
+      onClose();
+    } catch (error) {
+      toast({ title: "Error", description: String(error), variant: "error" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -77,66 +95,111 @@ const BookingEditDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[420px]">
-        <SheetHeader>
-          <SheetTitle>Editar Reserva</SheetTitle>
+      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl overflow-y-auto">
+        <SheetHeader className="pb-6 border-b">
+          <SheetTitle className="text-2xl font-bold">Gestionar Reserva</SheetTitle>
           <SheetDescription>
-            Actualizá los datos del huésped o las fechas.
+            ID: <span className="font-mono text-xs">{booking.id.slice(0,8)}</span>
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-6 py-6">
-          <div className="grid gap-2">
-            <Label htmlFor="edit-name">Nombre del Huésped</Label>
-            <Input
-              id="edit-name"
-              value={formData.guest_name}
-              onChange={(e) =>
-                setFormData({ ...formData, guest_name: e.target.value })
-              }
-              required
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="edit-check-in">Check-in</Label>
-            <Input
-              id="edit-check-in"
-              type="date"
-              value={formData.check_in}
-              onChange={(e) =>
-                setFormData({ ...formData, check_in: e.target.value })
-              }
-              required
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="edit-check-out">Check-out</Label>
-            <Input
-              id="edit-check-out"
-              type="date"
-              value={formData.check_out}
-              onChange={(e) =>
-                setFormData({ ...formData, check_out: e.target.value })
-              }
-              required
-            />
-          </div>
-
-          <SheetFooter>
-            <Button type="submit" disabled={loading} className="w-full bg-slate-900">
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
-                </>
-              ) : (
-                "Guardar Cambios"
+        <div className="py-6 space-y-6">
+          {/* Quick Actions */}
+          <div className="space-y-3">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {booking.status === 'CONFIRMED' && (
+                <Button 
+                  onClick={() => handleStatusChange('CHECKED_IN')}
+                  disabled={loading}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Check-in
+                </Button>
               )}
-            </Button>
-          </SheetFooter>
-        </form>
+              {booking.status === 'CHECKED_IN' && (
+                <Button 
+                  onClick={() => handleStatusChange('CHECKED_OUT')}
+                  disabled={loading}
+                  className="bg-slate-600 hover:bg-slate-700 text-white"
+                >
+                  <LogOut className="w-4 h-4 mr-2" /> Check-out
+                </Button>
+              )}
+              {booking.status !== 'CANCELLED' && booking.status !== 'CheckedOut' && (
+                <Button 
+                  variant="outline"
+                  onClick={() => handleStatusChange('CANCELLED')}
+                  disabled={loading}
+                  className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Cancelar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Datos de la Estancia</Label>
+            <div className="grid gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-name">Nombre del Huésped</Label>
+                <Input
+                  id="edit-name"
+                  value={formData.guest_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, guest_name: e.target.value })
+                  }
+                  required
+                  className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-check-in">Check-in</Label>
+                  <Input
+                    id="edit-check-in"
+                    type="date"
+                    value={formData.check_in}
+                    onChange={(e) =>
+                      setFormData({ ...formData, check_in: e.target.value })
+                    }
+                    required
+                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-check-out">Check-out</Label>
+                  <Input
+                    id="edit-check-out"
+                    type="date"
+                    value={formData.check_out}
+                    onChange={(e) =>
+                      setFormData({ ...formData, check_out: e.target.value })
+                    }
+                    required
+                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <SheetFooter className="pt-6">
+              <Button type="submit" disabled={loading} className="w-full bg-slate-900 h-12 text-lg">
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  "Guardar Cambios"
+                )}
+              </Button>
+            </SheetFooter>
+          </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -1,10 +1,11 @@
 import client from "@/api/client";
 
-export type BookingStatus = "CONFIRMED" | "CANCELLED" | "Cancelled";
+export type BookingStatus = "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" | "Cancelled";
 
 export type Booking = {
   id: string;
   room_id: string;
+  guest_id?: string | null;
   guest_name: string;
   check_in: string;
   check_out: string;
@@ -15,6 +16,7 @@ export type Booking = {
 
 export type CreateBookingPayload = {
   room_id: string;
+  guest_id?: string | null;
   guest_name: string;
   check_in: string;
   check_out: string;
@@ -34,14 +36,19 @@ export const createBooking = async (bookingData: CreateBookingPayload) => {
   }
 };
 
-export const getBookings = async () => {
-  const response = await client.get("/bookings");
+export const getBookings = async (startDate?: string, endDate?: string) => {
+  const response = await client.get("/bookings", {
+    params: {
+      start: startDate,
+      end: endDate,
+    },
+  });
   return response.data as Booking[];
 };
 
 export const updateBooking = async (
   id: string,
-  data: Partial<Pick<Booking, "guest_name" | "check_in" | "check_out" | "status">>,
+  data: Partial<Pick<Booking, "guest_id" | "guest_name" | "check_in" | "check_out" | "status">>,
 ) => {
   try {
     const response = await client.patch(`/bookings/${id}`, data);

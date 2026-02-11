@@ -71,6 +71,7 @@ impl IntoResponse for DomainError {
 #[derive(Deserialize)]
 pub struct CreateBookingRequest {
     pub room_id: Uuid,
+    pub guest_id: Option<Uuid>,
     pub guest_name: String,
     #[serde(alias = "start_date")]
     pub check_in: NaiveDate,
@@ -85,7 +86,14 @@ pub struct SearchParams {
 }
 
 #[derive(Deserialize)]
+pub struct BookingFilterParams {
+    pub start: Option<NaiveDate>,
+    pub end: Option<NaiveDate>,
+}
+
+#[derive(Deserialize)]
 pub struct UpdateBookingRequest {
+    pub guest_id: Option<Uuid>,
     pub guest_name: Option<String>,
     pub check_in: Option<NaiveDate>,
     pub check_out: Option<NaiveDate>,
@@ -155,6 +163,7 @@ pub async fn create_booking_handler(
         .booking_service
         .execute(
             payload.room_id,
+            payload.guest_id,
             payload.guest_name,
             payload.check_in,
             payload.check_out,
@@ -166,12 +175,20 @@ pub async fn create_booking_handler(
 
 pub async fn list_bookings_handler(
     State(state): State<Arc<AppState>>,
+    Query(params): Query<BookingFilterParams>,
 ) -> Result<Json<Value>, DomainError> {
-    let bookings: Vec<crate::domain::models::Booking> = state
-        .booking_service
-        .list_bookings()
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let bookings: Vec<crate::domain::models::Booking> = match (params.start, params.end) {
+        (Some(start), Some(end)) => state
+            .booking_service
+            .list_bookings_in_range(start, end)
+            .await
+            .map_err(DomainError::InfrastructureError)?,
+        _ => state
+            .booking_service
+            .list_bookings()
+            .await
+            .map_err(DomainError::InfrastructureError)?,
+    };
     Ok(Json(json!(bookings)))
 }
 
@@ -189,6 +206,7 @@ pub async fn update_booking_handler(
         .booking_service
         .update_booking(
             booking_id,
+            payload.guest_id,
             payload.guest_name,
             payload.check_in,
             payload.check_out,

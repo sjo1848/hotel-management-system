@@ -16,6 +16,7 @@ pub trait RoomRepository: Send + Sync {
 pub trait BookingRepository: Send + Sync {
     async fn save(&self, booking: Booking) -> Result<Booking, String>;
     async fn find_all(&self) -> Result<Vec<Booking>, String>;
+    async fn find_by_range(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Booking>, String>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Booking>, String>;
     async fn update(&self, booking: Booking) -> Result<Booking, String>;
     async fn find_by_room(&self, room_id: Uuid) -> Result<Vec<Booking>, String>;

@@ -19,9 +19,11 @@ pub struct Room {
     pub price_cents: i64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, PartialEq)]
 pub enum BookingStatus {
     Confirmed,
+    CheckedIn,
+    CheckedOut,
     Cancelled,
 }
 
@@ -29,6 +31,7 @@ pub enum BookingStatus {
 pub struct Booking {
     pub id: Uuid,
     pub room_id: Uuid,
+    pub guest_id: Option<Uuid>,
     pub guest_name: String,
     pub check_in: NaiveDate,
     pub check_out: NaiveDate,
@@ -70,6 +73,7 @@ mod tests {
         let booking = Booking {
             id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
+            guest_id: None,
             guest_name: "Test".to_string(),
             check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
             check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),
@@ -85,6 +89,7 @@ mod tests {
         let booking = Booking {
             id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
+            guest_id: None,
             guest_name: "Test".to_string(),
             check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
             check_out: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
@@ -100,6 +105,7 @@ mod tests {
         let booking = Booking {
             id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
+            guest_id: None,
             guest_name: "Test".to_string(),
             check_in: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
             check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),

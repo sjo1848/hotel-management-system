@@ -24,6 +24,7 @@ impl BookingService {
     pub async fn execute(
         &self,
         room_id: Uuid,
+        guest_id: Option<Uuid>,
         guest_name: String,
         check_in: NaiveDate,
         check_out: NaiveDate,
@@ -48,6 +49,7 @@ impl BookingService {
         let mut new_booking = Booking {
             id: Uuid::new_v4(),
             room_id,
+            guest_id,
             guest_name,
             check_in,
             check_out,
@@ -70,6 +72,7 @@ impl BookingService {
     pub async fn update_booking(
         &self,
         booking_id: Uuid,
+        guest_id: Option<Uuid>,
         guest_name: Option<String>,
         check_in: Option<NaiveDate>,
         check_out: Option<NaiveDate>,
@@ -81,6 +84,10 @@ impl BookingService {
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::BookingNotFound)?;
+
+        if let Some(gid) = guest_id {
+            booking.guest_id = Some(gid);
+        }
 
         if let Some(name) = guest_name {
             booking.guest_name = name;
@@ -134,6 +141,14 @@ impl BookingService {
 
     pub async fn list_bookings(&self) -> Result<Vec<Booking>, String> {
         self.booking_repo.find_all().await
+    }
+
+    pub async fn list_bookings_in_range(
+        &self,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Booking>, String> {
+        self.booking_repo.find_by_range(start, end).await
     }
 }
 
