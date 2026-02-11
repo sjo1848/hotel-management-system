@@ -16,7 +16,7 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # Base de Datos (Postgres + UUID + Chrono)
 # Importante: Todo en una sola declaración
-sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres", "uuid", "chrono", "migrate"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "migrate"] }
 uuid = { version = "1.0", features = ["serde", "v4"] }
 
 # Middleware y Utilidades

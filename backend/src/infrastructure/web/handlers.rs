@@ -3,7 +3,7 @@ use crate::AppState;
 use axum::{
     extract::{Path, Query, State},
     http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Response, AppendHeaders},
     Extension, Json,
 };
 use chrono::NaiveDate;
@@ -56,7 +56,7 @@ impl IntoResponse for DomainError {
         };
 
         let request_id = REQUEST_ID
-            .try_with(|value| value.clone())
+            .try_with(|value: &String| value.clone())
             .unwrap_or_else(|_| "unknown".to_string());
         let body = Json(json!({
             "error_code": error_code,
@@ -280,11 +280,11 @@ pub async fn login_handler(
 
     Ok((
         StatusCode::OK,
-        [
+        AppendHeaders([
             (header::SET_COOKIE, refresh_cookie),
             (header::SET_COOKIE, access_cookie),
             (header::SET_COOKIE, csrf_cookie),
-        ],
+        ]),
         Json(json!(LoginResponse {
             access_token,
             expires_in: state.auth_service.access_ttl_seconds(),
@@ -340,11 +340,11 @@ pub async fn refresh_handler(
 
     Ok((
         StatusCode::OK,
-        [
+        AppendHeaders([
             (header::SET_COOKIE, refresh_cookie),
             (header::SET_COOKIE, access_cookie),
             (header::SET_COOKIE, csrf_cookie),
-        ],
+        ]),
         Json(json!(LoginResponse {
             access_token,
             expires_in: state.auth_service.access_ttl_seconds(),
@@ -373,11 +373,11 @@ pub async fn logout_handler(
         let expired_csrf = clear_csrf_cookie(&state.config);
         return Ok((
             StatusCode::OK,
-            [
+            AppendHeaders([
                 (header::SET_COOKIE, expired_cookie),
                 (header::SET_COOKIE, expired_access),
                 (header::SET_COOKIE, expired_csrf),
-            ],
+            ]),
             Json(json!({ "status": "ok" })),
         )
             .into_response());
@@ -394,11 +394,11 @@ pub async fn logout_handler(
     record_audit(&state, Some(user_id), "auth.logout", None).await;
     Ok((
         StatusCode::OK,
-        [
+        AppendHeaders([
             (header::SET_COOKIE, expired_cookie),
             (header::SET_COOKIE, expired_access),
             (header::SET_COOKIE, expired_csrf),
-        ],
+        ]),
         Json(json!({ "status": "ok" })),
     )
         .into_response())
@@ -483,9 +483,8 @@ pub async fn create_user_handler(
 }
 
 fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(header::COOKIE)
-        .and_then(|value| value.to_str().ok())
+    let cookies_header = headers.get(header::COOKIE).and_then(|value| value.to_str().ok());
+    cookies_header
         .and_then(|cookies| {
             cookies
                 .split(';')
@@ -495,79 +494,66 @@ fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
         })
 }
 
-fn csrf_valid(headers: &HeaderMap) -> bool {
-    let header_token = headers
-        .get("x-csrf-token")
-        .and_then(|value| value.to_str().ok())
-        .map(|value| value.trim().to_string());
+pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
+    let mut cookie_parts = vec![
+        format!("refresh_token={}", token),
+        format!("Path=/"),
+        format!("SameSite={}", config.cookie_samesite),
+        format!("Max-Age={}", config.refresh_ttl_days * 24 * 60 * 60)
+    ];
 
-    let cookie_token = headers
-        .get(header::COOKIE)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|cookies| {
-            cookies
-                .split(';')
-                .map(|cookie| cookie.trim())
-                .find(|cookie| cookie.starts_with("csrf_token="))
-                .map(|cookie| cookie.trim_start_matches("csrf_token=").to_string())
-        });
-
-    match (header_token, cookie_token) {
-        (Some(header_token), Some(cookie_token)) => header_token == cookie_token,
-        _ => false,
+    cookie_parts.push(String::from("HttpOnly"));
+    if config.cookie_secure { // In prod, add Secure
+        cookie_parts.push(String::from("Secure"));
     }
+    // In dev (cookie_secure is false), HttpOnly and Secure are omitted
+
+    cookie_parts.join("; ")
 }
 
-fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
-    let mut cookie = format!(
-        "refresh_token={}; HttpOnly; Path=/; SameSite={}; Max-Age={}",
-        token,
-        config.cookie_samesite,
-        config.refresh_ttl_days * 24 * 60 * 60
-    );
-
-    if config.cookie_secure {
-        cookie.push_str("; Secure");
+pub fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
+    let mut cookie_parts = vec![
+        format!("refresh_token=;"),
+        format!("Path=/"),
+        format!("SameSite={}", config.cookie_samesite),
+        format!("Max-Age=0")
+    ];
+    if config.cookie_secure { // Clear HttpOnly and Secure if they were set
+        cookie_parts.push(String::from("HttpOnly"));
+        cookie_parts.push(String::from("Secure"));
     }
-
-    cookie
+    cookie_parts.join("; ")
 }
 
-fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
-    let mut cookie = format!(
-        "refresh_token=; HttpOnly; Path=/; SameSite={}; Max-Age=0",
-        config.cookie_samesite
-    );
-    if config.cookie_secure {
-        cookie.push_str("; Secure");
+pub fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> String {
+    let mut cookie_parts = vec![
+        format!("access_token={}", token),
+        format!("Path=/"),
+        format!("SameSite={}", config.cookie_samesite),
+        format!("Max-Age={}", config.access_ttl_minutes * 60)
+    ];
+
+    cookie_parts.push(String::from("HttpOnly"));
+    if config.cookie_secure { // In prod, add Secure
+        cookie_parts.push(String::from("Secure"));
     }
-    cookie
+    // In dev (cookie_secure is false), HttpOnly and Secure are omitted
+
+    cookie_parts.join("; ")
 }
 
-fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> String {
-    let mut cookie = format!(
-        "access_token={}; HttpOnly; Path=/; SameSite={}; Max-Age={}",
-        token,
-        config.cookie_samesite,
-        config.access_ttl_minutes * 60
-    );
-
-    if config.cookie_secure {
-        cookie.push_str("; Secure");
+pub fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
+    let mut cookie_parts = vec![
+        format!("access_token=;"),
+        format!("Path=/"),
+        format!("SameSite={}", config.cookie_samesite),
+        format!("Max-Age=0")
+    ];
+    if config.cookie_secure { // Clear HttpOnly and Secure if they were set
+        cookie_parts.push(String::from("HttpOnly"));
+        cookie_parts.push(String::from("Secure"));
     }
-
-    cookie
-}
-
-fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
-    let mut cookie = format!(
-        "access_token=; HttpOnly; Path=/; SameSite={}; Max-Age=0",
-        config.cookie_samesite
-    );
-    if config.cookie_secure {
-        cookie.push_str("; Secure");
-    }
-    cookie
+    cookie_parts.join("; ")
 }
 
 fn generate_csrf_token() -> String {

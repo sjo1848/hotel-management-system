@@ -5,7 +5,7 @@ use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRe
 use chrono::NaiveDate;
 use uuid::Uuid;
 
-#[sqlx::test(migrations = "../migrations")]
+#[sqlx::test]
 async fn booking_flow_creates_total_price(pool: sqlx::PgPool) {
     let room_repo = PostgresRoomRepository::new(pool.clone());
     let booking_repo = PostgresBookingRepository::new(pool.clone());
@@ -15,15 +15,15 @@ async fn booking_flow_creates_total_price(pool: sqlx::PgPool) {
     );
 
     let room_id = Uuid::new_v4();
-    sqlx::query!(
+    sqlx::query(
         "INSERT INTO rooms (id, room_number, room_type, status, price_cents)
-         VALUES ($1, $2, $3, $4, $5)",
-        room_id,
-        "A101",
-        "Suite",
-        "AVAILABLE",
-        12000_i64
+         VALUES ($1, $2, $3, $4, $5)"
     )
+    .bind(room_id)
+    .bind("A101")
+    .bind("Suite")
+    .bind("AVAILABLE")
+    .bind(12000_i64)
     .execute(&pool)
     .await
     .unwrap();

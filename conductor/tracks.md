@@ -4,5 +4,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Estabilizar y Finalizar el Flujo de Autenticación**
+- [~] **Track: Estabilizar y Finalizar el Flujo de Autenticación**
   *Link: [./tracks/auth_flow_20260210/](./tracks/auth_flow_20260210/)*

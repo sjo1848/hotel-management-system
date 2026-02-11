@@ -39,6 +39,7 @@ use hms_backend::infrastructure::web::handlers::{
     list_guests_handler, login_handler, logout_handler, me_handler, readiness_check, refresh_handler,
     root_handler, search_rooms_handler, update_booking_handler, list_users_handler, create_user_handler,
 };
+use hms_backend::infrastructure::web::utils::{csrf_valid, requires_csrf};
 use hms_backend::infrastructure::web::handlers::REQUEST_ID;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 
@@ -232,7 +233,7 @@ async fn auth_middleware(
         .headers()
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok());
-
+    
     let token = if let Some(value) = auth_header {
         if value.starts_with("Bearer ") {
             value.trim_start_matches("Bearer ").trim().to_string()
@@ -267,41 +268,6 @@ async fn auth_middleware(
     let mut req = req;
     req.extensions_mut().insert(claims);
     Ok(next.run(req).await)
-}
-
-fn requires_csrf(req: &axum::http::Request<axum::body::Body>) -> bool {
-    let method = req.method();
-    if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
-        return false;
-    }
-    let path = req.uri().path();
-    !(path == "/api/auth/login" || path == "/api/auth/refresh" || path == "/api/auth/logout")
-}
-
-fn csrf_valid(headers: &axum::http::HeaderMap) -> bool {
-    let header_token = headers
-        .get("x-csrf-token")
-        .and_then(|value| value.to_str().ok())
-        .map(|value| value.trim().to_string());
-
-    let cookie_token = headers
-        .get(axum::http::header::COOKIE)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|cookies| extract_cookie_value(cookies, "csrf_token"));
-
-    match (header_token, cookie_token) {
-        (Some(header_token), Some(cookie_token)) => header_token == cookie_token,
-        _ => false,
-    }
-}
-
-fn extract_cookie_value(cookies: &str, name: &str) -> Option<String> {
-    let needle = format!("{}=", name);
-    cookies
-        .split(';')
-        .map(|cookie| cookie.trim())
-        .find(|cookie| cookie.starts_with(&needle))
-        .map(|cookie| cookie.trim_start_matches(&needle).to_string())
 }
 
 async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRepository>) {
@@ -341,12 +307,12 @@ fn parse_cors_origins(raw: &str) -> Vec<HeaderValue> {
 async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
     if let Ok(rooms) = room_repo.find_all().await {
         if !rooms.is_empty() {
-            println!("ℹ️  Habitaciones ya existen, saltando seed.");
+            tracing::info!("Habitaciones ya existen, saltando seed.");
             return;
         }
     }
 
-    println!("🌱 Seeding initial rooms...");
+    tracing::info!("Seeding initial rooms...");
     let rooms = vec![
         ("101", "SINGLE", 5000),
         ("102", "SINGLE", 5000),
@@ -366,8 +332,8 @@ async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
             price_cents: price,
         };
         if let Err(e) = room_repo.create(room).await {
-            eprintln!("🚨 Error creating seed room {}: {}", num, e);
+            tracing::error!("Error creating seed room {}: {}", num, e);
         }
     }
-    println!("✅ Seed complete.");
+    tracing::info!("Seed complete.");
 }
