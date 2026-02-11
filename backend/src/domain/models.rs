@@ -1,8 +1,9 @@
 use chrono::NaiveDate;
 use serde::Serialize;
 use uuid::Uuid;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub enum RoomStatus {
     Available,
     Occupied,
@@ -10,7 +11,7 @@ pub enum RoomStatus {
     Maintenance,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Room {
     pub id: Uuid,
     pub room_number: String,
@@ -19,7 +20,7 @@ pub struct Room {
     pub price_cents: i64,
 }
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
 pub enum BookingStatus {
     Confirmed,
     CheckedIn,
@@ -27,7 +28,7 @@ pub enum BookingStatus {
     Cancelled,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Booking {
     pub id: Uuid,
     pub room_id: Uuid,
@@ -119,7 +120,7 @@ mod tests {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Guest {
     pub id: Uuid,
     pub full_name: String,
@@ -127,7 +128,7 @@ pub struct Guest {
     pub phone: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct User {
     pub id: Uuid,
     pub username: String,
@@ -144,7 +145,7 @@ pub struct RefreshToken {
     pub revoked_at: Option<chrono::NaiveDateTime>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AuditEvent {
     pub id: Uuid,
     pub user_id: Option<Uuid>,
@@ -153,7 +154,7 @@ pub struct AuditEvent {
     pub created_at: chrono::NaiveDateTime,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct DashboardKpis {
     pub revenue_month_cents: i64,
     pub occupancy_rate: f64,
@@ -161,12 +162,45 @@ pub struct DashboardKpis {
     pub active_bookings_count: i64,
     pub arrivals_today: Vec<BookingAlert>,
     pub departures_today: Vec<BookingAlert>,
+    pub rev_par_cents: i64,
+    pub adr_cents: i64,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct BookingAlert {
     pub booking_id: Uuid,
     pub guest_name: String,
     pub room_number: String,
     pub status: BookingStatus,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
+pub enum InvoiceStatus {
+    #[serde(rename = "PENDING")]
+    Pending,
+    #[serde(rename = "PAID")]
+    Paid,
+    #[serde(rename = "VOIDED")]
+    Voided,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct Invoice {
+    pub id: Uuid,
+    pub booking_id: Uuid,
+    pub amount_cents: i64,
+    pub status: InvoiceStatus,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl Invoice {
+    pub fn new(booking_id: Uuid, amount_cents: i64) -> Self {
+        Self {
+            id: Uuid::new_v4(),
+            booking_id,
+            amount_cents,
+            status: InvoiceStatus::Pending,
+            created_at: chrono::Utc::now().naive_utc(),
+        }
+    }
 }

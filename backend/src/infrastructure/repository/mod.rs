@@ -4,3 +4,4 @@ pub mod postgres_guest;
 pub mod postgres_refresh_token;
 pub mod postgres_user;
 pub mod postgres_audit;
+pub mod postgres_invoice;

@@ -8,6 +8,9 @@ use axum::{
     routing::{get, post, patch},
     Router,
 };
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
+use crate::infrastructure::web::openapi::ApiDoc;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
@@ -19,11 +22,14 @@ use tower_http::{
 use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
     create_booking_handler, create_guest_handler, create_user_handler, get_dashboard_kpis_handler,
-    get_rooms_handler, health_check, list_bookings_handler, list_guests_handler, list_users_handler,
-    login_handler, logout_handler, me_handler, readiness_check, refresh_handler, root_handler,
-    search_rooms_handler, update_booking_handler, update_room_status_handler,
+    get_invoice_by_booking_handler, get_rooms_handler, health_check, list_bookings_handler,
+    list_guests_handler, list_invoices_handler, list_users_handler, login_handler, logout_handler,
+    me_handler, readiness_check, refresh_handler, root_handler, search_rooms_handler,
+    update_booking_handler, update_room_status_handler,
 };
-use crate::infrastructure::web::middleware::{auth::auth_middleware, request_id::request_id_middleware};
+use crate::infrastructure::web::middleware::{
+    auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware,
+};
 
 pub fn create_router(state: Arc<AppState>) -> Router {
     let config = &state.config;
@@ -93,8 +99,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/bookings/:id", patch(update_booking_handler))
         .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/v1/auth/me", get(me_handler))
-        .route("/api/v1/users", get(list_users_handler).post(create_user_handler))
-        .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler));
+        .route("/api/v1/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler));
 
     let legacy_api = Router::new()
         .merge(auth_router_legacy)
@@ -104,12 +112,15 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/bookings/:id", patch(update_booking_handler))
         .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/auth/me", get(me_handler))
-        .route("/api/users", get(list_users_handler).post(create_user_handler))
-        .route("/api/analytics/kpis", get(get_dashboard_kpis_handler));
+        .route("/api/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/bookings/:id/invoice", get(get_invoice_by_booking_handler));
 
     let auth_layer = middleware::from_fn_with_state(state.clone(), auth_middleware);
 
     Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/", get(root_handler))
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))

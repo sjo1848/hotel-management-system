@@ -1,6 +1,6 @@
 import client from "@/api/client";
 
-export type BookingStatus = "CONFIRMED" | "CHECKED_IN" | "CHECKED_OUT" | "CANCELLED" | "Cancelled";
+export type BookingStatus = "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled";
 
 export type Booking = {
   id: string;
@@ -11,7 +11,6 @@ export type Booking = {
   check_out: string;
   total_price_cents: number;
   status: BookingStatus;
-  created_at: string;
 };
 
 export type CreateBookingPayload = {
@@ -22,26 +21,27 @@ export type CreateBookingPayload = {
   check_out: string;
 };
 
+export type BookingFilterParams = {
+  start?: string;
+  end?: string;
+};
+
 export const createBooking = async (bookingData: CreateBookingPayload) => {
   try {
-    // bookingData debe tener: { room_id, guest_name, check_in, check_out, etc }
     const response = await client.post("/bookings", bookingData);
     return response.data as Booking;
   } catch (error) {
     console.error("Error creando reserva:", error);
     const message =
-      (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error || "Error al procesar la reserva";
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al procesar la reserva";
     throw message;
   }
 };
 
-export const getBookings = async (startDate?: string, endDate?: string) => {
+export const getBookings = async (params?: BookingFilterParams) => {
   const response = await client.get("/bookings", {
-    params: {
-      start: startDate,
-      end: endDate,
-    },
+    params,
   });
   return response.data as Booking[];
 };
@@ -56,8 +56,8 @@ export const updateBooking = async (
   } catch (error) {
     console.error("Error actualizando reserva:", error);
     const message =
-      (error as { response?: { data?: { error?: string } } })?.response?.data
-        ?.error || "Error al actualizar la reserva";
+      (error as { response?: { data?: { message?: string } } })?.response?.data
+        ?.message || "Error al actualizar la reserva";
     throw message;
   }
 };

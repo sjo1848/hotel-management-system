@@ -7,3 +7,4 @@ pub mod test_cookie_builders;
 
 pub mod middleware;
 pub mod routes;
+pub mod openapi;

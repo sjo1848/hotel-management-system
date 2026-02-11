@@ -29,3 +29,5 @@ rand = "0.8"
 sha2 = "0.10"
 tower_governor = "0.4"
 base64 = "0.22"
+utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "7.0", features = ["axum"] }

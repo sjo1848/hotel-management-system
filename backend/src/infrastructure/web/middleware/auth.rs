@@ -63,9 +63,7 @@ pub async fn auth_middleware(
         return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
     }
 
-    if claims.role != "admin" && claims.role != "ops" {
-        return Err(DomainError::Unauthorized);
-    }
+    // Role check is now handled by RBAC middleware
 
     let mut req = req;
     req.extensions_mut().insert(claims);

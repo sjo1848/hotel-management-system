@@ -14,6 +14,7 @@ use std::sync::Arc;
 use uuid::Uuid;
 use base64::Engine;
 use tokio::task_local;
+use utoipa::ToSchema;
 
 task_local! {
     pub static REQUEST_ID: String;
@@ -68,7 +69,7 @@ impl IntoResponse for DomainError {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateBookingRequest {
     pub room_id: Uuid,
     pub guest_id: Option<Uuid>,
@@ -91,7 +92,7 @@ pub struct BookingFilterParams {
     pub end: Option<NaiveDate>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UpdateBookingRequest {
     pub guest_id: Option<Uuid>,
     pub guest_name: Option<String>,
@@ -100,14 +101,14 @@ pub struct UpdateBookingRequest {
     pub status: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CreateGuestRequest {
     pub full_name: String,
     pub email: String,
     pub phone: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
@@ -118,18 +119,26 @@ pub struct RefreshRequest {
     pub refresh_token: Option<String>,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, ToSchema)]
 pub struct LoginResponse {
     pub access_token: String,
     pub expires_in: usize,
     pub role: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UpdateRoomStatusRequest {
     pub status: String,
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/rooms",
+    responses(
+        (status = 200, description = "Lista de todas las habitaciones", body = [Room])
+    ),
+    tag = "Hotelería"
+)]
 pub async fn get_rooms_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
@@ -170,6 +179,16 @@ pub async fn search_rooms_handler(
     Ok(Json(json!(rooms)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/bookings",
+    request_body = CreateBookingRequest,
+    responses(
+        (status = 201, description = "Reserva creada exitosamente", body = Booking),
+        (status = 409, description = "Conflicto de fechas")
+    ),
+    tag = "Reservas"
+)]
 pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateBookingRequest>,
@@ -242,11 +261,7 @@ pub async fn update_booking_handler(
 pub async fn list_guests_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let guests: Vec<crate::domain::models::Guest> = state
-        .guest_repo
-        .find_all()
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let guests = state.guest_service.list_guests().await?;
     Ok(Json(json!(guests)))
 }
 
@@ -254,28 +269,23 @@ pub async fn create_guest_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateGuestRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    if payload.full_name.trim().is_empty() || payload.email.trim().is_empty() {
-        return Err(DomainError::InvalidInput(
-            "Nombre completo y email son obligatorios".to_string(),
-        ));
-    }
-
-    let guest = crate::domain::models::Guest {
-        id: Uuid::new_v4(),
-        full_name: payload.full_name,
-        email: payload.email,
-        phone: payload.phone,
-    };
-
-    let created: crate::domain::models::Guest = state
-        .guest_repo
-        .create(guest)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let created = state
+        .guest_service
+        .create_guest(payload.full_name, payload.email, payload.phone)
+        .await?;
 
     Ok(Json(json!(created)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/login",
+    request_body = LoginRequest,
+    responses(
+        (status = 200, description = "Login exitoso", body = LoginResponse)
+    ),
+    tag = "Autenticación"
+)]
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<LoginRequest>,
@@ -662,13 +672,51 @@ pub async fn root_handler() -> Json<Value> {
     Json(json!({ "message": "HMS Elite Backend (Hexagonal) activo" }))
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/v1/analytics/kpis",
+    responses(
+        (status = 200, description = "KPIs del dashboard", body = DashboardKpis)
+    ),
+    tag = "Análisis",
+    security(
+        ("jwt" = [])
+    )
+)]
 pub async fn get_dashboard_kpis_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
     let kpis = state
-        .analytics_service
-        .get_dashboard_kpis()
+        .reporting_service
+        .get_dashboard_summary()
         .await
         .map_err(DomainError::InfrastructureError)?;
     Ok(Json(json!(kpis)))
+}
+
+pub async fn list_invoices_handler(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let invoices = state
+        .invoice_repo
+        .find_all()
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+    Ok(Json(json!(invoices)))
+}
+
+pub async fn get_invoice_by_booking_handler(
+    State(state): State<Arc<AppState>>,
+    Path(booking_id): Path<Uuid>,
+) -> Result<Json<Value>, DomainError> {
+    let invoice = state
+        .invoice_repo
+        .find_by_booking(booking_id)
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+
+    match invoice {
+        Some(inv) => Ok(Json(json!(inv))),
+        None => Err(DomainError::InfrastructureError("Factura no encontrada para esta reserva".to_string())),
+    }
 }

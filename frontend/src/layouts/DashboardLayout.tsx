@@ -102,14 +102,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <div>
-            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
-              Configuración
-            </p>
-            <div className="space-y-1">
-              <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} />
+          {user?.role === "admin" && (
+            <div>
+              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
+                Configuración
+              </p>
+              <div className="space-y-1">
+                <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} />
+              </div>
             </div>
-          </div>
+          )}
         </nav>
 
         {/* User Footer */}

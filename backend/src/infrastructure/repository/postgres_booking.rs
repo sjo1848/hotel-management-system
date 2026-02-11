@@ -377,6 +377,8 @@ impl BookingRepository for PostgresBookingRepository {
             active_bookings_count: active.0,
             arrivals_today,
             departures_today,
+            rev_par_cents: 0,
+            adr_cents: 0,
         })
     }
 }

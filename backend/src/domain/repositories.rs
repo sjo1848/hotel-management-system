@@ -1,4 +1,4 @@
-use crate::domain::models::{AuditEvent, Booking, Guest, RefreshToken, Room, User};
+use crate::domain::models::{AuditEvent, Booking, Guest, Invoice, RefreshToken, Room, User};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use uuid::Uuid;
@@ -62,4 +62,11 @@ pub trait RefreshTokenRepository: Send + Sync {
 #[async_trait]
 pub trait AuditRepository: Send + Sync {
     async fn record(&self, event: AuditEvent) -> Result<(), String>;
+}
+
+#[async_trait]
+pub trait InvoiceRepository: Send + Sync {
+    async fn save(&self, invoice: Invoice) -> Result<Invoice, String>;
+    async fn find_by_booking(&self, booking_id: Uuid) -> Result<Option<Invoice>, String>;
+    async fn find_all(&self) -> Result<Vec<Invoice>, String>;
 }

@@ -11,6 +11,7 @@ import UsersPage from "./features/users/UsersPage";
 import React from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
+import { ToastProvider } from "./components/ui/toast";
 
 const Placeholder = ({ title }) => (
   <div className="p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
@@ -105,7 +106,9 @@ const router = createBrowserRouter([
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider router={router} />
+      <ToastProvider>
+        <RouterProvider router={router} />
+      </ToastProvider>
     </AuthProvider>
   );
 }
