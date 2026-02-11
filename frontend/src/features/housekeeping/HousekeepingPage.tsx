@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Loader2, Sparkles, AlertCircle, Wrench, CheckCircle2, Filter } from "lucide-react";
+import { Loader2, Sparkles, AlertCircle, Wrench, CheckCircle2, Play, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import roomService, { type Room } from "@/features/rooms/services/roomService";
+import { type Room } from "@/features/rooms/services/roomService";
+import housekeepingService from "./services/housekeepingService";
 import { useToast } from "@/components/ui/toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,12 +16,15 @@ const HousekeepingPage = () => {
   const loadRooms = async () => {
     setLoading(true);
     try {
-      const data = await roomService.getAllRooms();
+      // Cargamos solo las que necesitan atención (Dirty o Cleaning)
+      // O podríamos cargar todas si queremos una vista general.
+      // Siguiendo el plan "vista para personal de limpieza", cargaremos las que necesitan limpieza.
+      const data = await housekeepingService.getDirtyRooms();
       setRooms(data);
     } catch (error) {
       toast({
         title: "Error al cargar habitaciones",
-        description: "No se pudo obtener el estado actual.",
+        description: "No se pudo obtener la lista de limpieza.",
         variant: "error",
       });
     } finally {
@@ -32,65 +36,52 @@ const HousekeepingPage = () => {
     loadRooms();
   }, []);
 
-  const handleUpdateStatus = async (roomId: string, newStatus: string) => {
+  const handleStartCleaning = async (roomId: string) => {
     try {
-      await roomService.updateRoomStatus(roomId, newStatus);
-      toast({
-        title: "Estado actualizado",
-        description: `Habitación marcada como ${newStatus.toLowerCase()}.`,
-        variant: "success",
-      });
+      await housekeepingService.startCleaning(roomId);
+      toast({ title: "Limpieza iniciada", variant: "success" });
       loadRooms();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo cambiar el estado.",
-        variant: "error",
-      });
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo iniciar la limpieza", variant: "error" });
+    }
+  };
+
+  const handleFinishCleaning = async (roomId: string) => {
+    try {
+      await housekeepingService.finishCleaning(roomId);
+      toast({ title: "Habitación lista", description: "Marcada como disponible", variant: "success" });
+      loadRooms();
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo finalizar la limpieza", variant: "error" });
     }
   };
 
   const filteredRooms = rooms.filter((r) => {
     if (filter === "ALL") return true;
-    return r.status === filter;
+    return r.status === (filter === "CLEANING" ? "Cleaning" : "Dirty");
   });
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case "DIRTY":
+      case "Cleaning":
+        return {
+          color: "bg-amber-50 text-amber-700 border-amber-200",
+          icon: CheckCircle2,
+          label: "En progreso",
+          action: "Finalizar",
+          onAction: handleFinishCleaning,
+          btnIcon: Check,
+          btnColor: "bg-emerald-600 hover:bg-emerald-700",
+        };
+      case "Dirty":
+      default:
         return {
           color: "bg-rose-50 text-rose-700 border-rose-200",
           icon: AlertCircle,
-          label: "Sucia",
-          action: "Limpiar",
-          nextStatus: "AVAILABLE",
-          btnColor: "bg-emerald-600 hover:bg-emerald-700",
-        };
-      case "MAINTENANCE":
-        return {
-          color: "bg-amber-50 text-amber-700 border-amber-200",
-          icon: Wrench,
-          label: "En Mantenimiento",
-          action: "Habilitar",
-          nextStatus: "AVAILABLE",
-          btnColor: "bg-slate-900",
-        };
-      case "OCCUPIED":
-        return {
-          color: "bg-blue-50 text-blue-700 border-blue-200",
-          icon: CheckCircle2,
-          label: "Ocupada",
-          action: "Bloquear",
-          nextStatus: "MAINTENANCE",
-          btnColor: "bg-amber-600 hover:bg-amber-700",
-        };
-      default:
-        return {
-          color: "bg-emerald-50 text-emerald-700 border-emerald-200",
-          icon: Sparkles,
-          label: "Limpia",
-          action: "Bloquear",
-          nextStatus: "MAINTENANCE",
+          label: "Pendiente",
+          action: "Empezar",
+          onAction: handleStartCleaning,
+          btnIcon: Play,
           btnColor: "bg-amber-600 hover:bg-amber-700",
         };
     }
@@ -100,35 +91,35 @@ const HousekeepingPage = () => {
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Housekeeping</h2>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Limpieza</h2>
           <p className="text-slate-500 font-medium mt-3">
-            Gestión de limpieza y estado físico de las habitaciones.
+            Atención prioritaria para habitaciones sucias.
           </p>
         </div>
         <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
-          <Button 
-            variant={filter === "ALL" ? "secondary" : "ghost"} 
-            size="sm" 
+          <Button
+            variant={filter === "ALL" ? "secondary" : "ghost"}
+            size="sm"
             className="rounded-lg font-bold text-[10px] uppercase tracking-widest"
             onClick={() => setFilter("ALL")}
           >
-            Todas
+            Todas ({rooms.length})
           </Button>
-          <Button 
-            variant={filter === "DIRTY" ? "secondary" : "ghost"} 
-            size="sm" 
+          <Button
+            variant={filter === "DIRTY" ? "secondary" : "ghost"}
+            size="sm"
             className="rounded-lg font-bold text-[10px] uppercase tracking-widest text-rose-600"
             onClick={() => setFilter("DIRTY")}
           >
-            Sucias
+            Pendientes ({rooms.filter(r => r.status === 'Dirty').length})
           </Button>
-          <Button 
-            variant={filter === "MAINTENANCE" ? "secondary" : "ghost"} 
-            size="sm" 
+          <Button
+            variant={filter === "CLEANING" ? "secondary" : "ghost"}
+            size="sm"
             className="rounded-lg font-bold text-[10px] uppercase tracking-widest text-amber-600"
-            onClick={() => setFilter("MAINTENANCE")}
+            onClick={() => setFilter("CLEANING")}
           >
-            Mantenimiento
+            En Progreso ({rooms.filter(r => r.status === 'Cleaning').length})
           </Button>
         </div>
       </div>
@@ -137,15 +128,22 @@ const HousekeepingPage = () => {
         <div className="flex justify-center p-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
           <Loader2 className="animate-spin w-10 h-10 text-primary" />
         </div>
+      ) : rooms.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-20 bg-emerald-50 rounded-3xl border border-emerald-100 border-dashed">
+          <Sparkles className="w-12 h-12 text-emerald-500 mb-4" />
+          <h3 className="text-xl font-black text-emerald-900 tracking-tight">¡Todo está limpio!</h3>
+          <p className="text-emerald-600 font-medium mt-1">No hay tareas pendientes en este momento.</p>
+        </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredRooms.map((room) => {
             const config = getStatusConfig(room.status);
             const StatusIcon = config.icon;
-            
+            const ActionIcon = config.btnIcon;
+
             return (
-              <Card 
-                key={room.id} 
+              <Card
+                key={room.id}
                 className="border-none rounded-3xl overflow-hidden shadow-xl shadow-slate-200/50 hover:shadow-2xl transition-all group"
               >
                 <div className={`h-2 w-full ${config.color.split(' ')[0]}`} />
@@ -165,24 +163,13 @@ const HousekeepingPage = () => {
                     </Badge>
                   </div>
 
-                  <div className="space-y-3">
-                    <Button 
-                      className={`w-full h-12 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-lg transition-all active:scale-95 ${config.btnColor}`}
-                      onClick={() => handleUpdateStatus(room.id, config.nextStatus)}
-                    >
-                      {config.action}
-                    </Button>
-                    
-                    {room.status === 'AVAILABLE' && (
-                      <Button 
-                        variant="outline"
-                        className="w-full h-12 rounded-2xl font-black uppercase text-xs tracking-widest border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100"
-                        onClick={() => handleUpdateStatus(room.id, 'DIRTY')}
-                      >
-                        Marcar Sucia
-                      </Button>
-                    )}
-                  </div>
+                  <Button
+                    className={`w-full h-12 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-lg transition-all active:scale-95 ${config.btnColor}`}
+                    onClick={() => config.onAction(room.id)}
+                  >
+                    <ActionIcon className="w-4 h-4 mr-2" />
+                    {config.action}
+                  </Button>
                 </CardContent>
               </Card>
             );

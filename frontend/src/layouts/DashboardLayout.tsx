@@ -11,7 +11,8 @@ import {
   LogOut,
   Bell,
   Search,
-  Menu
+  Menu,
+  TrendingUp
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +110,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               </p>
               <div className="space-y-1">
                 <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} />
+                <SidebarItem icon={TrendingUp} label="Tendencias" path="/reports" active={location.pathname.startsWith("/reports")} />
               </div>
             </div>
           )}

@@ -8,6 +8,7 @@ import GuestsPage from "./features/guests/GuestsPage";
 import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
+import ReportsPage from "./features/reports/ReportsPage";
 import React from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
@@ -94,6 +95,10 @@ const router = createBrowserRouter([
       {
         path: "/users",
         element: <UsersPage />,
+      },
+      {
+        path: "/reports",
+        element: <ReportsPage />,
       },
     ],
   },

@@ -4,7 +4,7 @@ export type Room = {
   id: string;
   room_number: string;
   room_type: string;
-  status: "Available" | "Occupied" | "Dirty" | "Maintenance";
+  status: "Available" | "Occupied" | "Dirty" | "Cleaning" | "Maintenance";
   price_cents: number;
 };
 
