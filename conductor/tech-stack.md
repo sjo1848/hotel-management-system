@@ -17,7 +17,7 @@ La pila tecnológica de HMS Elite está diseñada para ofrecer una alta performa
     *   **Ventajas:** Un potente runtime asíncrono para Rust, fundamental para aplicaciones de red de alta concurrencia.
 
 ### Frontend
-*   **Framework:** React 19
+*   **Framework:** React 18
     *   **Ventajas:** Biblioteca JavaScript popular para construir interfaces de usuario interactivas y eficientes.
 *   **Lenguaje de Programación:** TypeScript
     *   **Ventajas:** Añade tipado estático a JavaScript, mejorando la robustez y mantenibilidad del código en proyectos grandes.

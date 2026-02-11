@@ -7,9 +7,9 @@ services:
     container_name: hms-db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: hms_core
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -30,14 +30,14 @@ services:
       - cargo_registry:/usr/local/cargo/registry
       - cargo_target:/app/target
     environment:
-      DATABASE_URL: postgres://admin:password123@db:5432/hms_core
+      DATABASE_URL: ${DATABASE_URL}
       RUST_LOG: debug
-      JWT_SECRET: change-me-dev
+      JWT_SECRET: ${JWT_SECRET}
       AUTH_REQUIRED: "true"
       CORS_ORIGIN: http://localhost:5173,https://app.tudominio.com
-      ADMIN_USER: admin
-      ADMIN_PASSWORD: admin123
-      ADMIN_ROLE: admin
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_ROLE: ${ADMIN_ROLE}
       ACCESS_TTL_MINUTES: "15"
       REFRESH_TTL_DAYS: "7"
       RATE_LIMIT_PER_MINUTE: "60"

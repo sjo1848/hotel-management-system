@@ -14,7 +14,7 @@ El proyecto está estructurado siguiendo el patrón de **Puertos y Adaptadores**
 
  Stack Tecnológico
 - **Backend:** Rust (Axum, SQLx, Tokio).
-- **Frontend:** React 19 (TypeScript, Vite).
+- **Frontend:** React 18 (TypeScript, Vite).
 - **Base de Datos:** PostgreSQL 16.
 - **Contenerización:** Docker & Docker Compose.
 

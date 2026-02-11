@@ -1,4 +1,5 @@
 import React from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -9,134 +10,161 @@ import {
   Settings,
   LogOut,
   Bell,
+  Search,
+  Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/useAuth";
+import { cn } from "@/lib/utils";
 
-const SidebarItem = ({ icon: Icon, label, path }) => {
-  const location = useLocation();
-  const isActive = location.pathname === path;
-
+const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean }) => {
   return (
     <Link to={path}>
       <div
-        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
-          isActive 
-            ? "bg-slate-900 text-white shadow-md shadow-slate-200" 
-            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-        }`}
+        className={cn(
+          "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 group relative overflow-hidden",
+          active
+            ? "bg-white/10 text-white shadow-lg backdrop-blur-md border border-white/5"
+            : "text-slate-400 hover:bg-white/5 hover:text-white"
+        )}
       >
-        <Icon className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"}`} />
-        <span className="font-semibold text-sm">{label}</span>
+        {active && (
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
+        )}
+        <Icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", active ? "text-secondary" : "text-slate-500 group-hover:text-slate-300")} />
+        <span className="font-medium text-sm tracking-wide">{label}</span>
       </div>
     </Link>
   );
 };
 
-const DashboardLayout = ({ children }) => {
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuth();
 
-  const handleLogout = () => {
-    logout().catch(() => null);
-    navigate("/login", { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login", { replace: true });
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
   };
 
   return (
-    <div className="flex h-screen app-shell overflow-hidden font-sans antialiased text-slate-900">
-      {/* SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col hidden md:flex shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-50">
-        <div className="p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-200 rotate-3">
-              <span className="text-white font-black text-xl">H</span>
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      {/* SIDEBAR - DEEP THEME */}
+      <aside className="w-72 bg-slate-950 text-white flex flex-col shadow-2xl z-50 relative">
+        {/* Abstract Background Decoration */}
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 pointer-events-none" />
+        <div className="absolute top-0 left-0 right-0 h-64 bg-secondary/5 blur-[100px] pointer-events-none" />
+
+        {/* Brand */}
+        <div className="relative p-8 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-amber-700 flex items-center justify-center shadow-lg shadow-amber-900/20">
+              <span className="font-bold text-xl text-white">H</span>
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-black text-slate-900 tracking-tight leading-tight">
-                HMS ELITE
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                Management
-              </span>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-white leading-none">
+                HMS <span className="text-secondary">ELITE</span>
+              </h1>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold">
+                Management System
+              </p>
             </div>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 py-2 space-y-6">
+        {/* Navigation */}
+        <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 mb-3 uppercase tracking-[0.2em]">
-              Operaciones
+            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
+              Principal
             </p>
             <div className="space-y-1">
-              <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" />
-              <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" />
-              <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" />
-              <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" />
-              <SidebarItem icon={Users} label="Huéspedes" path="/guests" />
-              <SidebarItem icon={Brush} label="Housekeeping" path="/housekeeping" />
+              <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" active={location.pathname === "/"} />
+              <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" active={location.pathname.startsWith("/bookings")} />
+              <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" active={location.pathname.startsWith("/calendar")} />
             </div>
           </div>
 
           <div>
-            <p className="px-4 text-[10px] font-black text-slate-400 mb-3 uppercase tracking-[0.2em]">
-              Sistema
+            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
+              Gestión
             </p>
             <div className="space-y-1">
-              <SidebarItem icon={Settings} label="Usuarios" path="/users" />
+              <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" active={location.pathname.startsWith("/rooms")} />
+              <SidebarItem icon={Users} label="Huéspedes" path="/guests" active={location.pathname.startsWith("/guests")} />
+              <SidebarItem icon={Brush} label="Servicios" path="/housekeeping" active={location.pathname.startsWith("/housekeeping")} />
+            </div>
+          </div>
+
+          <div>
+            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
+              Configuración
+            </p>
+            <div className="space-y-1">
+              <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} />
             </div>
           </div>
         </nav>
 
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+        {/* User Footer */}
+        <div className="relative p-4 mx-4 mb-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/10">
+              <span className="font-bold text-sm">{user?.username?.charAt(0).toUpperCase() || "U"}</span>
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium truncate">{user?.username || "Usuario"}</p>
+              <p className="text-xs text-slate-500 truncate capitalize">{user?.role || "Staff"}</p>
+            </div>
+          </div>
           <Button
             variant="ghost"
-            className="w-full justify-start text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors font-bold text-xs uppercase tracking-wider"
             onClick={handleLogout}
+            className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/10 h-9 text-xs"
           >
-            <LogOut className="w-4 h-4 mr-3" />
+            <LogOut className="w-4 h-4 mr-2" />
             Cerrar Sesión
           </Button>
         </div>
       </aside>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 z-40">
-          <div className="flex flex-col">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">Sistema de Gestión</h1>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest -mt-1">Hospitalidad Premium</p>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-xl relative border-slate-200 hover:bg-slate-50 transition-all active:scale-95"
-            >
-              <Bell className="w-4 h-4 text-slate-600" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
-            </Button>
-            
-            <div className="h-10 w-px bg-slate-200 mx-2"></div>
-
-            <div className="flex items-center gap-3 bg-slate-50 pl-3 pr-1 py-1 rounded-2xl border border-slate-100">
-              <div className="text-right">
-                <div className="text-sm font-black text-slate-800 leading-none capitalize">
-                  {user?.username || "Usuario"}
-                </div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mt-1">
-                  {user?.role || "sesion"}
-                </div>
-              </div>
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-200 to-slate-300 rounded-xl border border-white shadow-sm flex items-center justify-center font-bold text-slate-500 uppercase">
-                {user?.username?.charAt(0) || "U"}
-              </div>
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+        {/* Top Header Glass */}
+        <header className="h-20 px-8 flex items-center justify-between z-40 sticky top-0 md:relative">
+          <div className="flex-1 max-w-xl">
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
+              <Input
+                placeholder="Buscar reservas, habitaciones o huéspedes..."
+                className="pl-10 bg-white border-slate-200/60 shadow-sm focus:ring-secondary/20 rounded-xl h-10 w-full transition-all duration-300 focus:w-[105%]"
+              />
             </div>
+          </div>
+
+          <div className="flex items-center gap-4 ml-4">
+            <Button size="icon" variant="ghost" className="rounded-full hover:bg-white hover:shadow-sm text-slate-500 relative">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            </Button>
+            <Button size="icon" variant="ghost" className="md:hidden">
+              <Menu className="w-5 h-5" />
+            </Button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-auto p-8">{children}</div>
+        {/* Content Scroll Area */}
+        <div className="flex-1 overflow-auto p-8 pt-0">
+          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {children}
+          </div>
+        </div>
       </main>
     </div>
   );
