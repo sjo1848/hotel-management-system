@@ -27,10 +27,16 @@ export const updateRoomStatus = async (id: string, status: string) => {
   return response.data;
 };
 
+export const createRoom = async (roomData: { room_number: string, room_type: string, price_cents: number }) => {
+  const response = await client.post("/rooms", roomData);
+  return response.data as Room;
+};
+
 const roomService = {
   getAllRooms,
   getRoomById,
   updateRoomStatus,
+  createRoom,
 };
 
 export default roomService;

@@ -5,7 +5,7 @@ use axum::{
         HeaderValue, Method,
     },
     middleware,
-    routing::{get, post, patch},
+    routing::{get, post, patch, delete},
     Router,
 };
 use utoipa::OpenApi;
@@ -21,10 +21,10 @@ use tower_http::{
 
 use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
-    create_booking_handler, create_guest_handler, create_user_handler, get_dashboard_kpis_handler,
+    create_booking_handler, create_guest_handler, create_room_handler, create_user_handler, get_dashboard_kpis_handler,
     finish_cleaning_handler, get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
     get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler, list_guests_handler,
-    list_invoices_handler, list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
+    list_invoices_handler, list_users_handler, delete_user_handler, login_handler, logout_handler, me_handler, readiness_check,
     refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler, update_booking_handler,
     update_room_status_handler,
 };
@@ -94,7 +94,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     let api_v1 = Router::new()
         .merge(auth_router_v1)
-        .route("/api/v1/rooms", get(get_rooms_handler))
+        .route("/api/v1/rooms", get(get_rooms_handler).merge(post(create_room_handler).layer(middleware::from_fn(admin_only))))
         .route("/api/v1/rooms/available", get(search_rooms_handler))
         .route("/api/v1/rooms/:id/status", patch(update_room_status_handler))
         .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
@@ -102,6 +102,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/v1/auth/me", get(me_handler))
         .route("/api/v1/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/users/:id", delete(delete_user_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler))

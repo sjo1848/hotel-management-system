@@ -3,13 +3,31 @@ use serde::Serialize;
 use uuid::Uuid;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema, PartialEq)]
 pub enum RoomStatus {
     Available,
     Occupied,
     Dirty,
     Cleaning,
     Maintenance,
+}
+
+impl RoomStatus {
+    pub fn can_transition_to(&self, next: &Self) -> bool {
+        match (self, next) {
+            (Self::Available, Self::Occupied) => true,
+            (Self::Available, Self::Maintenance) => true,
+            (Self::Occupied, Self::Dirty) => true,
+            (Self::Dirty, Self::Cleaning) => true,
+            (Self::Cleaning, Self::Available) => true,
+            (Self::Maintenance, Self::Available) => true,
+            (Self::Maintenance, Self::Dirty) => true,
+            // Permitir el mismo estado (no-op)
+            (s, n) if s == n => true,
+            // Por defecto, cualquier otra transición es inválida
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -127,6 +145,7 @@ pub struct Guest {
     pub full_name: String,
     pub email: String,
     pub phone: Option<String>,
+    pub created_at: Option<chrono::NaiveDateTime>,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

@@ -66,6 +66,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const [searchValue, setSearchValue] = useState("");
   
   // Persistencia del estado de la sidebar
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -83,6 +84,20 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       navigate("/login", { replace: true });
     } catch (e) {
       console.error("Logout failed", e);
+    }
+  };
+
+  const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchValue.trim()) {
+      const term = searchValue.toLowerCase();
+      if (!isNaN(Number(term))) {
+        navigate(`/rooms`);
+      } else if (term.includes("@")) {
+        navigate(`/guests`);
+      } else {
+        navigate(`/bookings`);
+      }
+      setSearchValue("");
     }
   };
 
@@ -206,6 +221,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               <Input
                 placeholder="Buscar reservas, habitaciones o huéspedes..."
                 className="pl-10 bg-white border-slate-200/60 shadow-sm focus:ring-secondary/20 rounded-xl h-10 w-full transition-all duration-300 focus:w-[105%]"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={handleSearch}
               />
             </div>
           </div>

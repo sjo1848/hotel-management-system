@@ -15,6 +15,7 @@ import {
  
 } from "lucide-react";
 import BookingList from "@/features/bookings/components/BookingList";
+import BookingEditDrawer from "@/features/bookings/components/BookingEditDrawer";
 import { format } from "date-fns";
 import { 
   getDashboardKpis, 
@@ -86,32 +87,40 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
   </Card>
 );
 
-const AlertItem = ({ alert, type }: { alert: any, type: 'arrival' | 'departure' }) => (
-  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group">
-    <div className="flex items-center gap-4">
-      <div className={cn(
-        "w-10 h-10 rounded-lg flex items-center justify-center",
-        type === 'arrival' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
-      )}>
-        {type === 'arrival' ? <LogIn className="w-5 h-5" /> : <LogOutIcon className="w-5 h-5" />}
-      </div>
-      <div>
-        <div className="text-sm font-black text-slate-900 tracking-tight">{alert.guest_name}</div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-slate-400">Habitación {alert.room_number}</div>
-      </div>
-    </div>
-    <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-      <MoreVertical className="w-4 h-4 text-slate-400" />
-    </Button>
-  </div>
-);
-
 const DashboardHome = () => {
   const navigate = useNavigate();
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueReportItem[]>([]);
   const [occupancyData, setOccupancyData] = useState<OccupancyReportItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const AlertItem = ({ alert, type }: { alert: any, type: 'arrival' | 'departure' }) => (
+    <div 
+      className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group cursor-pointer"
+      onClick={() => {
+        setSelectedBookingId(alert.booking_id);
+        setIsDrawerOpen(true);
+      }}
+    >
+      <div className="flex items-center gap-4">
+        <div className={cn(
+          "w-10 h-10 rounded-lg flex items-center justify-center",
+          type === 'arrival' ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+        )}>
+          {type === 'arrival' ? <LogIn className="w-5 h-5" /> : <LogOutIcon className="w-5 h-5" />}
+        </div>
+        <div>
+          <div className="text-sm font-black text-slate-900 tracking-tight">{alert.guest_name}</div>
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Habitación {alert.room_number}</div>
+        </div>
+      </div>
+      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+        <MoreVertical className="w-4 h-4 text-slate-400" />
+      </Button>
+    </div>
+  );
 
   useEffect(() => {
     const loadData = async () => {
@@ -344,6 +353,16 @@ const DashboardHome = () => {
           </Card>
         </div>
       </div>
+
+      <BookingEditDrawer
+        booking={null}
+        bookingId={selectedBookingId}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };

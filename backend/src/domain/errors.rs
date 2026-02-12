@@ -4,6 +4,8 @@ use serde::Serialize;
 pub enum DomainError {
     RoomNotFound,
     RoomNotAvailable,
+    RoomAlreadyExists,
+    InvalidRoomStatusTransition,
     BookingNotFound,
     InvalidBookingDates,
     InvalidInput(String),

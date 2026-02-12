@@ -1,22 +1,27 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{Room, RoomStatus};
-use crate::domain::repositories::{RoomRepository, AuditRepository};
+use crate::domain::repositories::RoomRepository;
+use crate::application::room_service::RoomService;
+use crate::application::audit_service::AuditService;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct HousekeepingService {
     room_repo: Arc<dyn RoomRepository>,
-    audit_repo: Arc<dyn AuditRepository>,
+    room_service: Arc<RoomService>,
+    audit_service: Arc<AuditService>,
 }
 
 impl HousekeepingService {
     pub fn new(
         room_repo: Arc<dyn RoomRepository>,
-        audit_repo: Arc<dyn AuditRepository>,
+        room_service: Arc<RoomService>,
+        audit_service: Arc<AuditService>,
     ) -> Self {
         Self {
             room_repo,
-            audit_repo,
+            room_service,
+            audit_service,
         }
     }
 
@@ -30,29 +35,16 @@ impl HousekeepingService {
     }
 
     pub async fn start_cleaning(&self, room_id: Uuid) -> Result<(), DomainError> {
-        self.room_repo.update_status(room_id, RoomStatus::Cleaning).await
-            .map_err(DomainError::InfrastructureError)?;
+        self.room_service.update_room_status(room_id, RoomStatus::Cleaning).await?;
         
-        self.record_audit(None, &format!("Cleaning started for room {}", room_id)).await;
+        self.audit_service.record(None, &format!("Cleaning started for room {}", room_id), None).await;
         Ok(())
     }
 
     pub async fn finish_cleaning(&self, room_id: Uuid) -> Result<(), DomainError> {
-        self.room_repo.update_status(room_id, RoomStatus::Available).await
-            .map_err(DomainError::InfrastructureError)?;
+        self.room_service.update_room_status(room_id, RoomStatus::Available).await?;
         
-        self.record_audit(None, &format!("Cleaning finished for room {}", room_id)).await;
+        self.audit_service.record(None, &format!("Cleaning finished for room {}", room_id), None).await;
         Ok(())
-    }
-
-    async fn record_audit(&self, user_id: Option<Uuid>, action: &str) {
-        let event = crate::domain::models::AuditEvent {
-            id: Uuid::new_v4(),
-            user_id,
-            action: action.to_string(),
-            ip_address: None,
-            created_at: chrono::Utc::now().naive_utc(),
-        };
-        let _ = self.audit_repo.record(event).await;
     }
 }

@@ -92,6 +92,12 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
     setShowGuestList(false);
   };
 
+  const handleClearSelectedGuest = () => {
+    setSelectedGuestId(null);
+    setFormData({ guest_name: "", guest_email: "" });
+    setSearchTerm("");
+  };
+
   if (!room) return null;
 
   const nextStep = () => setStep(s => s + 1);
@@ -149,7 +155,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[420px] overflow-y-auto">
+      <SheetContent className="sm:max-w-[420px] overflow-y-auto bg-white border-l shadow-2xl">
         <SheetHeader>
           <div className="flex justify-between items-center mb-2">
             <Badge variant="outline" className="text-[10px] uppercase tracking-tighter">Paso {step} de 3</Badge>
@@ -196,13 +202,27 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="grid gap-2 relative">
-                <Label htmlFor="search-guest" className="text-xs font-bold uppercase text-slate-500">Buscar Huésped Existente</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="search-guest" className="text-xs font-bold uppercase text-slate-500">Buscar Huésped Existente</Label>
+                  {selectedGuestId && (
+                    <button 
+                      type="button" 
+                      onClick={handleClearSelectedGuest}
+                      className="text-[10px] font-bold text-rose-600 hover:underline"
+                    >
+                      Limpiar Selección
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
                     id="search-guest"
                     placeholder="Nombre o Email..."
-                    className="pl-10 h-11 rounded-xl"
+                    className={cn(
+                      "pl-10 h-11 rounded-xl transition-all",
+                      selectedGuestId ? "bg-indigo-50 border-indigo-200" : "bg-white"
+                    )}
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
@@ -214,50 +234,59 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                 </div>
                 
                 {showGuestList && filteredGuests.length > 0 && (
-                  <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-xl z-50 mt-2 max-h-48 overflow-y-auto overflow-x-hidden p-1 border-slate-100">
-                    {filteredGuests.map(guest => (
-                      <button
-                        key={guest.id}
-                        type="button"
-                        className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-slate-50 last:border-0"
-                        onClick={() => handleSelectGuest(guest)}
-                      >
-                        <span className="text-sm font-bold text-slate-800">{guest.full_name}</span>
-                        <span className="text-xs text-slate-500">{guest.email}</span>
-                      </button>
-                    ))}
-                  </div>
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowGuestList(false)} />
+                    <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 max-h-48 overflow-y-auto p-1 border-slate-100 animate-in fade-in zoom-in duration-200">
+                      {filteredGuests.map(guest => (
+                        <button
+                          key={guest.id}
+                          type="button"
+                          className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-slate-50 last:border-0"
+                          onClick={() => handleSelectGuest(guest)}
+                        >
+                          <span className="text-sm font-bold text-slate-800">{guest.full_name}</span>
+                          <span className="text-xs text-slate-500">{guest.email}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
 
               <div className="space-y-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center gap-2 text-indigo-600 mb-2">
                   <UserPlus className="w-4 h-4" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">O registrar nuevo</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">
+                    {selectedGuestId ? "Detalles del Huésped Seleccionado" : "O registrar nuevo"}
+                  </span>
                 </div>
                 
                 <div className="grid gap-2">
-                  <Label htmlFor="name">Nombre Completo</Label>
+                  <Label htmlFor="guest_name">Nombre Completo</Label>
                   <Input
-                    id="name"
+                    id="guest_name"
+                    name="guest_name"
                     placeholder="Juan Pérez"
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-xl bg-white border-slate-300 text-slate-900"
                     value={formData.guest_name}
-                    onChange={(e) => setFormData({ ...formData, guest_name: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, guest_name: e.target.value }))}
                     required
+                    autoComplete="off"
                   />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="guest_email">Email</Label>
                   <Input
-                    id="email"
+                    id="guest_email"
+                    name="guest_email"
                     type="email"
                     placeholder="juan@ejemplo.com"
-                    className="h-11 rounded-xl"
+                    className="h-11 rounded-xl bg-white border-slate-300 text-slate-900"
                     value={formData.guest_email}
-                    onChange={(e) => setFormData({ ...formData, guest_email: e.target.value })}
+                    onChange={(e) => setFormData(prev => ({ ...prev, guest_email: e.target.value }))}
                     required
+                    autoComplete="off"
                   />
                 </div>
               </div>
@@ -309,7 +338,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
             )}
             <Button
               type="submit"
-              disabled={loading || !hasDates || nights <= 0 || (step === 2 && (!formData.guest_name || !formData.guest_email))}
+              disabled={loading}
               className={cn(
                 "rounded-xl h-12 shadow-lg transition-all",
                 step === 3 ? "bg-emerald-600 hover:bg-emerald-700 flex-[2]" : "bg-slate-900 flex-1"

@@ -94,6 +94,33 @@ impl RoomRepository for PostgresRoomRepository {
         }))
     }
 
+    async fn find_by_room_number(&self, room_number: &str) -> Result<Option<Room>, String> {
+        let record = sqlx::query(
+            "SELECT id, room_number, room_type, status, price_cents FROM rooms WHERE room_number = $1",
+        )
+        .bind(room_number)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(record.map(|rec| {
+            let status: Option<String> = rec.try_get("status").ok();
+            Room {
+                id: rec.try_get("id").unwrap(),
+                room_number: rec.try_get("room_number").unwrap(),
+                room_type: rec.try_get("room_type").unwrap(),
+                status: match status.as_deref() {
+                    Some("AVAILABLE") => RoomStatus::Available,
+                    Some("OCCUPIED") => RoomStatus::Occupied,
+                    Some("DIRTY") => RoomStatus::Dirty,
+                    Some("CLEANING") => RoomStatus::Cleaning,
+                    _ => RoomStatus::Maintenance,
+                },
+                price_cents: rec.try_get("price_cents").unwrap(),
+            }
+        }))
+    }
+
     async fn update_status(&self, id: Uuid, status: RoomStatus) -> Result<(), String> {
         let status_str = match status {
             RoomStatus::Available => "AVAILABLE",

@@ -6,6 +6,7 @@ use crate::infrastructure::web::handlers::*;
 #[openapi(
     paths(
         get_rooms_handler,
+        create_room_handler,
         create_booking_handler,
         login_handler,
         get_dashboard_kpis_handler,
@@ -19,7 +20,7 @@ use crate::infrastructure::web::handlers::*;
         schemas(
             Room, RoomStatus, Booking, BookingStatus, Guest, User, AuditEvent,
             DashboardKpis, BookingAlert, Invoice, InvoiceStatus,
-            CreateBookingRequest, CreateGuestRequest, LoginRequest, LoginResponse,
+            CreateBookingRequest, CreateGuestRequest, CreateRoomRequest, LoginRequest, LoginResponse,
             RevenueReport, OccupancyReport,
         )
     ),

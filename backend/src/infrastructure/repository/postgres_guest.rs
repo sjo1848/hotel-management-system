@@ -17,7 +17,7 @@ impl PostgresGuestRepository {
 impl GuestRepository for PostgresGuestRepository {
     async fn find_all(&self) -> Result<Vec<Guest>, String> {
         let records = sqlx::query(
-            "SELECT id, full_name, email, phone FROM guests ORDER BY created_at DESC",
+            "SELECT id, full_name, email, phone, created_at FROM guests ORDER BY created_at DESC",
         )
         .fetch_all(&self.pool)
         .await
@@ -29,7 +29,8 @@ impl GuestRepository for PostgresGuestRepository {
                 id: row.try_get("id").unwrap(),
                 full_name: row.try_get("full_name").unwrap(),
                 email: row.try_get("email").unwrap(),
-                phone: row.try_get("phone").unwrap(),
+                phone: row.try_get("phone").ok(),
+                created_at: row.try_get("created_at").ok(),
             })
             .collect())
     }

@@ -1,6 +1,8 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::{Booking, BookingStatus, Invoice};
-use crate::domain::repositories::{BookingRepository, RoomRepository, AuditRepository, InvoiceRepository};
+use crate::domain::models::{Booking, BookingStatus, Invoice, RoomStatus};
+use crate::domain::repositories::{BookingRepository, RoomRepository, InvoiceRepository};
+use crate::application::room_service::RoomService;
+use crate::application::audit_service::AuditService;
 use chrono::NaiveDate;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -8,7 +10,8 @@ use uuid::Uuid;
 pub struct BookingService {
     booking_repo: Arc<dyn BookingRepository>,
     room_repo: Arc<dyn RoomRepository>,
-    audit_repo: Arc<dyn AuditRepository>,
+    room_service: Arc<RoomService>,
+    audit_service: Arc<AuditService>,
     invoice_repo: Arc<dyn InvoiceRepository>,
 }
 
@@ -16,13 +19,15 @@ impl BookingService {
     pub fn new(
         booking_repo: Arc<dyn BookingRepository>,
         room_repo: Arc<dyn RoomRepository>,
-        audit_repo: Arc<dyn AuditRepository>,
+        room_service: Arc<RoomService>,
+        audit_service: Arc<AuditService>,
         invoice_repo: Arc<dyn InvoiceRepository>,
     ) -> Self {
         Self {
             booking_repo,
             room_repo,
-            audit_repo,
+            room_service,
+            audit_service,
             invoice_repo,
         }
     }
@@ -41,6 +46,11 @@ impl BookingService {
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::RoomNotFound)?;
+
+        // Validación según mandato: La habitación debe estar disponible
+        if room.status != RoomStatus::Available {
+            return Err(DomainError::RoomNotAvailable);
+        }
 
         let is_available = self
             .booking_repo
@@ -74,7 +84,7 @@ impl BookingService {
             .await
             .map_err(map_repo_error)?;
 
-        self.record_audit(guest_id, &format!("New Booking created: {}", saved_booking.id)).await;
+        self.audit_service.record(guest_id, &format!("New Booking created: {}", saved_booking.id), None).await;
         
         Ok(saved_booking)
     }
@@ -148,22 +158,22 @@ impl BookingService {
             .await
             .map_err(map_repo_error)?;
 
-        // Side effect: Update room status based on booking status
+        // Side effect: Update room status based on booking status using RoomService
         match updated_booking.status {
             BookingStatus::CheckedIn => {
-                let _ = self.room_repo.update_status(updated_booking.room_id, crate::domain::models::RoomStatus::Occupied).await;
-                self.record_audit(None, &format!("Check-in: Booking {}", updated_booking.id)).await;
+                let _ = self.room_service.update_room_status(updated_booking.room_id, RoomStatus::Occupied).await;
+                self.audit_service.record(None, &format!("Check-in: Booking {}", updated_booking.id), None).await;
             },
             BookingStatus::CheckedOut => {
-                let _ = self.room_repo.update_status(updated_booking.room_id, crate::domain::models::RoomStatus::Dirty).await;
-                self.record_audit(None, &format!("Check-out: Booking {}", updated_booking.id)).await;
+                let _ = self.room_service.update_room_status(updated_booking.room_id, RoomStatus::Dirty).await;
+                self.audit_service.record(None, &format!("Check-out: Booking {}", updated_booking.id), None).await;
                 
                 // Automate Invoice generation
                 let invoice = Invoice::new(updated_booking.id, updated_booking.total_price_cents);
                 let _ = self.invoice_repo.save(invoice).await;
             },
             BookingStatus::Cancelled => {
-                self.record_audit(None, &format!("Cancellation: Booking {}", updated_booking.id)).await;
+                self.audit_service.record(None, &format!("Cancellation: Booking {}", updated_booking.id), None).await;
             },
             _ => {}
         }
@@ -181,17 +191,6 @@ impl BookingService {
         end: NaiveDate,
     ) -> Result<Vec<Booking>, String> {
         self.booking_repo.find_by_range(start, end).await
-    }
-
-    async fn record_audit(&self, user_id: Option<Uuid>, action: &str) {
-        let event = crate::domain::models::AuditEvent {
-            id: Uuid::new_v4(),
-            user_id,
-            action: action.to_string(),
-            ip_address: None,
-            created_at: chrono::Utc::now().naive_utc(),
-        };
-        let _ = self.audit_repo.record(event).await;
     }
 }
 

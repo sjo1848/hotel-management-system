@@ -9,14 +9,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getUsers } from "./usersService";
+import { getUsers, deleteUser } from "./usersService";
 import { User } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
+import UserCreateDrawer from "./components/UserCreateDrawer";
 
 const UsersPage = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -32,6 +34,17 @@ const UsersPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
+    try {
+      await deleteUser(id);
+      toast({ title: "Usuario eliminado", variant: "success" });
+      fetchUsers();
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo eliminar el usuario", variant: "error" });
     }
   };
 
@@ -64,7 +77,7 @@ const UsersPage = () => {
     },
     {
       header: "",
-      cell: () => (
+      cell: (item) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -75,8 +88,11 @@ const UsersPage = () => {
             <DropdownMenuItem onClick={() => toast({ title: "Seguridad", description: "La edición de perfiles está restringida." })}>
               Editar Permisos
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-red-600">
-              Desactivar Cuenta
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={() => handleDelete(item.id)}
+            >
+              Eliminar Cuenta
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -104,7 +120,7 @@ const UsersPage = () => {
 
         <Button 
           className="h-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
-          onClick={() => toast({ title: "Configuración", description: "El registro de nuevos usuarios está en desarrollo." })}
+          onClick={() => setIsCreateOpen(true)}
         >
           <Plus className="w-4 h-4" />
           Nuevo Operador
@@ -120,6 +136,12 @@ const UsersPage = () => {
           searchPlaceholder="Buscar por nombre de usuario..."
         />
       </div>
+
+      <UserCreateDrawer 
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchUsers}
+      />
     </div>
   );
 };

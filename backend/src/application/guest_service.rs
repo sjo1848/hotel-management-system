@@ -39,6 +39,7 @@ impl GuestService {
             full_name,
             email,
             phone,
+            created_at: None,
         };
 
         self.guest_repo

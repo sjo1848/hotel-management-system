@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, CheckCircle, Clock, XCircle, MoreVertical, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,13 +13,16 @@ import {
 import { getBookings, updateBooking } from "./services/bookingService";
 import { Booking } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
+import { downloadCSV, cn } from "@/lib/utils";
 import BookingEditDrawer from "./components/BookingEditDrawer";
 import BookingDetailsSheet from "./components/BookingDetailsSheet";
 
 const BookingsPage = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedBooking, setSelectedRoom] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -49,6 +53,19 @@ const BookingsPage = () => {
       toast({ title: "Error", description: "No se pudo cancelar la reserva", variant: "error" });
     }
   };
+
+  const handleExport = () => {
+    if (bookings.length === 0) {
+      toast({ title: "Sin datos", description: "No hay reservas para exportar", variant: "info" });
+      return;
+    }
+    downloadCSV(bookings, `reservas_${new Date().toISOString().split('T')[0]}.csv`);
+    toast({ title: "Exportación exitosa", description: "El archivo CSV ha sido generado", variant: "success" });
+  };
+
+  const filteredBookings = bookings.filter(b => 
+    filterStatus === "all" ? true : b.status === filterStatus
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -153,13 +170,35 @@ const BookingsPage = () => {
         </div>
 
         <div className="flex gap-3">
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
-            <Filter className="w-4 h-4 mr-2" /> Filtros
-          </Button>
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className={cn("h-10 rounded-xl border-slate-200", filterStatus !== "all" && "bg-indigo-50 border-indigo-200 text-indigo-700")}>
+                <Filter className="w-4 h-4 mr-2" /> 
+                {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 bg-white">
+              <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-10 rounded-xl border-slate-200"
+            onClick={handleExport}
+          >
             <Download className="w-4 h-4 mr-2" /> Exportar
           </Button>
-          <Button size="sm" className="h-10 rounded-xl bg-slate-900 shadow-lg shadow-slate-200">
+          <Button 
+            size="sm" 
+            className="h-10 rounded-xl bg-slate-900 shadow-lg shadow-slate-200"
+            onClick={() => navigate("/rooms")}
+          >
             <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
           </Button>
         </div>
@@ -168,7 +207,7 @@ const BookingsPage = () => {
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
         <DataTable
           columns={columns}
-          data={bookings}
+          data={filteredBookings}
           isLoading={loading}
           searchable
           searchPlaceholder="Buscar por huésped o ID..."
@@ -185,6 +224,7 @@ const BookingsPage = () => {
               setSelectedRoom(null);
             }}
             onSuccess={fetchBookings}
+            onViewDetails={() => setIsDetailsOpen(true)}
           />
           <BookingDetailsSheet
             booking={selectedBooking}

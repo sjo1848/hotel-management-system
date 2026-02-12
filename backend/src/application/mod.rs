@@ -5,3 +5,4 @@ pub mod room_service;
 pub mod reporting_service;
 pub mod guest_service;
 pub mod housekeeping_service;
+pub mod audit_service;

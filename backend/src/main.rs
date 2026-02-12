@@ -6,6 +6,7 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, auth_service::AuthService, booking_service::BookingService,
     room_service::RoomService, reporting_service::ReportingService,
     guest_service::GuestService, housekeeping_service::HousekeepingService,
+    audit_service::AuditService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
@@ -58,12 +59,19 @@ async fn main() {
     let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
 
     // 6. Initialize Services
-    let booking_service = Arc::new(BookingService::new(booking_repo.clone(), room_repo.clone(), audit_repo.clone(), invoice_repo.clone()));
+    let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
+    let room_service = Arc::new(RoomService::new(room_repo.clone()));
+    let booking_service = Arc::new(BookingService::new(
+        booking_repo.clone(),
+        room_repo.clone(),
+        room_service.clone(),
+        audit_service.clone(),
+        invoice_repo.clone(),
+    ));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
-    let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
-    let housekeeping_service = Arc::new(HousekeepingService::new(room_repo.clone(), audit_repo.clone()));
+    let housekeeping_service = Arc::new(HousekeepingService::new(room_repo.clone(), room_service.clone(), audit_service.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -84,6 +92,7 @@ async fn main() {
         guest_service,
         room_service,
         housekeeping_service,
+        audit_service,
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,

@@ -20,9 +20,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { getAllRooms } from "@/features/rooms/services/roomService";
+import { getAllRooms, updateRoomStatus } from "@/features/rooms/services/roomService";
 import { Room } from "@/types/domain";
 import BookingDrawer from "@/features/bookings/components/BookingDrawer";
+import RoomCreateDrawer from "./components/RoomCreateDrawer";
 import AvailabilityPicker from "./components/AvailabilityPicker";
 import { useToast } from "@/components/ui/toast";
 
@@ -57,6 +58,7 @@ const RoomsPage = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   // Booking State
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
@@ -93,6 +95,16 @@ const RoomsPage = () => {
 
   const handleBookingSuccess = () => {
     fetchRooms(bookingDates?.from, bookingDates?.to);
+  };
+
+  const handleUpdateStatus = async (roomId: string, status: string) => {
+    try {
+      await updateRoomStatus(roomId, status);
+      toast({ title: "Estado actualizado", variant: "success" });
+      fetchRooms(bookingDates?.from, bookingDates?.to);
+    } catch (error) {
+      toast({ title: "Error", description: "No se pudo actualizar el estado", variant: "error" });
+    }
   };
 
   const columns: Column<Room>[] = [
@@ -151,8 +163,20 @@ const RoomsPage = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Ver Detalle</DropdownMenuItem>
-              <DropdownMenuItem>Marcar Limpia</DropdownMenuItem>
-              <DropdownMenuItem>Mantenimiento</DropdownMenuItem>
+              {item.status === 'Dirty' && (
+                <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'AVAILABLE')}>
+                  Marcar Limpia (Rápido)
+                </DropdownMenuItem>
+              )}
+              {item.status !== 'Maintenance' ? (
+                <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'MAINTENANCE')}>
+                  Mantenimiento
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => handleUpdateStatus(item.id, 'AVAILABLE')}>
+                  Habilitar Habitación
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -260,7 +284,7 @@ const RoomsPage = () => {
               <Button
                 size="sm"
                 className="h-9 gap-2 shadow-lg shadow-primary/20"
-                onClick={() => toast({ title: "Configuración", description: "El módulo de gestión de catálogo está en desarrollo." })}
+                onClick={() => setIsCreateOpen(true)}
               >
                 <Plus className="w-4 h-4" /> Añadir Habitación
               </Button>
@@ -290,6 +314,20 @@ const RoomsPage = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>Ver Detalle</DropdownMenuItem>
+                      {room.status === 'Dirty' && (
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(room.id, 'AVAILABLE')}>
+                          Marcar Limpia
+                        </DropdownMenuItem>
+                      )}
+                      {room.status !== 'Maintenance' ? (
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(room.id, 'MAINTENANCE')}>
+                          Mantenimiento
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem onClick={() => handleUpdateStatus(room.id, 'AVAILABLE')}>
+                          Habilitar
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -325,7 +363,7 @@ const RoomsPage = () => {
             {/* Add New Room Card */}
             <div
               className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center text-slate-400 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
-              onClick={() => toast({ title: "Configuración", description: "El módulo de gestión de catálogo está en desarrollo." })}
+              onClick={() => setIsCreateOpen(true)}
             >
               <div className="w-12 h-12 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
                 <Plus className="w-6 h-6" />
@@ -350,6 +388,12 @@ const RoomsPage = () => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         onSuccess={handleBookingSuccess}
+      />
+
+      <RoomCreateDrawer 
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchRooms}
       />
     </div>
   );

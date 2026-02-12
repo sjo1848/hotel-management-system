@@ -6,11 +6,16 @@ import { getGuests } from "./services/guestService";
 import { Guest } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import { format } from "date-fns";
+import GuestCreateDrawer from "./components/GuestCreateDrawer";
+import GuestDetailsSheet from "./components/GuestDetailsSheet";
 
 const GuestsPage = () => {
   const { toast } = useToast();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
   const fetchGuests = async () => {
     setLoading(true);
@@ -64,15 +69,25 @@ const GuestsPage = () => {
       cell: (item) => (
         <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
           <Calendar className="w-3.5 h-3.5" />
-          {format(new Date(item.created_at), "dd MMM, yyyy")}
+          {item.created_at 
+            ? format(new Date(item.created_at), "dd MMM, yyyy")
+            : "Fecha no disponible"}
         </div>
       ),
     },
     {
       header: "",
-      cell: () => (
+      cell: (item) => (
         <div className="flex justify-end">
-          <Button variant="ghost" size="sm" className="text-indigo-600 font-bold text-xs h-8">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-indigo-600 font-bold text-xs h-8"
+            onClick={() => {
+              setSelectedGuest(item);
+              setIsDetailsOpen(true);
+            }}
+          >
             Ver Ficha
           </Button>
         </div>
@@ -100,7 +115,7 @@ const GuestsPage = () => {
 
         <Button 
           className="h-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
-          onClick={() => toast({ title: "Módulo CRM", description: "El registro manual de huéspedes está en desarrollo." })}
+          onClick={() => setIsCreateOpen(true)}
         >
           <Plus className="w-4 h-4" />
           Registrar Huésped
@@ -116,6 +131,21 @@ const GuestsPage = () => {
           searchPlaceholder="Buscar por nombre o email..."
         />
       </div>
+
+      <GuestCreateDrawer 
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        onSuccess={fetchGuests}
+      />
+
+      <GuestDetailsSheet
+        guest={selectedGuest}
+        isOpen={isDetailsOpen}
+        onClose={() => {
+          setIsDetailsOpen(false);
+          setSelectedGuest(null);
+        }}
+      />
     </div>
   );
 };

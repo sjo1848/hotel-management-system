@@ -5,6 +5,7 @@ use crate::application::room_service::RoomService;
 use crate::application::reporting_service::ReportingService;
 use crate::application::guest_service::GuestService;
 use crate::application::housekeeping_service::HousekeepingService;
+use crate::application::audit_service::AuditService;
 use crate::config::AppConfig;
 use crate::domain::repositories::{
     AuditRepository, GuestRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository, UserRepository,
@@ -19,6 +20,7 @@ pub struct AppState {
     pub guest_service: Arc<GuestService>,
     pub room_service: Arc<RoomService>,
     pub housekeeping_service: Arc<HousekeepingService>,
+    pub audit_service: Arc<AuditService>,
     pub guest_repo: Arc<dyn GuestRepository>,
     pub user_repo: Arc<dyn UserRepository>,
     pub refresh_repo: Arc<dyn RefreshTokenRepository>,

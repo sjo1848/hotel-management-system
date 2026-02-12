@@ -13,6 +13,7 @@ import {
 import { getRevenueReport, getOccupancyReport, RevenueData, OccupancyData } from "./services/reportingService";
 import { useToast } from "@/components/ui/toast";
 import { format, subDays } from "date-fns";
+import { downloadCSV } from "@/lib/utils";
 
 const ReportsPage = () => {
     const { toast } = useToast();
@@ -48,6 +49,17 @@ const ReportsPage = () => {
     const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
     const formatDate = (dateStr: string) => format(new Date(dateStr), "dd MMM");
 
+    const handleExport = () => {
+        if (revenueData.length === 0 && occupancyData.length === 0) {
+            toast({ title: "Sin datos", description: "No hay información para exportar", variant: "info" });
+            return;
+        }
+        
+        // Exportamos ingresos por defecto
+        downloadCSV(revenueData, `reporte_ingresos_${new Date().toISOString().split('T')[0]}.csv`);
+        toast({ title: "Exportación exitosa", description: "El reporte de ingresos ha sido descargado", variant: "success" });
+    };
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -64,8 +76,11 @@ const ReportsPage = () => {
                     <Button variant="outline" className="h-12 rounded-xl border-slate-200">
                         <CalendarIcon className="w-4 h-4 mr-2" /> Últimos 30 días
                     </Button>
-                    <Button className="h-12 rounded-xl bg-slate-900 shadow-lg shadow-slate-200" onClick={() => toast({ title: "Exportación", description: "El módulo de PDF está en cola de desarrollo." })}>
-                        <Download className="w-4 h-4 mr-2" /> Descargar PDF
+                    <Button 
+                        className="h-12 rounded-xl bg-slate-900 shadow-lg shadow-slate-200" 
+                        onClick={handleExport}
+                    >
+                        <Download className="w-4 h-4 mr-2" /> Exportar CSV
                     </Button>
                 </div>
             </div>

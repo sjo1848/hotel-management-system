@@ -11,25 +11,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateBooking } from "../services/bookingService";
+import { updateBooking, getBookings } from "../services/bookingService";
 import roomService from "@/features/rooms/services/roomService";
 import { useToast } from "@/components/ui/toast";
 import { Booking, Room, BookingStatus } from "@/types/domain";
 
 type BookingEditDrawerProps = {
   booking: Booking | null;
+  bookingId?: string | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onViewDetails?: () => void;
 };
 
 const BookingEditDrawer = ({
-  booking,
+  booking: initialBooking,
+  bookingId,
   isOpen,
   onClose,
   onSuccess,
+  onViewDetails,
 }: BookingEditDrawerProps) => {
   const [loading, setLoading] = useState(false);
+  const [booking, setBooking] = useState<Booking | null>(initialBooking);
+  const [showSuccess, setShowSuccess] = useState<'CheckedIn' | 'CheckedOut' | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const { toast } = useToast();
 
@@ -40,16 +46,51 @@ const BookingEditDrawer = ({
   });
 
   useEffect(() => {
-    if (booking && isOpen) {
-      setFormData({
-        guest_name: booking.guest_name || "",
-        check_in: booking.check_in || "",
-        check_out: booking.check_out || "",
-      });
-      // Fetch room status
-      roomService.getRoomById(booking.room_id).then(setRoom).catch(console.error);
-    }
-  }, [booking, isOpen]);
+    const loadBooking = async () => {
+      if (!isOpen) return;
+      
+      let currentBooking = initialBooking;
+      
+      if (!currentBooking && bookingId) {
+        setLoading(true);
+        try {
+          // Asumimos que getBookings sin params trae todas, o mejor usamos un getById si existiera
+          // Por simplicidad en este HMS, buscaremos en la lista o usaremos el servicio
+          const all = await getBookings();
+          currentBooking = all.find(b => b.id === bookingId) || null;
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      setBooking(currentBooking);
+
+      if (currentBooking) {
+        setShowSuccess(null);
+        setFormData({
+          guest_name: currentBooking.guest_name || "",
+          check_in: currentBooking.check_in || "",
+          check_out: currentBooking.check_out || "",
+        });
+        // Fetch room status
+        roomService.getRoomById(currentBooking.room_id).then(setRoom).catch(console.error);
+      }
+    };
+
+    loadBooking();
+  }, [initialBooking, bookingId, isOpen]);
+
+  if (!booking && !loading && isOpen && bookingId) {
+      return (
+        <Sheet open={isOpen} onOpenChange={onClose}>
+            <SheetContent className="bg-white">
+                <div className="p-10 text-center">No se encontró la reserva</div>
+            </SheetContent>
+        </Sheet>
+      )
+  }
 
   if (!booking) return null;
 
@@ -80,8 +121,14 @@ const BookingEditDrawer = ({
         description: `La reserva ahora está ${newStatus.toLowerCase()}.`,
         variant: "success",
       });
-      onSuccess();
-      onClose();
+      
+      if (newStatus === 'CheckedIn' || newStatus === 'CheckedOut') {
+        setShowSuccess(newStatus as any);
+        onSuccess();
+      } else {
+        onSuccess();
+        onClose();
+      }
     } catch (error) {
       toast({ title: "Error", description: String(error), variant: "error" });
     } finally {
@@ -119,114 +166,155 @@ const BookingEditDrawer = ({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl overflow-y-auto">
-        <SheetHeader className="pb-6 border-b">
-          <SheetTitle className="text-2xl font-bold">Gestionar Reserva</SheetTitle>
-          <SheetDescription>
-            ID: <span className="font-mono text-xs">{booking.id.slice(0,8)}</span>
-          </SheetDescription>
-        </SheetHeader>
-
-        <div className="py-6 space-y-6">
-          {/* Room Status Warning */}
-          {room?.status === 'Dirty' && (
-            <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
-              <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-black text-rose-900 leading-tight">Habitación Sucia</p>
-                <p className="text-xs font-medium text-rose-700 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
-              </div>
+        {showSuccess ? (
+          <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6 animate-in zoom-in fade-in duration-500">
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-emerald-100' : 'bg-blue-100'}`}>
+              <CheckCircle2 className={`w-12 h-12 ${showSuccess === 'CheckedIn' ? 'text-emerald-600' : 'text-blue-600'}`} />
             </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="space-y-3">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>
-            <div className="grid grid-cols-2 gap-3">
-              {booking.status === 'Confirmed' && (
+            <div className="space-y-2">
+              <h2 className="text-2xl font-black text-slate-900">
+                {showSuccess === 'CheckedIn' ? 'Check-in Exitoso' : 'Check-out Exitoso'}
+              </h2>
+              <p className="text-slate-500 text-sm max-w-xs mx-auto">
+                {showSuccess === 'CheckedIn' 
+                  ? 'El huésped ha sido registrado correctamente y la habitación está ocupada.' 
+                  : 'La estancia ha finalizado. Se ha generado la factura correspondiente.'}
+              </p>
+            </div>
+            
+            <div className="flex flex-col w-full gap-3 pt-6">
+              {showSuccess === 'CheckedOut' && (
                 <Button 
-                  onClick={() => handleStatusChange('CheckedIn')}
-                  disabled={loading}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-slate-900 text-white rounded-xl h-12 gap-2"
+                  onClick={() => {
+                    onClose();
+                    onViewDetails?.();
+                  }}
                 >
-                  <CheckCircle2 className="w-4 h-4 mr-2" /> Check-in
+                  Ver Factura y Detalles
                 </Button>
               )}
-              {booking.status === 'CheckedIn' && (
-                <Button 
-                  onClick={() => handleStatusChange('CheckedOut')}
-                  disabled={loading}
-                  className="bg-slate-600 hover:bg-slate-700 text-white"
-                >
-                  <LogOut className="w-4 h-4 mr-2" /> Check-out
-                </Button>
-              )}
-              {booking.status !== 'Cancelled' && booking.status !== 'CheckedOut' && (
-                <Button 
-                  variant="outline"
-                  onClick={() => handleStatusChange('Cancelled')}
-                  disabled={loading}
-                  className="border-rose-200 text-rose-600 hover:bg-rose-50"
-                >
-                  <XCircle className="w-4 h-4 mr-2" /> Cancelar
-                </Button>
-              )}
+              <Button 
+                variant="outline" 
+                className="rounded-xl h-12"
+                onClick={onClose}
+              >
+                Cerrar Panel
+              </Button>
             </div>
           </div>
+        ) : (
+          <>
+            <SheetHeader className="pb-6 border-b">
+              <SheetTitle className="text-2xl font-bold">Gestionar Reserva</SheetTitle>
+              <SheetDescription>
+                ID: <span className="font-mono text-xs">{booking.id.slice(0,8)}</span>
+              </SheetDescription>
+            </SheetHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Datos de la Estancia</Label>
-            <div className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-name">Nombre del Huésped</Label>
-                <Input
-                  id="edit-name"
-                  value={formData.guest_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, guest_name: e.target.value })
-                  }
-                  required
-                  className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
-                />
+            <div className="py-6 space-y-6">
+              {/* Room Status Warning */}
+              {room?.status === 'Dirty' && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-black text-rose-900 leading-tight">Habitación Sucia</p>
+                    <p className="text-xs font-medium text-rose-700 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div className="space-y-3">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {booking.status === 'Confirmed' && (
+                    <Button 
+                      onClick={() => handleStatusChange('CheckedIn')}
+                      disabled={loading}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    >
+                      <CheckCircle2 className="w-4 h-4 mr-2" /> Check-in
+                    </Button>
+                  )}
+                  {booking.status === 'CheckedIn' && (
+                    <Button 
+                      onClick={() => handleStatusChange('CheckedOut')}
+                      disabled={loading}
+                      className="bg-slate-600 hover:bg-slate-700 text-white"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" /> Check-out
+                    </Button>
+                  )}
+                  {booking.status !== 'Cancelled' && booking.status !== 'CheckedOut' && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => handleStatusChange('Cancelled')}
+                      disabled={loading}
+                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" /> Cancelar
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-check-in">Check-in</Label>
-                  <Input
-                    id="edit-check-in"
-                    type="date"
-                    value={formData.check_in}
-                    onChange={(e) =>
-                      setFormData({ ...formData, check_in: e.target.value })
-                    }
-                    required
-                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
-                  />
+              <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Datos de la Estancia</Label>
+                <div className="grid gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-name">Nombre del Huésped</Label>
+                    <Input
+                      id="edit-name"
+                      value={formData.guest_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, guest_name: e.target.value })
+                      }
+                      required
+                      className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-check-in">Check-in</Label>
+                      <Input
+                        id="edit-check-in"
+                        type="date"
+                        value={formData.check_in}
+                        onChange={(e) =>
+                          setFormData({ ...formData, check_in: e.target.value })
+                        }
+                        required
+                        className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-check-out">Check-out</Label>
+                      <Input
+                        id="edit-check-out"
+                        type="date"
+                        value={formData.check_out}
+                        onChange={(e) =>
+                          setFormData({ ...formData, check_out: e.target.value })
+                        }
+                        required
+                        className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-check-out">Check-out</Label>
-                  <Input
-                    id="edit-check-out"
-                    type="date"
-                    value={formData.check_out}
-                    onChange={(e) =>
-                      setFormData({ ...formData, check_out: e.target.value })
-                    }
-                    required
-                    className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
-                  />
-                </div>
-              </div>
+                <SheetFooter className="pt-6">
+                  <Button type="submit" disabled={loading} className="w-full bg-slate-900 rounded-xl h-12">
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
+                  </Button>
+                </SheetFooter>
+              </form>
             </div>
-
-            <SheetFooter className="pt-6">
-              <Button type="submit" disabled={loading} className="w-full bg-slate-900 rounded-xl h-12">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
-              </Button>
-            </SheetFooter>
-          </form>
-        </div>
+          </>
+        )}
       </SheetContent>
     </Sheet>
   );

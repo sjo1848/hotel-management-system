@@ -16,3 +16,8 @@ export const createUser = async (payload: CreateUserPayload) => {
   const response = await client.post("/users", payload);
   return response.data as User;
 };
+
+export const deleteUser = async (id: string) => {
+  const response = await client.delete(`/users/${id}`);
+  return response.data;
+};

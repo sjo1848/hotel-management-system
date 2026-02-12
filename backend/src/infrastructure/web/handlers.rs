@@ -29,6 +29,16 @@ impl IntoResponse for DomainError {
                 "ROOM_NOT_FOUND",
                 "La habitación solicitada no existe".to_string(),
             ),
+            DomainError::RoomAlreadyExists => (
+                StatusCode::CONFLICT,
+                "ROOM_ALREADY_EXISTS",
+                "Ya existe una habitación con ese número".to_string(),
+            ),
+            DomainError::InvalidRoomStatusTransition => (
+                StatusCode::BAD_REQUEST,
+                "INVALID_ROOM_STATUS_TRANSITION",
+                "Transición de estado de habitación no permitida".to_string(),
+            ),
             DomainError::RoomNotAvailable => (
                 StatusCode::CONFLICT,
                 "ROOM_NOT_AVAILABLE",
@@ -138,6 +148,13 @@ pub struct UpdateRoomStatusRequest {
     pub status: String,
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct CreateRoomRequest {
+    pub room_number: String,
+    pub room_type: String,
+    pub price_cents: i64,
+}
+
 #[utoipa::path(
     get,
     path = "/api/v1/rooms",
@@ -157,6 +174,58 @@ pub async fn get_rooms_handler(
     Ok(Json(json!(rooms)))
 }
 
+#[utoipa::path(
+    post,
+    path = "/api/v1/rooms",
+    request_body = CreateRoomRequest,
+    responses(
+        (status = 201, description = "Habitación creada exitosamente", body = Room),
+        (status = 409, description = "Ya existe una habitación con ese número"),
+        (status = 401, description = "No autorizado"),
+        (status = 403, description = "Prohibido (Solo Admin)")
+    ),
+    tag = "Hotelería",
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn create_room_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(payload): Json<CreateRoomRequest>,
+) -> Result<(StatusCode, Json<Value>), DomainError> {
+    let ip = addr.ip().to_string();
+    let user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
+
+    let room = state
+        .room_service
+        .create_room(payload.room_number, payload.room_type, payload.price_cents)
+        .await?;
+
+    state.audit_service.record(
+        Some(user_id),
+        &format!("room.created: {}", room.room_number),
+        Some(ip),
+    )
+    .await;
+
+    Ok((StatusCode::CREATED, Json(json!(room))))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/rooms/{room_id}/status",
+    request_body = UpdateRoomStatusRequest,
+    params(
+        ("room_id" = Uuid, Path, description = "ID de la habitación")
+    ),
+    responses(
+        (status = 200, description = "Estado actualizado exitosamente"),
+        (status = 404, description = "Habitación no encontrada")
+    ),
+    tag = "Hotelería"
+)]
 pub async fn update_room_status_handler(
     State(state): State<Arc<AppState>>,
     Path(room_id): Path<Uuid>,
@@ -340,8 +409,7 @@ pub async fn login_handler(
     let csrf_token = generate_csrf_token();
     let csrf_cookie = build_csrf_cookie(&csrf_token, &state.config);
 
-    record_audit(
-        &state,
+    state.audit_service.record(
         Some(user.id),
         "auth.login",
         Some(ip),
@@ -463,7 +531,7 @@ pub async fn logout_handler(
     let expired_cookie = clear_refresh_cookie(&state.config);
     let expired_access = clear_access_cookie(&state.config);
     let expired_csrf = clear_csrf_cookie(&state.config);
-    record_audit(&state, Some(user_id), "auth.logout", Some(ip)).await;
+    state.audit_service.record(Some(user_id), "auth.logout", Some(ip)).await;
     Ok((
         StatusCode::OK,
         AppendHeaders([
@@ -514,6 +582,24 @@ pub async fn list_users_handler(
         .collect::<Vec<_>>())))
 }
 
+pub async fn delete_user_handler(
+    State(state): State<Arc<AppState>>,
+    Path(user_id): Path<Uuid>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+) -> Result<Json<Value>, DomainError> {
+    let current_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
+    
+    if user_id == current_user_id {
+        return Err(DomainError::InvalidInput("No puedes eliminar tu propia cuenta".to_string()));
+    }
+
+    state.user_repo.delete(user_id).await.map_err(DomainError::InfrastructureError)?;
+    
+    state.audit_service.record(Some(current_user_id), &format!("user.deleted: {}", user_id), None).await;
+
+    Ok(Json(json!({ "status": "ok" })))
+}
+
 pub async fn create_user_handler(
     Extension(_claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
@@ -541,7 +627,7 @@ pub async fn create_user_handler(
         .await
         .map_err(DomainError::InfrastructureError)?;
 
-    record_audit(&state, Some(created.id), "user.created", None).await;
+    state.audit_service.record(Some(created.id), "user.created", None).await;
 
     Ok(Json(json!({ "id": created.id, "username": created.username, "role": created.role })))
 }
@@ -646,23 +732,6 @@ fn clear_csrf_cookie(config: &crate::config::AppConfig) -> String {
         cookie.push_str("; Secure");
     }
     cookie
-}
-
-async fn record_audit(
-    state: &Arc<AppState>,
-    user_id: Option<Uuid>,
-    action: &str,
-    ip: Option<String>,
-) {
-    let event = crate::domain::models::AuditEvent {
-        id: Uuid::new_v4(),
-        user_id,
-        action: action.to_string(),
-        ip_address: ip,
-        created_at: chrono::Utc::now().naive_utc(),
-    };
-
-    let _ = state.audit_repo.record(event).await;
 }
 
 pub async fn health_check() -> Json<Value> {
