@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Booking, getBookings, updateBooking } from '../services/bookingService';
+import { useEffect, useState } from 'react';
+import { MoreVertical, CheckCircle2, AlertCircle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,175 +8,170 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { getBookings, updateBooking } from '../services/bookingService';
+import { Booking } from '@/types/domain';
 import { useToast } from '@/components/ui/toast';
 import BookingEditDrawer from './BookingEditDrawer';
 
-const BookingList = ({ limit = 5, showActions = false }: { limit?: number; showActions?: boolean }) => {
+const BookingList = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const { toast } = useToast();
+
+  // Estado para edición
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const data = await getBookings();
+      setBookings(data.slice(0, 10)); // Solo las últimas 10 para el dashboard
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast({
+        title: 'Error al cargar reservas',
+        description: 'Hubo un problema al conectar con el servidor.',
+        variant: 'error',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    getBookings()
-      .then((res) => {
-        setBookings(res);
-        setError('');
-      })
-      .catch((err) => {
-        console.error('Error cargando reservas:', err);
-        setError('No se pudieron cargar las reservas.');
-        toast({
-          title: 'Error al cargar reservas',
-          description: 'Reintentá en unos segundos.',
-          variant: 'error',
-        });
-        setBookings([]);
-      })
-      .finally(() => setLoading(false));
-  }, [toast]);
-
-  const handleEdit = (booking: Booking) => {
-    setSelectedBooking(booking);
-    setIsEditOpen(true);
-  };
-
-  const handleUpdated = (updated: Booking) => {
-    setBookings((current) =>
-      current.map((item) => (item.id === updated.id ? updated : item)),
-    );
-  };
+    fetchBookings();
+  }, []);
 
   const handleCancel = async (booking: Booking) => {
-    if (booking.status === 'Cancelled' || booking.status === 'CANCELLED') return;
-    const confirmCancel = window.confirm(
-      '¿Querés cancelar esta reserva? Esta acción no se puede deshacer.',
-    );
-    if (!confirmCancel) return;
+    if (booking.status === 'Cancelled') return;
+
     try {
-      const updated = await updateBooking(booking.id, { status: 'CANCELLED' });
+      await updateBooking(booking.id, { status: 'Cancelled' });
       toast({
         title: 'Reserva cancelada',
-        description: 'La reserva quedó marcada como cancelada.',
-        variant: "success",
+        variant: 'success',
       });
-      handleUpdated(updated);
+      fetchBookings();
     } catch (error) {
       toast({
-        title: 'No se pudo cancelar',
+        title: 'Error',
         description: String(error),
         variant: 'error',
       });
     }
   };
 
-  if (loading) {
-    return <div className='p-12 flex justify-center text-slate-400 bg-white'><Loader2 className='animate-spin w-8 h-8 text-primary' /></div>;
-  }
-
-  const visibleBookings = limit ? bookings.slice(0, limit) : bookings;
-
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'CHECKED_IN':
-        return <Badge variant='outline' className='bg-emerald-50 text-emerald-700 border-emerald-200 font-bold uppercase text-[10px] tracking-tighter'>Huésped en Casa</Badge>;
-      case 'CHECKED_OUT':
-        return <Badge variant='outline' className='bg-slate-50 text-slate-600 border-slate-200 font-bold uppercase text-[10px] tracking-tighter'>Finalizada</Badge>;
-      case 'CANCELLED':
+      case 'Confirmed':
+        return <Badge variant="info">Confirmada</Badge>;
+      case 'CheckedIn':
+        return <Badge variant="success">Check-in</Badge>;
+      case 'CheckedOut':
+        return <Badge variant="neutral">Finalizada</Badge>;
       case 'Cancelled':
-        return <Badge variant='outline' className='bg-rose-50 text-rose-700 border-rose-200 font-bold uppercase text-[10px] tracking-tighter'>Cancelada</Badge>;
+        return <Badge variant="destructive">Cancelada</Badge>;
       default:
-        return <Badge variant='outline' className='bg-indigo-50 text-indigo-700 border-indigo-200 font-bold uppercase text-[10px] tracking-tighter'>Confirmada</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-10 flex flex-col items-center justify-center space-y-4">
+        <CheckCircle2 className="w-8 h-8 text-slate-200 animate-pulse" />
+        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Actualizando reservas...</span>
+      </div>
+    );
+  }
+
+  if (bookings.length === 0) {
+    return (
+      <div className="p-10 flex flex-col items-center justify-center text-center">
+        <AlertCircle className="w-10 h-10 text-slate-200 mb-2" />
+        <p className="text-sm font-bold text-slate-500">No hay actividad reciente</p>
+      </div>
+    );
+  }
+
   return (
     <>
-    <div className='overflow-x-auto'>
-    <Table>
-      <TableHeader>
-        <TableRow className='bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-100'>
-          <TableHead className='text-[10px] font-black text-slate-400 uppercase tracking-widest pl-8 py-4'>Reserva ID</TableHead>
-          <TableHead className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Huésped</TableHead>
-          <TableHead className='text-[10px] font-black text-slate-400 uppercase tracking-widest'>Estancia</TableHead>
-          <TableHead className='text-right text-[10px] font-black text-slate-400 uppercase tracking-widest'>Estado</TableHead>
-          {showActions ? (
-            <TableHead className='text-right text-[10px] font-black text-slate-400 uppercase tracking-widest pr-8'>Gestión</TableHead>
-          ) : null}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {error ? (
-          <TableRow>
-            <TableCell colSpan={showActions ? 5 : 4} className='h-32 text-center text-slate-500 font-medium'>
-              {error}
-            </TableCell>
-          </TableRow>
-        ) : bookings.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={showActions ? 5 : 4} className='h-32 text-center text-slate-500 font-medium'>
-              No hay movimientos registrados.
-            </TableCell>
-          </TableRow>
-        ) : (
-          visibleBookings.map((booking) => (
-            <TableRow key={booking.id} className='hover:bg-slate-50/50 border-b border-slate-50 last:border-0 transition-colors'>
-              <TableCell className='font-mono text-[10px] font-bold text-slate-400 pl-8'>
-                #{String(booking.id).slice(0, 8).toUpperCase()}
-              </TableCell>
-              <TableCell className='font-black text-slate-700 text-sm py-4'>
-                {booking.guest_name}
-              </TableCell>
-              <TableCell className='text-xs font-bold text-slate-500'>
-                <div className='flex items-center gap-2'>
-                  <span>{format(new Date(booking.check_in), 'MMM dd', { locale: es })}</span>
-                  <span className='w-4 h-px bg-slate-200'></span>
-                  <span>{format(new Date(booking.check_out), 'MMM dd', { locale: es })}</span>
-                </div>
-              </TableCell>
-              <TableCell className='text-right'>
-                {getStatusBadge(booking.status)}
-              </TableCell>
-              {showActions ? (
-                <TableCell className='text-right pr-8'>
-                  <div className='flex justify-end gap-2'>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className='h-8 px-3 font-black text-[10px] uppercase tracking-widest text-slate-600 hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200'
-                      onClick={() => handleEdit(booking)}
-                    >
-                      Gestionar
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className='h-8 px-3 font-black text-[10px] uppercase tracking-widest text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 disabled:opacity-0'
-                      onClick={() => handleCancel(booking)}
-                      disabled={booking.status === 'Cancelled' || booking.status === 'CANCELLED' || booking.status === 'CHECKED_OUT'}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </TableCell>
-              ) : null}
+      <div className="overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Huésped</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Fechas</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Monto</TableHead>
+              <TableHead className="py-4 px-6"></TableHead>
             </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
-    </div>
-    <BookingEditDrawer
-      booking={selectedBooking}
-      isOpen={isEditOpen}
-      onClose={() => setIsEditOpen(false)}
-      onUpdated={handleUpdated}
-    />
+          </TableHeader>
+          <TableBody>
+            {bookings.map((booking) => (
+              <TableRow key={booking.id} className="border-slate-50 hover:bg-slate-50/50 transition-colors group">
+                <TableCell className="py-4 px-6">
+                  <div className="font-bold text-slate-900">{booking.guest_name}</div>
+                  <div className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
+                </TableCell>
+                <TableCell className="py-4 px-6">
+                  {getStatusBadge(booking.status)}
+                </TableCell>
+                <TableCell className="py-4 px-6">
+                  <div className="text-xs font-bold text-slate-600">{booking.check_in}</div>
+                  <div className="text-[10px] text-slate-400 font-medium">al {booking.check_out}</div>
+                </TableCell>
+                <TableCell className="py-4 px-6 text-right">
+                  <div className="font-mono font-bold text-slate-900">${(booking.total_price_cents / 100).toLocaleString()}</div>
+                </TableCell>
+                <TableCell className="py-4 px-6 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:shadow-md">
+                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl">
+                      <DropdownMenuItem 
+                        className="text-xs font-bold"
+                        onClick={() => {
+                          setSelectedBooking(booking);
+                          setIsEditOpen(true);
+                        }}
+                      >
+                        Gestionar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-xs font-bold text-rose-600"
+                        disabled={booking.status === 'Cancelled' || booking.status === 'CheckedOut'}
+                        onClick={() => handleCancel(booking)}
+                      >
+                        Cancelar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <BookingEditDrawer
+        booking={selectedBooking}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onSuccess={fetchBookings}
+      />
     </>
   );
 };

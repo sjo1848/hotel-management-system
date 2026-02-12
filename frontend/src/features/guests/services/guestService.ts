@@ -1,11 +1,5 @@
 import client from "@/api/client";
-
-export type Guest = {
-  id: string;
-  full_name: string;
-  email: string;
-  phone?: string | null;
-};
+import { Guest } from "@/types/domain";
 
 export const getGuests = async () => {
   try {

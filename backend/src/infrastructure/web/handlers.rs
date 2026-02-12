@@ -1,11 +1,12 @@
 use crate::domain::errors::DomainError;
 use crate::AppState;
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Path, Query, State, ConnectInfo},
     http::{header, HeaderMap, StatusCode},
     response::{IntoResponse, Response, AppendHeaders},
     Extension, Json,
 };
+use std::net::SocketAddr;
 use chrono::NaiveDate;
 use rand::RngCore;
 use serde::Deserialize;
@@ -294,18 +295,31 @@ pub async fn create_guest_handler(
 )]
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Response, DomainError> {
+    let ip = addr.ip().to_string();
+
     if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
         return Err(DomainError::InvalidInput(
             "Usuario y contraseña son obligatorios".to_string(),
         ));
     }
 
-    let user = state
+    let user = match state
         .auth_service
         .verify_user(&payload.username, &payload.password)
-        .await?;
+        .await {
+            Ok(u) => u,
+            Err(e) => {
+                tracing::warn!(
+                    ip = %ip,
+                    username = %payload.username,
+                    "Intento de login fallido"
+                );
+                return Err(e);
+            }
+        };
 
     let exp = state.auth_service.access_exp();
 
@@ -330,7 +344,7 @@ pub async fn login_handler(
         &state,
         Some(user.id),
         "auth.login",
-        None,
+        Some(ip),
     )
     .await;
 
@@ -355,7 +369,7 @@ pub async fn refresh_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
-    // CSRF check removed for refresh endpoint to allow session restoration
+    // CSRF check is now performed by auth_middleware for this endpoint
     
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
@@ -412,10 +426,12 @@ pub async fn refresh_handler(
 
 pub async fn logout_handler(
     State(state): State<Arc<AppState>>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
-    // CSRF check removed for logout to ensure users can always sign out
+    let ip = addr.ip().to_string();
+    // CSRF check is now performed by auth_middleware for this endpoint
     
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
@@ -447,7 +463,7 @@ pub async fn logout_handler(
     let expired_cookie = clear_refresh_cookie(&state.config);
     let expired_access = clear_access_cookie(&state.config);
     let expired_csrf = clear_csrf_cookie(&state.config);
-    record_audit(&state, Some(user_id), "auth.logout", None).await;
+    record_audit(&state, Some(user_id), "auth.logout", Some(ip)).await;
     Ok((
         StatusCode::OK,
         AppendHeaders([
@@ -483,13 +499,9 @@ pub struct CreateUserRequest {
 }
 
 pub async fn list_users_handler(
-    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Extension(_claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    if claims.role != "admin" {
-        return Err(DomainError::Unauthorized);
-    }
-
     let users: Vec<crate::domain::models::User> = state
         .user_repo
         .find_all()
@@ -503,14 +515,10 @@ pub async fn list_users_handler(
 }
 
 pub async fn create_user_handler(
-    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Extension(_claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    if claims.role != "admin" {
-        return Err(DomainError::Unauthorized);
-    }
-
     if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
         return Err(DomainError::InvalidInput(
             "Usuario y contraseña son obligatorios".to_string(),
@@ -555,14 +563,13 @@ pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> S
         format!("refresh_token={}", token),
         format!("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age={}", config.refresh_ttl_days * 24 * 60 * 60)
+        format!("Max-Age={}", config.refresh_ttl_days * 24 * 60 * 60),
+        String::from("HttpOnly"),
     ];
 
-    cookie_parts.push(String::from("HttpOnly"));
-    if config.cookie_secure { // In prod, add Secure
+    if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
-    // In dev (cookie_secure is false), HttpOnly and Secure are omitted
 
     cookie_parts.join("; ")
 }
@@ -572,10 +579,10 @@ pub fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
         format!("refresh_token=;"),
         format!("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age=0")
+        format!("Max-Age=0"),
+        String::from("HttpOnly"),
     ];
-    if config.cookie_secure { // Clear HttpOnly and Secure if they were set
-        cookie_parts.push(String::from("HttpOnly"));
+    if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
     cookie_parts.join("; ")
@@ -586,14 +593,13 @@ pub fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> St
         format!("access_token={}", token),
         format!("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age={}", config.access_ttl_minutes * 60)
+        format!("Max-Age={}", config.access_ttl_minutes * 60),
+        String::from("HttpOnly"),
     ];
 
-    cookie_parts.push(String::from("HttpOnly"));
-    if config.cookie_secure { // In prod, add Secure
+    if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
-    // In dev (cookie_secure is false), HttpOnly and Secure are omitted
 
     cookie_parts.join("; ")
 }
@@ -603,10 +609,10 @@ pub fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
         format!("access_token=;"),
         format!("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age=0")
+        format!("Max-Age=0"),
+        String::from("HttpOnly"),
     ];
-    if config.cookie_secure { // Clear HttpOnly and Secure if they were set
-        cookie_parts.push(String::from("HttpOnly"));
+    if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
     cookie_parts.join("; ")

@@ -9,28 +9,13 @@ import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
 import ReportsPage from "./features/reports/ReportsPage";
-import React from "react";
+import { ReactNode } from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
 import { ToastProvider } from "./components/ui/toast";
-
-const Placeholder = ({ title }) => (
-  <div className="p-8 bg-white border border-slate-200 rounded-xl shadow-sm">
-    <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
-    <p className="text-sm text-slate-500 mt-2">
-      Esta sección está en construcción.
-    </p>
-  </div>
-);
-
-const NotFound = () => (
-  <div className="p-8">
-    <h2 className="text-lg font-semibold text-slate-800">Página no encontrada</h2>
-    <p className="text-sm text-slate-500 mt-2">
-      Revisa la URL o vuelve al dashboard.
-    </p>
-  </div>
-);
+import { ApiInterceptor } from "./components/ApiInterceptor";
+import NotFoundPage from "./features/errors/NotFoundPage";
+import GeneralErrorPage from "./features/errors/GeneralErrorPage";
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -38,7 +23,7 @@ const AppLayout = () => (
   </DashboardLayout>
 );
 
-const RequireAuth = ({ children }) => {
+const RequireAuth = ({ children }: { children: ReactNode }) => {
   const { status } = useAuth();
 
   if (status === "loading") {
@@ -53,13 +38,14 @@ const RequireAuth = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+    errorElement: <GeneralErrorPage />,
   },
   {
     element: (
@@ -67,6 +53,7 @@ const router = createBrowserRouter([
         <AppLayout />
       </RequireAuth>
     ),
+    errorElement: <GeneralErrorPage />,
     children: [
       {
         path: "/",
@@ -104,7 +91,7 @@ const router = createBrowserRouter([
   },
   {
     path: "*",
-    element: <NotFound />,
+    element: <NotFoundPage />,
   },
 ]);
 
@@ -112,6 +99,7 @@ function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <ApiInterceptor />
         <RouterProvider router={router} />
       </ToastProvider>
     </AuthProvider>

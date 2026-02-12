@@ -42,8 +42,8 @@ El proyecto está estructurado siguiendo el patrón de **Puertos y Adaptadores**
 
 El sistema estará disponible en:
 - **Frontend:** http://localhost:5173
-- **API Backend:** http://localhost:3000
-- **Salud del Sistema:** http://localhost:3000/health
+- **API Backend:** http://localhost:3001
+- **Salud del Sistema:** http://localhost:3001/health
 
 ### Mapa de API (v1)
 - `GET /api/v1/rooms`: Gestión de habitaciones.

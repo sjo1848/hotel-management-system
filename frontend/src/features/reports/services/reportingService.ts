@@ -2,7 +2,7 @@ import client from "@/api/client";
 
 export interface RevenueData {
     date: string;
-    revenue_cents: number;
+    amount_cents: number;
 }
 
 export interface OccupancyData {

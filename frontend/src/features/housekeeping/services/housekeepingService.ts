@@ -1,5 +1,5 @@
 import client from "@/api/client";
-import { type Room } from "@/features/rooms/services/roomService";
+import { Room } from "@/types/domain";
 
 export const getDirtyRooms = async (): Promise<Room[]> => {
     const response = await client.get("/housekeeping/dirty");

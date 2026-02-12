@@ -1,15 +1,10 @@
 import client from "@/api/client";
-
-export type User = {
-  id: string;
-  username: string;
-  role: string;
-};
+import { User, UserRole } from "@/types/domain";
 
 export type CreateUserPayload = {
   username: string;
   password: string;
-  role: string;
+  role: UserRole;
 };
 
 export const getUsers = async () => {

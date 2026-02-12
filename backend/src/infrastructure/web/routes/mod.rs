@@ -29,11 +29,17 @@ use crate::infrastructure::web::handlers::{
     update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
-    auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware,
+    auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware, metrics::track_metrics,
+    security_headers::security_headers_middleware, rate_limit_logger::rate_limit_logger_middleware,
 };
 
 pub fn create_router(state: Arc<AppState>) -> Router {
     let config = &state.config;
+
+    // --- Metrics Handler ---
+    let metrics_handle = metrics_exporter_prometheus::PrometheusBuilder::new()
+        .install_recorder()
+        .expect("failed to install recorder");
 
     // --- Rate Limiting Configuration ---
     let api_rate = Arc::new(
@@ -79,16 +85,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     // --- Routes Definition ---
     
-    let auth_router_legacy = Router::new()
-        .route("/api/auth/login", post(login_handler))
-        .route("/api/auth/refresh", post(refresh_handler))
-        .route("/api/auth/logout", post(logout_handler))
-        .layer(GovernorLayer { config: login_rate.clone() });
-
     let auth_router_v1 = Router::new()
         .route("/api/v1/auth/login", post(login_handler))
         .route("/api/v1/auth/refresh", post(refresh_handler))
         .route("/api/v1/auth/logout", post(logout_handler))
+        .layer(middleware::from_fn(rate_limit_logger_middleware)) // Log fallos de login masivos
         .layer(GovernorLayer { config: login_rate });
 
     let api_v1 = Router::new()
@@ -110,19 +111,6 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/api/v1/reports/revenue", get(get_revenue_report_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/reports/occupancy", get(get_occupancy_report_handler).layer(middleware::from_fn(admin_only)));
 
-    let legacy_api = Router::new()
-        .merge(auth_router_legacy)
-        .route("/api/rooms", get(get_rooms_handler))
-        .route("/api/rooms/available", get(search_rooms_handler))
-        .route("/api/bookings", get(list_bookings_handler).post(create_booking_handler))
-        .route("/api/bookings/:id", patch(update_booking_handler))
-        .route("/api/guests", get(list_guests_handler).post(create_guest_handler))
-        .route("/api/auth/me", get(me_handler))
-        .route("/api/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/bookings/:id/invoice", get(get_invoice_by_booking_handler));
-
     let auth_layer = middleware::from_fn_with_state(state.clone(), auth_middleware);
 
     Router::new()
@@ -130,9 +118,15 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/", get(root_handler))
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
+        .route("/metrics", get(move || {
+            let handle = metrics_handle.clone();
+            async move { handle.render() }
+        }))
         .merge(api_v1)
-        .merge(legacy_api)
         .route_layer(auth_layer)
+        .layer(middleware::from_fn(track_metrics))
+        .layer(middleware::from_fn_with_state(state.clone(), security_headers_middleware))
+        .layer(middleware::from_fn(rate_limit_logger_middleware)) // Log general de rate limit
         .layer(GovernorLayer { config: api_rate })
         .layer(cors)
         .layer(DefaultBodyLimit::max(1024 * 1024))

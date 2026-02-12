@@ -1,20 +1,34 @@
+# HMS Elite - Git Ignore Configuration
+
 # --- RUST ---
 backend/target/
-backend/Cargo.lock # Opcional en binarios, pero suele dejarse.
+# backend/Cargo.lock  # Recomendado subirlo para aplicaciones (binarios)
 
 # --- NODE/REACT ---
 frontend/node_modules/
 frontend/dist/
 frontend/.env.local
+frontend/package-lock.json.backup
 
 # --- DOCKER & DB ---
 postgres_data/
+hms_pgdata/
 *.log
 .env
+
+# --- BACKUPS & SECRETS (Critical) ---
+scripts/backups/*.sql.gz
+cookies.txt
+smoke_cookies.txt
+login_headers.txt
+
+# --- PRIVATE DOCUMENTATION & TEMP ---
+archivos/
+docs/adr/
+conductor/
 
 # --- OS ---
 .DS_Store
 Thumbs.db
-
-archivos/
-conductor/
+.vscode/
+.idea/

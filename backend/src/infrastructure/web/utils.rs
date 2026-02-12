@@ -26,12 +26,14 @@ pub fn csrf_valid(headers: &HeaderMap) -> bool {
     }
 }
 
-pub fn requires_csrf(req: &Request<axum::body::Body>) -> bool { // Make it pub
+pub fn requires_csrf(req: &Request<axum::body::Body>) -> bool {
     let method = req.method();
-    if method == &Method::GET || method == &Method::HEAD || method == &Method::OPTIONS { // Compare with &Method
+    if method == &Method::GET || method == &Method::HEAD || method == &Method::OPTIONS {
         return false;
     }
     let path = req.uri().path();
-    let is_auth_path_without_csrf = path == "/api/auth/login" || path == "/api/auth/refresh" || path == "/api/auth/logout" || path == "/api/v1/auth/login" || path == "/api/v1/auth/refresh" || path == "/api/v1/auth/logout";
-    !is_auth_path_without_csrf
+    // Only login is exempt because it establishes the session and generates the first CSRF token.
+    // Refresh and Logout MUST be protected as they rely on existing session state.
+    let is_login_path = path == "/api/auth/login" || path == "/api/v1/auth/login";
+    !is_login_path
 }

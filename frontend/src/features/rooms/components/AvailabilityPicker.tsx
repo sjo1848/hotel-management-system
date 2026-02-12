@@ -85,24 +85,31 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
             <Calendar
               initialFocus
               mode="range"
-              defaultMonth={date?.from}
+              defaultMonth={date?.from || new Date()}
               selected={date}
               onSelect={handleSelect}
               numberOfMonths={2}
               locale={es}
+              disabled={{ before: new Date() }}
             />
           </PopoverContent>
         </Popover>
         {date?.from && date?.to ? (
-          <div className="text-xs text-slate-500">
-            Estancia:{" "}
-            <span className="font-semibold text-slate-700">
-              {nights} {nights === 1 ? "noche" : "noches"}
-            </span>
-          </div>
+          nights > 0 ? (
+            <div className="text-xs text-emerald-600 font-medium">
+              Estancia válida:{" "}
+              <span className="font-bold">
+                {nights} {nights === 1 ? "noche" : "noches"}
+              </span>
+            </div>
+          ) : (
+            <div className="text-xs text-red-500 font-medium">
+              La fecha de salida debe ser posterior a la de entrada.
+            </div>
+          )
         ) : (
           <div className="text-xs text-slate-400">
-            Seleccioná un rango para ver disponibilidad real.
+            Seleccioná entrada y salida para ver disponibilidad.
           </div>
         )}
       </div>
@@ -119,7 +126,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
         </Button>
         <Button
           onClick={handleSearch}
-          disabled={!date?.from || !date?.to}
+          disabled={!date?.from || !date?.to || nights <= 0}
           className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
         >
           <Search className="w-4 h-4 mr-2" />

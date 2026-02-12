@@ -97,7 +97,7 @@ export function DataTable<T extends { id: string | number }>({
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            data.map((item, rowIdx) => (
+                            data.map((item,  _rowIdx) => (
                                 <TableRow
                                     key={item.id}
                                     className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 last:border-0 group"

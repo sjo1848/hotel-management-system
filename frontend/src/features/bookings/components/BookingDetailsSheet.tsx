@@ -16,7 +16,6 @@ import { es } from "date-fns/locale";
 
 import {
     getInvoiceByBooking,
-    Invoice
 } from "@/features/bookings/services/invoiceService";
 
 import {
@@ -29,13 +28,11 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Booking, BookingStatus } from "@/features/bookings/services/bookingService";
-import { Room } from "@/features/rooms/services/roomService";
+import { Booking, BookingStatus, Invoice } from "@/types/domain";
 import { cn } from "@/lib/utils";
 
 interface BookingDetailsSheetProps {
     booking: Booking | null;
-    room: Room | null;
     isOpen: boolean;
     onClose: () => void;
     onUpdateStatus?: (id: string, status: BookingStatus) => Promise<void>;
@@ -43,7 +40,6 @@ interface BookingDetailsSheetProps {
 
 const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
     booking,
-    room,
     isOpen,
     onClose,
     onUpdateStatus,
@@ -149,17 +145,13 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                     <section className="space-y-4">
                         <div className="flex items-center gap-2 text-slate-900 font-semibold text-sm uppercase tracking-wider">
                             <DoorOpen className="w-4 h-4 text-secondary" />
-                            Habitación
+                            Habitación (ID: {booking.room_id.slice(0,4)})
                         </div>
                         <div className="flex items-center justify-between p-4 bg-slate-900 rounded-xl text-white shadow-xl overflow-hidden relative group">
                             <div className="absolute right-0 top-0 bottom-0 w-32 bg-secondary opacity-10 group-hover:opacity-20 transition-opacity skew-x-12 -mr-8" />
                             <div className="relative z-10">
-                                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Número</div>
-                                <div className="text-3xl font-black font-mono">#{room?.room_number || "---"}</div>
-                            </div>
-                            <div className="text-right relative z-10">
-                                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Tipo</div>
-                                <div className="text-lg font-bold">{room?.room_type || "Standard"}</div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">Total Reserva</div>
+                                <div className="text-3xl font-black font-mono">${(booking.total_price_cents / 100).toLocaleString()}</div>
                             </div>
                         </div>
                     </section>
@@ -171,10 +163,6 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                             Resumen Financiero
                         </div>
                         <div className="border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                            <div className="p-4 bg-slate-50/50 flex justify-between items-center border-b border-slate-100">
-                                <span className="text-sm text-slate-600 font-medium">Tarifa por Noche</span>
-                                <span className="font-mono text-slate-900">${(room?.price_cents || 0) / 100}</span>
-                            </div>
                             <div className="p-4 bg-white flex justify-between items-center">
                                 <span className="text-lg font-bold text-slate-900">Total Estancia</span>
                                 <div className="text-right">
@@ -210,11 +198,11 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                             </div>
                                             <Badge className={cn(
                                                 "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                                                invoice.status === 'PAID'
+                                                invoice.status === 'Paid'
                                                     ? "bg-emerald-600 text-white"
                                                     : "bg-amber-100 text-amber-700 border-amber-200"
                                             )}>
-                                                {invoice.status === 'PAID' ? 'Pagada' : 'Pendiente'}
+                                                {invoice.status === 'Paid' ? 'Pagada' : 'Pendiente'}
                                             </Badge>
                                         </div>
 

@@ -16,7 +16,29 @@ export type DashboardKpis = {
   departures_today: BookingAlert[];
 };
 
+export type RevenueReportItem = {
+  date: string;
+  amount_cents: number;
+};
+
+export type OccupancyReportItem = {
+  date: string;
+  occupancy_rate: number;
+};
+
 export const getDashboardKpis = async (): Promise<DashboardKpis> => {
   const response = await client.get("/analytics/kpis");
   return response.data as DashboardKpis;
+};
+
+export const getRevenueReport = async (start?: string, end?: string): Promise<RevenueReportItem[]> => {
+  const params = { start, end };
+  const response = await client.get("/reports/revenue", { params });
+  return response.data;
+};
+
+export const getOccupancyReport = async (start?: string, end?: string): Promise<OccupancyReportItem[]> => {
+  const params = { start, end };
+  const response = await client.get("/reports/occupancy", { params });
+  return response.data;
 };

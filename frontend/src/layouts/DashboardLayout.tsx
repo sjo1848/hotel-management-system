@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -12,29 +12,51 @@ import {
   Bell,
   Search,
   Menu,
-  TrendingUp
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
 
-const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean }) => {
+const SidebarItem = ({ 
+  icon: Icon, 
+  label, 
+  path, 
+  active, 
+  collapsed 
+}: { 
+  icon: any, 
+  label: string, 
+  path: string, 
+  active: boolean,
+  collapsed: boolean
+}) => {
   return (
-    <Link to={path}>
+    <Link to={path} title={collapsed ? label : ""}>
       <div
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 group relative overflow-hidden",
           active
             ? "bg-white/10 text-white shadow-lg backdrop-blur-md border border-white/5"
-            : "text-slate-400 hover:bg-white/5 hover:text-white"
+            : "text-slate-400 hover:bg-white/5 hover:text-white",
+          collapsed && "justify-center px-0"
         )}
       >
         {active && (
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-secondary shadow-[0_0_10px_rgba(var(--secondary),0.5)]" />
         )}
-        <Icon className={cn("w-5 h-5 transition-transform duration-300 group-hover:scale-110", active ? "text-secondary" : "text-slate-500 group-hover:text-slate-300")} />
-        <span className="font-medium text-sm tracking-wide">{label}</span>
+        <Icon className={cn(
+          "w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110", 
+          active ? "text-secondary" : "text-slate-500 group-hover:text-slate-300"
+        )} />
+        {!collapsed && (
+          <span className="font-medium text-sm tracking-wide animate-in fade-in slide-in-from-left-2 duration-300">
+            {label}
+          </span>
+        )}
       </div>
     </Link>
   );
@@ -44,6 +66,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  
+  // Persistencia del estado de la sidebar
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const saved = localStorage.getItem("sidebar-collapsed");
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", String(isCollapsed));
+  }, [isCollapsed]);
 
   const handleLogout = async () => {
     try {
@@ -57,84 +89,110 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
       {/* SIDEBAR - DEEP THEME */}
-      <aside className="w-72 bg-slate-950 text-white flex flex-col shadow-2xl z-50 relative">
+      <aside className={cn(
+        "bg-slate-950 text-white flex flex-col shadow-2xl z-50 relative transition-all duration-500 ease-in-out",
+        isCollapsed ? "w-20" : "w-72"
+      )}>
         {/* Abstract Background Decoration */}
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 pointer-events-none" />
         <div className="absolute top-0 left-0 right-0 h-64 bg-secondary/5 blur-[100px] pointer-events-none" />
 
         {/* Brand */}
-        <div className="relative p-8 pb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-amber-700 flex items-center justify-center shadow-lg shadow-amber-900/20">
+        <div className={cn("relative transition-all duration-500", isCollapsed ? "p-4 text-center" : "p-8 pb-4")}>
+          <div className={cn("flex items-center gap-4", isCollapsed && "justify-center")}>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-amber-700 flex items-center justify-center shadow-lg shadow-amber-900/20 shrink-0">
               <span className="font-bold text-xl text-white">H</span>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-white leading-none">
-                HMS <span className="text-secondary">ELITE</span>
-              </h1>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold">
-                Management System
-              </p>
-            </div>
+            {!isCollapsed && (
+              <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                <h1 className="text-2xl font-bold tracking-tight text-white leading-none">
+                  HMS <span className="text-secondary">ELITE</span>
+                </h1>
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold">
+                  Management System
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Collapse Toggle Button */}
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-3 top-24 w-6 h-6 bg-secondary text-slate-900 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform z-50"
+        >
+          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+        </button>
+
         {/* Navigation */}
-        <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar">
+        <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
           <div>
-            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
-              Principal
-            </p>
+            {!isCollapsed && (
+              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+                Principal
+              </p>
+            )}
             <div className="space-y-1">
-              <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" active={location.pathname === "/"} />
-              <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" active={location.pathname.startsWith("/bookings")} />
-              <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" active={location.pathname.startsWith("/calendar")} />
+              <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" active={location.pathname === "/"} collapsed={isCollapsed} />
+              <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" active={location.pathname.startsWith("/bookings")} collapsed={isCollapsed} />
+              <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" active={location.pathname.startsWith("/calendar")} collapsed={isCollapsed} />
             </div>
           </div>
 
           <div>
-            <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
-              Gestión
-            </p>
+            {!isCollapsed && (
+              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+                Gestión
+              </p>
+            )}
             <div className="space-y-1">
-              <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" active={location.pathname.startsWith("/rooms")} />
-              <SidebarItem icon={Users} label="Huéspedes" path="/guests" active={location.pathname.startsWith("/guests")} />
-              <SidebarItem icon={Brush} label="Servicios" path="/housekeeping" active={location.pathname.startsWith("/housekeeping")} />
+              <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" active={location.pathname.startsWith("/rooms")} collapsed={isCollapsed} />
+              <SidebarItem icon={Users} label="Huéspedes" path="/guests" active={location.pathname.startsWith("/guests")} collapsed={isCollapsed} />
+              <SidebarItem icon={Brush} label="Servicios" path="/housekeeping" active={location.pathname.startsWith("/housekeeping")} collapsed={isCollapsed} />
             </div>
           </div>
 
           {user?.role === "admin" && (
             <div>
-              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest">
-                Configuración
-              </p>
+              {!isCollapsed && (
+                <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+                  Configuración
+                </p>
+              )}
               <div className="space-y-1">
-                <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} />
-                <SidebarItem icon={TrendingUp} label="Tendencias" path="/reports" active={location.pathname.startsWith("/reports")} />
+                <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} collapsed={isCollapsed} />
+                <SidebarItem icon={TrendingUp} label="Tendencias" path="/reports" active={location.pathname.startsWith("/reports")} collapsed={isCollapsed} />
               </div>
             </div>
           )}
         </nav>
 
         {/* User Footer */}
-        <div className="relative p-4 mx-4 mb-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/10">
+        <div className={cn(
+          "relative p-4 mx-4 mb-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm transition-all duration-500",
+          isCollapsed && "mx-2 p-2"
+        )}>
+          <div className={cn("flex items-center gap-3", !isCollapsed && "mb-3", isCollapsed && "justify-center")}>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/10 shrink-0">
               <span className="font-bold text-sm">{user?.username?.charAt(0).toUpperCase() || "U"}</span>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium truncate">{user?.username || "Usuario"}</p>
-              <p className="text-xs text-slate-500 truncate capitalize">{user?.role || "Staff"}</p>
-            </div>
+            {!isCollapsed && (
+              <div className="overflow-hidden animate-in fade-in duration-300">
+                <p className="text-sm font-medium truncate">{user?.username || "Usuario"}</p>
+                <p className="text-xs text-slate-500 truncate capitalize">{user?.role || "Staff"}</p>
+              </div>
+            )}
           </div>
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/10 h-9 text-xs"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Cerrar Sesión
-          </Button>
+          {!isCollapsed && (
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/10 h-9 text-xs animate-in fade-in duration-300"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Cerrar Sesión
+            </Button>
+          )}
         </div>
       </aside>
 
@@ -157,7 +215,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
             </Button>
-            <Button size="icon" variant="ghost" className="md:hidden">
+            <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setIsCollapsed(!isCollapsed)}>
               <Menu className="w-5 h-5" />
             </Button>
           </div>

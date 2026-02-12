@@ -1,5 +1,4 @@
-import React from "react";
-import { Users, Wifi, Wind, Coffee, ArrowRight } from "lucide-react";
+import { Users, Wifi, Coffee, ArrowRight } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -9,9 +8,8 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { Room } from "../services/roomService";
+import { Room } from "@/types/domain";
 
-// Agregamos onBook a las props
 type RoomCardProps = {
   room: Room;
   onBook: () => void;

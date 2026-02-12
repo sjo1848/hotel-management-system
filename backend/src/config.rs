@@ -65,11 +65,17 @@ impl AppConfig {
             if jwt_secret == "dev-secret-change-me" {
                 panic!("JWT_SECRET must be set to a strong value in production.");
             }
+            if jwt_secret.len() < 32 {
+                panic!("JWT_SECRET must be at least 32 characters long in production.");
+            }
             if admin_password == "admin123" {
                 panic!("ADMIN_PASSWORD must be set to a strong value in production.");
             }
             if !cookie_secure {
                 panic!("COOKIE_SECURE must be true in production.");
+            }
+            if cors_origin == "*" {
+                panic!("CORS_ORIGIN cannot be '*' in production.");
             }
         }
 

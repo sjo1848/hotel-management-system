@@ -1,16 +1,35 @@
-import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const ToastContext = createContext(null);
+export type ToastVariant = "default" | "success" | "error";
+
+export type Toast = {
+  id: string;
+  title: string;
+  description?: string;
+  variant: ToastVariant;
+};
+
+export type ToastOptions = {
+  title: string;
+  description?: string;
+  variant?: ToastVariant;
+};
+
+export type ToastContextType = {
+  toast: (options: ToastOptions) => void;
+};
+
+const ToastContext = createContext<ToastContextType | null>(null);
 
 const TOAST_LIFETIME_MS = 3500;
 
-export const ToastProvider = ({ children }) => {
-  const [toasts, setToasts] = useState([]);
-  const timers = useRef(new Map());
+export const ToastProvider = ({ children }: { children: ReactNode }) => {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
-  const removeToast = useCallback((id) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
+  const removeToast = useCallback((id: string) => {
+    setToasts((current: Toast[]) => current.filter((t: Toast) => t.id !== id));
     const timer = timers.current.get(id);
     if (timer) {
       clearTimeout(timer);
@@ -19,9 +38,9 @@ export const ToastProvider = ({ children }) => {
   }, []);
 
   const toast = useCallback(
-    ({ title, description, variant = "default" }) => {
+    ({ title, description, variant = "default" }: ToastOptions) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      setToasts((current) => [
+      setToasts((current: Toast[]) => [
         ...current,
         { id, title, description, variant },
       ]);
@@ -37,26 +56,26 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={value}>
       {children}
       <div className="fixed top-5 right-5 z-50 flex flex-col gap-3 w-[320px]">
-        {toasts.map((toast) => (
+        {toasts.map((t: Toast) => (
           <div
-            key={toast.id}
+            key={t.id}
             className={cn(
               "rounded-xl border shadow-lg bg-white p-4 animate-in fade-in slide-in-from-top-2",
-              toast.variant === "success" && "border-emerald-200",
-              toast.variant === "error" && "border-red-200",
+              t.variant === "success" && "border-emerald-200 bg-emerald-50/50",
+              t.variant === "error" && "border-red-200 bg-red-50/50",
             )}
           >
             <div className="text-sm font-semibold text-slate-900">
-              {toast.title}
+              {t.title}
             </div>
-            {toast.description ? (
+            {t.description ? (
               <div className="text-sm text-slate-600 mt-1">
-                {toast.description}
+                {t.description}
               </div>
             ) : null}
             <button
               type="button"
-              onClick={() => removeToast(toast.id)}
+              onClick={() => removeToast(t.id)}
               className="text-xs text-slate-400 hover:text-slate-600 mt-2"
             >
               Cerrar

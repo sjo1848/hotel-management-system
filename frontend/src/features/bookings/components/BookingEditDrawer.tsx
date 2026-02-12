@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, CheckCircle2, LogOut, XCircle, AlertTriangle } from "lucide-react";
 import {
   Sheet,
@@ -11,22 +11,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Booking, updateBooking, BookingStatus } from "../services/bookingService";
-import roomService, { type Room } from "@/features/rooms/services/roomService";
+import { updateBooking } from "../services/bookingService";
+import roomService from "@/features/rooms/services/roomService";
 import { useToast } from "@/components/ui/toast";
+import { Booking, Room, BookingStatus } from "@/types/domain";
 
 type BookingEditDrawerProps = {
   booking: Booking | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdated: (booking: Booking) => void;
+  onSuccess: () => void;
 };
 
 const BookingEditDrawer = ({
   booking,
   isOpen,
   onClose,
-  onUpdated,
+  onSuccess,
 }: BookingEditDrawerProps) => {
   const [loading, setLoading] = useState(false);
   const [room, setRoom] = useState<Room | null>(null);
@@ -53,7 +54,7 @@ const BookingEditDrawer = ({
   if (!booking) return null;
 
   const handleStatusChange = async (newStatus: BookingStatus) => {
-    if (newStatus === 'CHECKED_IN' && room?.status === 'DIRTY') {
+    if (newStatus === 'CheckedIn' && room?.status === 'Dirty') {
       toast({
         title: "Habitación Sucia",
         description: "No se puede realizar el check-in. La habitación debe estar limpia primero.",
@@ -62,7 +63,7 @@ const BookingEditDrawer = ({
       return;
     }
 
-    if (newStatus === 'CHECKED_IN' && room?.status === 'MAINTENANCE') {
+    if (newStatus === 'CheckedIn' && room?.status === 'Maintenance') {
       toast({
         title: "En Mantenimiento",
         description: "No se puede realizar el check-in. La habitación está bloqueada.",
@@ -73,13 +74,13 @@ const BookingEditDrawer = ({
 
     setLoading(true);
     try {
-      const updated = await updateBooking(booking.id, { status: newStatus });
+      await updateBooking(booking.id, { status: newStatus });
       toast({
         title: "Estado actualizado",
-        description: `La reserva ahora está ${newStatus.replace('_', ' ').toLowerCase()}.`,
+        description: `La reserva ahora está ${newStatus.toLowerCase()}.`,
         variant: "success",
       });
-      onUpdated(updated);
+      onSuccess();
       onClose();
     } catch (error) {
       toast({ title: "Error", description: String(error), variant: "error" });
@@ -92,7 +93,7 @@ const BookingEditDrawer = ({
     event.preventDefault();
     setLoading(true);
     try {
-      const updated = await updateBooking(booking.id, {
+      await updateBooking(booking.id, {
         guest_name: formData.guest_name,
         check_in: formData.check_in,
         check_out: formData.check_out,
@@ -102,7 +103,7 @@ const BookingEditDrawer = ({
         description: "Los cambios se guardaron correctamente.",
         variant: "success",
       });
-      onUpdated(updated);
+      onSuccess();
       onClose();
     } catch (error) {
       toast({
@@ -127,7 +128,7 @@ const BookingEditDrawer = ({
 
         <div className="py-6 space-y-6">
           {/* Room Status Warning */}
-          {room?.status === 'DIRTY' && (
+          {room?.status === 'Dirty' && (
             <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
               <div>
@@ -141,28 +142,28 @@ const BookingEditDrawer = ({
           <div className="space-y-3">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>
             <div className="grid grid-cols-2 gap-3">
-              {booking.status === 'CONFIRMED' && (
+              {booking.status === 'Confirmed' && (
                 <Button 
-                  onClick={() => handleStatusChange('CHECKED_IN')}
+                  onClick={() => handleStatusChange('CheckedIn')}
                   disabled={loading}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" /> Check-in
                 </Button>
               )}
-              {booking.status === 'CHECKED_IN' && (
+              {booking.status === 'CheckedIn' && (
                 <Button 
-                  onClick={() => handleStatusChange('CHECKED_OUT')}
+                  onClick={() => handleStatusChange('CheckedOut')}
                   disabled={loading}
                   className="bg-slate-600 hover:bg-slate-700 text-white"
                 >
                   <LogOut className="w-4 h-4 mr-2" /> Check-out
                 </Button>
               )}
-              {booking.status !== 'CANCELLED' && booking.status !== 'CheckedOut' && (
+              {booking.status !== 'Cancelled' && booking.status !== 'CheckedOut' && (
                 <Button 
                   variant="outline"
-                  onClick={() => handleStatusChange('CANCELLED')}
+                  onClick={() => handleStatusChange('Cancelled')}
                   disabled={loading}
                   className="border-rose-200 text-rose-600 hover:bg-rose-50"
                 >
@@ -220,15 +221,8 @@ const BookingEditDrawer = ({
             </div>
 
             <SheetFooter className="pt-6">
-              <Button type="submit" disabled={loading} className="w-full bg-slate-900 h-12 text-lg">
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Guardando...
-                  </>
-                ) : (
-                  "Guardar Cambios"
-                )}
+              <Button type="submit" disabled={loading} className="w-full bg-slate-900 rounded-xl h-12">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
               </Button>
             </SheetFooter>
           </form>

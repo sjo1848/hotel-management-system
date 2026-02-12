@@ -1,193 +1,192 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, LineChart, Line, Legend
+    AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import {
-    TrendingUp,
-    Users,
-    DollarSign,
-    Calendar as CalendarIcon,
-    Loader2,
-    Download,
-    Filter
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import reportingService, { RevenueData, OccupancyData } from "./services/reportingService";
+import {
+    Calendar as CalendarIcon,
+    TrendingUp,
+    BarChart3,
+    Download
+} from "lucide-react";
+import { getRevenueReport, getOccupancyReport, RevenueData, OccupancyData } from "./services/reportingService";
 import { useToast } from "@/components/ui/toast";
 import { format, subDays } from "date-fns";
-import { es } from "date-fns/locale";
 
 const ReportsPage = () => {
+    const { toast } = useToast();
     const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
     const [occupancyData, setOccupancyData] = useState<OccupancyData[]>([]);
     const [loading, setLoading] = useState(true);
-    const [range, setRange] = useState(30);
-    const { toast } = useToast();
 
-    const loadReports = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
+            const start = format(subDays(new Date(), 30), "yyyy-MM-dd");
             const end = format(new Date(), "yyyy-MM-dd");
-            const start = format(subDays(new Date(), range), "yyyy-MM-dd");
-
+            
             const [rev, occ] = await Promise.all([
-                reportingService.getRevenueReport(start, end),
-                reportingService.getOccupancyReport(start, end)
+                getRevenueReport(start, end),
+                getOccupancyReport(start, end)
             ]);
-
+            
             setRevenueData(rev);
             setOccupancyData(occ);
         } catch (error) {
-            toast({
-                title: "Error",
-                description: "No se pudieron cargar los reportes.",
-                variant: "error"
-            });
+            console.error("Failed to fetch reports", error);
+            toast({ title: "Error", description: "No se pudieron cargar los reportes analíticos", variant: "error" });
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        loadReports();
-    }, [range]);
+        fetchData();
+    }, []);
 
-    const formatCurrency = (cents: number) => {
-        return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(cents / 100);
-    };
-
-    const formatDate = (dateStr: string) => {
-        return format(new Date(dateStr), "dd MMM", { locale: es });
-    };
+    const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString()}`;
+    const formatDate = (dateStr: string) => format(new Date(dateStr), "dd MMM");
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase">Análisis & BI</h2>
-                    <p className="text-slate-500 font-medium mt-3 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                        Tendencias de rendimiento y métricas operativas.
+                    <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                        Analítica Avanzada
+                    </h2>
+                    <p className="text-slate-500 font-medium mt-2">
+                        Rendimiento financiero y métricas de ocupación.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm">
-                    {[7, 14, 30, 90].map((days) => (
-                        <Button
-                            key={days}
-                            variant={range === days ? "secondary" : "ghost"}
-                            size="sm"
-                            className={`rounded-xl font-bold text-[11px] uppercase tracking-widest px-4 ${range === days ? 'bg-slate-900 text-white hover:bg-slate-800' : ''}`}
-                            onClick={() => setRange(days)}
-                        >
-                            {days} Días
-                        </Button>
-                    ))}
+                <div className="flex gap-3">
+                    <Button variant="outline" className="h-12 rounded-xl border-slate-200">
+                        <CalendarIcon className="w-4 h-4 mr-2" /> Últimos 30 días
+                    </Button>
+                    <Button className="h-12 rounded-xl bg-slate-900 shadow-lg shadow-slate-200" onClick={() => toast({ title: "Exportación", description: "El módulo de PDF está en cola de desarrollo." })}>
+                        <Download className="w-4 h-4 mr-2" /> Descargar PDF
+                    </Button>
                 </div>
             </div>
 
-            {loading ? (
-                <div className="flex flex-col items-center justify-center p-32 bg-white rounded-[40px] border border-slate-100 shadow-xl shadow-slate-200/50">
-                    <Loader2 className="animate-spin w-12 h-12 text-slate-400 mb-4" />
-                    <p className="text-slate-400 font-bold tracking-widest uppercase text-[10px]">Cargando analíticas...</p>
-                </div>
-            ) : (
-                <div className="grid gap-8 lg:grid-cols-2">
-                    {/* Revenue Chart */}
-                    <Card className="border-none rounded-[40px] shadow-2xl shadow-slate-200/60 overflow-hidden bg-white">
-                        <CardHeader className="p-8 pb-2">
-                            <div className="flex items-center justify-between">
-                                <div className="bg-emerald-50 p-3 rounded-2xl">
-                                    <DollarSign className="w-6 h-6 text-emerald-600" />
-                                </div>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Download className="w-4 h-4 text-slate-400" />
-                                </Button>
-                            </div>
-                            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight mt-4">Crecimiento de Ingresos</CardTitle>
-                            <p className="text-slate-400 text-sm font-medium">Ingresos diarios acumulados por reservas.</p>
-                        </CardHeader>
-                        <CardContent className="p-8 h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={revenueData}>
-                                    <defs>
-                                        <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis
-                                        dataKey="date"
-                                        tickFormatter={formatDate}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                                        dy={10}
-                                    />
-                                    <YAxis
-                                        tickFormatter={(val) => `€${val / 100}`}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                        formatter={(val: number) => [formatCurrency(val), "Ingresos"]}
-                                        labelFormatter={formatDate}
-                                    />
-                                    <Area type="monotone" dataKey="revenue_cents" stroke="#10b981" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Gráfico de Ingresos */}
+                <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-lg font-black text-slate-800">Ingresos Diarios</CardTitle>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Flujo de caja</p>
+                        </div>
+                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                            <TrendingUp className="w-5 h-5" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="h-[300px] w-full">
+                            {loading ? (
+                                <div className="h-full w-full bg-slate-50 animate-pulse rounded-2xl" />
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={revenueData}>
+                                        <defs>
+                                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis 
+                                            dataKey="date" 
+                                            tickFormatter={formatDate}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                        />
+                                        <YAxis 
+                                            tickFormatter={(val) => `$${val/100}`}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                        />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                            formatter={(val: any) => [formatCurrency(Number(val)), "Ingresos"]}
+                                            labelFormatter={(label: any) => formatDate(String(label))}
+                                        />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="amount_cents" 
+                                            stroke="#10b981" 
+                                            strokeWidth={3}
+                                            fillOpacity={1} 
+                                            fill="url(#colorRev)" 
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
 
-                    {/* Occupancy Chart */}
-                    <Card className="border-none rounded-[40px] shadow-2xl shadow-slate-200/60 overflow-hidden bg-white">
-                        <CardHeader className="p-8 pb-2">
-                            <div className="flex items-center justify-between">
-                                <div className="bg-blue-50 p-3 rounded-2xl">
-                                    <Users className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <Button variant="ghost" size="icon" className="rounded-full">
-                                    <Download className="w-4 h-4 text-slate-400" />
-                                </Button>
-                            </div>
-                            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight mt-4">Tasa de Ocupación</CardTitle>
-                            <p className="text-slate-400 text-sm font-medium">Porcentaje de habitaciones vendidas sobre disponibilidad.</p>
-                        </CardHeader>
-                        <CardContent className="p-8 h-[400px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={occupancyData}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                    <XAxis
-                                        dataKey="date"
-                                        tickFormatter={formatDate}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                                        dy={10}
-                                    />
-                                    <YAxis
-                                        tickFormatter={(val) => `${val}%`}
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                        formatter={(val: number) => [`${val.toFixed(1)}%`, "Ocupación"]}
-                                        labelFormatter={formatDate}
-                                    />
-                                    <Line type="stepAfter" dataKey="occupancy_rate" stroke="#3b82f6" strokeWidth={4} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 8 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                {/* Gráfico de Ocupación */}
+                <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="text-lg font-black text-slate-800">Tasa de Ocupación</CardTitle>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Eficiencia de inventario</p>
+                        </div>
+                        <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                            <BarChart3 className="w-5 h-5" />
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        <div className="h-[300px] w-full">
+                            {loading ? (
+                                <div className="h-full w-full bg-slate-50 animate-pulse rounded-2xl" />
+                            ) : (
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={occupancyData}>
+                                        <defs>
+                                            <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <XAxis 
+                                            dataKey="date" 
+                                            tickFormatter={formatDate}
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                        />
+                                        <YAxis 
+                                            axisLine={false}
+                                            tickLine={false}
+                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                            unit="%"
+                                        />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                            formatter={(val: any) => [`${Number(val).toFixed(1)}%`, "Ocupación"]}
+                                            labelFormatter={(label: any) => formatDate(String(label))}
+                                        />
+                                        <Area 
+                                            type="monotone" 
+                                            dataKey="occupancy_rate" 
+                                            stroke="#6366f1" 
+                                            strokeWidth={3}
+                                            fillOpacity={1} 
+                                            fill="url(#colorOcc)" 
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     );
 };

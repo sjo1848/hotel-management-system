@@ -1,12 +1,5 @@
 import client from "@/api/client";
-
-export type Room = {
-  id: string;
-  room_number: string;
-  room_type: string;
-  status: "Available" | "Occupied" | "Dirty" | "Cleaning" | "Maintenance";
-  price_cents: number;
-};
+import { Room } from "@/types/domain";
 
 export const getAllRooms = async (startDate?: string | null, endDate?: string | null) => {
   try {

@@ -18,16 +18,25 @@ pub async fn auth_middleware(
     }
 
     let path = req.uri().path();
-    if path == "/health"
+    let is_public_path = path == "/health"
         || path == "/ready"
+        || path == "/metrics"
         || path == "/"
         || path == "/api/auth/login"
         || path == "/api/auth/refresh"
         || path == "/api/auth/logout"
         || path == "/api/v1/auth/login"
         || path == "/api/v1/auth/refresh"
-        || path == "/api/v1/auth/logout"
-    {
+        || path == "/api/v1/auth/logout";
+
+    // Perform CSRF check BEFORE potentially skipping auth for public paths.
+    // This ensures that even if authentication is skipped (e.g., for refresh/logout),
+    // we still validate CSRF for state-changing operations.
+    if requires_csrf(&req) && !csrf_valid(req.headers()) {
+        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
+    }
+
+    if is_public_path {
         return Ok(next.run(req).await);
     }
 

@@ -1,4 +1,5 @@
 import client from "@/api/client";
+import { User } from "@/types/domain";
 
 export type LoginResponse = {
   access_token: string;
@@ -6,11 +7,7 @@ export type LoginResponse = {
   role: string;
 };
 
-export type MeResponse = {
-  id: string;
-  username: string;
-  role: string;
-};
+export type MeResponse = User;
 
 export const login = async (username: string, password: string) => {
   const response = await client.post("/auth/login", { username, password });

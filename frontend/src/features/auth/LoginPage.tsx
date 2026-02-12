@@ -29,7 +29,7 @@ const LoginPage = () => {
       toast({
         title: "Error de acceso",
         description: "Usuario o contraseña incorrectos.",
-        variant: "destructive",
+        variant: "error",
       });
     } finally {
       setLoading(false);

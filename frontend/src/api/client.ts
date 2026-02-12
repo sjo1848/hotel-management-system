@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 
 const baseURL = "/api/v1";
 
@@ -36,11 +36,19 @@ const resolveQueue = (error: unknown, token: string | null = null) => {
   pendingQueue = [];
 };
 
-// Interceptor para manejar los Errores de Dominio (Sprint 5) de forma global
+// Manejador de errores global opcional
+type ErrorHandler = (message: string, status?: number) => void;
+let globalErrorHandler: ErrorHandler | null = null;
+
+export const setGlobalErrorHandler = (handler: ErrorHandler) => {
+  globalErrorHandler = handler;
+};
+
+// Interceptor para manejar los Errores de Dominio de forma global
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   async (error: AxiosError) => {
-    const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const requestUrl = originalRequest?.url || "";
     const isAuthEndpoint =
       requestUrl.includes("/auth/login") ||
@@ -50,7 +58,7 @@ api.interceptors.response.use(
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           pendingQueue.push({ resolve, reject });
-        }).then((token) => {
+        }).then(() => {
           return api(originalRequest);
         });
       }
@@ -74,15 +82,20 @@ api.interceptors.response.use(
     }
 
     // Si el backend mandó un error tipado (400, 409, 404)
-    const errorData = error.response?.data as { error?: string; message?: string } | undefined;
+    const errorData = error.response?.data as { error?: string; message?: string; error_code?: string } | undefined;
     const message = errorData?.message || errorData?.error || "Error inesperado en el servidor";
 
-    // Aquí podrías disparar un Toast o notificación global más adelante
+    if (globalErrorHandler && error.response?.status !== 401) {
+      globalErrorHandler(message, error.response?.status);
+    }
+
+    // Registro de logs para monitoreo
     console.error(`🚨 HMS Error [${error.response?.status}]:`, message);
 
     return Promise.reject({
       status: error.response?.status,
       message: message,
+      code: errorData?.error_code
     });
   },
 );
@@ -96,7 +109,7 @@ const getCookie = (name: string) => {
   return match.substring(name.length + 1);
 };
 
-const attachCsrf = (config: AxiosRequestConfig) => {
+const attachCsrf = (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
   const method = (config.method || "get").toLowerCase();
   if (["post", "put", "patch", "delete"].includes(method)) {
     const csrfToken = getCookie("csrf_token");

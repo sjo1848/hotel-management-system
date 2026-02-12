@@ -1,17 +1,5 @@
 import client from "@/api/client";
-
-export type BookingStatus = "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled";
-
-export type Booking = {
-  id: string;
-  room_id: string;
-  guest_id?: string | null;
-  guest_name: string;
-  check_in: string;
-  check_out: string;
-  total_price_cents: number;
-  status: BookingStatus;
-};
+import { Booking } from "@/types/domain";
 
 export type CreateBookingPayload = {
   room_id: string;
@@ -32,14 +20,12 @@ export const createBooking = async (bookingData: CreateBookingPayload) => {
     return response.data as Booking;
   } catch (error) {
     console.error("Error creando reserva:", error);
-    const message =
-      (error as { response?: { data?: { message?: string } } })?.response?.data
-        ?.message || "Error al procesar la reserva";
-    throw message;
+    throw error;
   }
 };
 
-export const getBookings = async (params?: BookingFilterParams) => {
+export const getBookings = async (start?: string, end?: string): Promise<Booking[]> => {
+  const params = { start, end };
   const response = await client.get("/bookings", {
     params,
   });
@@ -55,9 +41,14 @@ export const updateBooking = async (
     return response.data as Booking;
   } catch (error) {
     console.error("Error actualizando reserva:", error);
-    const message =
-      (error as { response?: { data?: { message?: string } } })?.response?.data
-        ?.message || "Error al actualizar la reserva";
-    throw message;
+    throw error;
   }
 };
+
+const bookingService = {
+    createBooking,
+    getBookings,
+    updateBooking,
+};
+
+export default bookingService;

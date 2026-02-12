@@ -1,24 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import RoomCard from "./RoomCard";
 import roomService from "../services/roomService";
-// Importamos el Drawer que creaste recién
 import BookingDrawer from "../../bookings/components/BookingDrawer";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { differenceInCalendarDays, parseISO } from "date-fns";
+import { Room } from "@/types/domain";
 
 type SearchDates = {
   from: string;
   to: string;
 } | null;
-
-type Room = {
-  id: string;
-  room_number: string;
-  room_type: string;
-  status: string;
-  price_cents: number;
-};
 
 const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -29,6 +21,7 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
   // Estado para manejar el Drawer
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  
   const nights = useMemo(() => {
     if (!searchDates?.from || !searchDates?.to) return 0;
     return Math.max(
@@ -58,7 +51,7 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
     const start = searchDates?.from || null;
     const end = searchDates?.to || null;
     loadRooms(start, end);
-  }, [searchDates, toast]); // Se recarga cuando cambian las fechas
+  }, [searchDates]); // Eliminado toast de deps para evitar bucles si cambiara
 
   // Handler para abrir el drawer
   const handleBookClick = (room: Room) => {

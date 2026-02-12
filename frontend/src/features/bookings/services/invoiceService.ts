@@ -1,21 +1,19 @@
-import client from '../../../api/client';
+import client from '@/api/client';
+import { Invoice } from '@/types/domain';
 
-export type InvoiceStatus = 'PENDING' | 'PAID' | 'VOIDED';
-
-export interface Invoice {
-    id: string;
-    booking_id: string;
-    amount_cents: number;
-    status: InvoiceStatus;
-    created_at: string;
-}
-
-export const getInvoices = async () => {
+export const getInvoices = async (): Promise<Invoice[]> => {
     const response = await client.get('/invoices');
     return response.data as Invoice[];
 };
 
-export const getInvoiceByBooking = async (bookingId: string) => {
+export const getInvoiceByBooking = async (bookingId: string): Promise<Invoice> => {
     const response = await client.get(`/bookings/${bookingId}/invoice`);
     return response.data as Invoice;
 };
+
+const invoiceService = {
+    getInvoices,
+    getInvoiceByBooking,
+};
+
+export default invoiceService;
