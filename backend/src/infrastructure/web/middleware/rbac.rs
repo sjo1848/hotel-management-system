@@ -2,50 +2,88 @@ use crate::domain::errors::DomainError;
 use crate::infrastructure::web::jwt::Claims;
 use axum::{extract::Request, middleware::Next, response::Response};
 
+const ADMIN_CAPABILITIES: &[&str] = &[
+    "saas.hotels.read",
+    "saas.hotels.write",
+    "rooms.read",
+    "rooms.write",
+    "rooms.search",
+    "rooms.status.write",
+    "bookings.read",
+    "bookings.write",
+    "bookings.update",
+    "bookings.extra_charges.read",
+    "bookings.extra_charges.write",
+    "guests.read",
+    "guests.write",
+    "housekeeping.read",
+    "housekeeping.write",
+    "billing.balance.read",
+    "billing.close_cash.write",
+    "billing.invoices.read",
+    "billing.invoice.read",
+    "analytics.kpis.read",
+    "reports.revenue.read",
+    "reports.occupancy.read",
+    "users.read",
+    "users.write",
+    "users.delete",
+];
+
+const SAAS_ADMIN_CAPABILITIES: &[&str] = &["saas.hotels.read", "saas.hotels.write"];
+
+const OPS_CAPABILITIES: &[&str] = &[
+    "rooms.read",
+    "rooms.search",
+    "rooms.status.write",
+    "bookings.read",
+    "bookings.write",
+    "bookings.update",
+    "bookings.extra_charges.read",
+    "bookings.extra_charges.write",
+    "guests.read",
+    "guests.write",
+    "housekeeping.read",
+    "housekeeping.write",
+    "billing.balance.read",
+    "billing.close_cash.write",
+    "billing.invoices.read",
+    "billing.invoice.read",
+    "analytics.kpis.read",
+    "reports.revenue.read",
+    "reports.occupancy.read",
+];
+
+const RECEPTIONIST_CAPABILITIES: &[&str] = &[
+    "rooms.read",
+    "rooms.search",
+    "bookings.read",
+    "bookings.write",
+    "bookings.update",
+    "bookings.extra_charges.read",
+    "bookings.extra_charges.write",
+    "guests.read",
+    "guests.write",
+    "billing.balance.read",
+    "billing.invoice.read",
+];
+
+const HOUSEKEEPING_CAPABILITIES: &[&str] = &["housekeeping.read", "housekeeping.write"];
+
+fn has_capability(capabilities: &[&str], capability: &str) -> bool {
+    capabilities.contains(&capability)
+}
+
 pub fn role_has_capability(role: &str, capability: &str) -> bool {
     match role {
-        // Platform/super-admin keeps full access.
-        "admin" => true,
+        "admin" => has_capability(ADMIN_CAPABILITIES, capability),
+        "saas_admin" => has_capability(SAAS_ADMIN_CAPABILITIES, capability),
         // Ops can operate day-to-day flow and business reporting.
-        "ops" => matches!(
-            capability,
-            "rooms.read"
-                | "rooms.search"
-                | "rooms.status.write"
-                | "bookings.read"
-                | "bookings.write"
-                | "bookings.update"
-                | "bookings.extra_charges.read"
-                | "bookings.extra_charges.write"
-                | "guests.read"
-                | "guests.write"
-                | "housekeeping.read"
-                | "housekeeping.write"
-                | "billing.balance.read"
-                | "billing.close_cash.write"
-                | "billing.invoices.read"
-                | "billing.invoice.read"
-                | "analytics.kpis.read"
-                | "reports.revenue.read"
-                | "reports.occupancy.read"
-        ),
+        "ops" => has_capability(OPS_CAPABILITIES, capability),
         // Reception can handle front-desk workflows.
-        "receptionist" => matches!(
-            capability,
-            "rooms.read"
-                | "rooms.search"
-                | "bookings.read"
-                | "bookings.write"
-                | "bookings.update"
-                | "bookings.extra_charges.read"
-                | "bookings.extra_charges.write"
-                | "guests.read"
-                | "guests.write"
-                | "billing.balance.read"
-                | "billing.invoice.read"
-        ),
+        "receptionist" => has_capability(RECEPTIONIST_CAPABILITIES, capability),
         // Housekeeping is constrained to cleaning operations.
-        "housekeeping" => matches!(capability, "housekeeping.read" | "housekeeping.write"),
+        "housekeeping" => has_capability(HOUSEKEEPING_CAPABILITIES, capability),
         _ => false,
     }
 }
@@ -190,7 +228,17 @@ mod tests {
 
     #[test]
     fn admin_has_all_capabilities() {
-        assert!(role_has_capability("admin", "any.capability"));
+        assert!(role_has_capability("admin", "users.delete"));
+        assert!(role_has_capability("admin", "saas.hotels.write"));
+        assert!(!role_has_capability("admin", "unknown.capability"));
+    }
+
+    #[test]
+    fn saas_admin_has_only_hotel_network_capabilities() {
+        assert!(role_has_capability("saas_admin", "saas.hotels.read"));
+        assert!(role_has_capability("saas_admin", "saas.hotels.write"));
+        assert!(!role_has_capability("saas_admin", "users.read"));
+        assert!(!role_has_capability("saas_admin", "bookings.write"));
     }
 
     #[test]

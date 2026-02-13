@@ -84,9 +84,10 @@ pub fn parse_booking_status_input(
 pub fn validate_role(role: &str) -> Result<(), DomainError> {
     let normalized = role.trim().to_lowercase();
     match normalized.as_str() {
-        "admin" | "ops" | "receptionist" | "housekeeping" => Ok(()),
+        "admin" | "saas_admin" | "ops" | "receptionist" | "housekeeping" => Ok(()),
         _ => Err(DomainError::InvalidInput(
-            "Rol inválido. Valores permitidos: admin, ops, receptionist, housekeeping".to_string(),
+            "Rol inválido. Valores permitidos: admin, saas_admin, ops, receptionist, housekeeping"
+                .to_string(),
         )),
     }
 }

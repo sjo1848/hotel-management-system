@@ -46,6 +46,7 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         .unwrap();
 
     let admin_id = insert_user(&pool, hotel_id, "admin_rbac", "admin").await;
+    let saas_admin_id = insert_user(&pool, hotel_id, "saas_admin_rbac", "saas_admin").await;
     let ops_id = insert_user(&pool, hotel_id, "ops_rbac", "ops").await;
     let reception_id = insert_user(&pool, hotel_id, "reception_rbac", "receptionist").await;
     let hk_id = insert_user(&pool, hotel_id, "housekeeping_rbac", "housekeeping").await;
@@ -54,6 +55,7 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
     let app = create_router(build_state(pool.clone(), config.clone()));
 
     let admin_token = make_token(&config.jwt_secret, admin_id, hotel_id, "admin");
+    let saas_admin_token = make_token(&config.jwt_secret, saas_admin_id, hotel_id, "saas_admin");
     let ops_token = make_token(&config.jwt_secret, ops_id, hotel_id, "ops");
     let reception_token = make_token(&config.jwt_secret, reception_id, hotel_id, "receptionist");
     let hk_token = make_token(&config.jwt_secret, hk_id, hotel_id, "housekeeping");
@@ -91,6 +93,45 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         None,
         false,
         StatusCode::OK,
+    )
+    .await;
+
+    // SaaS admin can list hotels.
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/hotels",
+        &saas_admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+
+    // SaaS admin can create hotels.
+    assert_status(
+        &app,
+        Method::POST,
+        "/api/v1/hotels",
+        &saas_admin_token,
+        Some(format!(
+            r#"{{"name":"Hotel SaaS {}","address":"HQ"}}"#,
+            Uuid::new_v4()
+        )),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    // Ops cannot list hotels in SaaS network scope.
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/hotels",
+        &ops_token,
+        None,
+        false,
+        StatusCode::FORBIDDEN,
     )
     .await;
 
