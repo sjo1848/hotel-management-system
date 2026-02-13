@@ -37,6 +37,6 @@ impl HotelService {
         let result: Result<Option<Hotel>, String> = self.hotel_repo.find_by_id(id).await;
         result
             .map_err(DomainError::InfrastructureError)?
-            .ok_or(DomainError::RoomNotFound)
+            .ok_or(DomainError::HotelNotFound)
     }
 }

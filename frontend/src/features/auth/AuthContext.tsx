@@ -12,7 +12,7 @@ export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 export type AuthContextValue = {
   status: AuthStatus;
   user: MeResponse | null;
-  login: (username: string, password: string) => Promise<LoginResponse>;
+  login: (username: string, password: string, hotelId: string) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<MeResponse>;
 };
@@ -20,7 +20,7 @@ export type AuthContextValue = {
 export const AuthContext = createContext<AuthContextValue>({
   status: "loading",
   user: null,
-  login: async () => {
+  login: async (_username: string, _password: string, _hotelId: string) => {
     throw new Error("AuthContext not ready");
   },
   logout: async () => {},
@@ -56,8 +56,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return request;
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const data = await apiLogin(username, password);
+  const login = useCallback(async (username: string, password: string, hotelId: string) => {
+    const data = await apiLogin(username, password, hotelId);
     await refreshUser();
     return data;
   }, [refreshUser]);

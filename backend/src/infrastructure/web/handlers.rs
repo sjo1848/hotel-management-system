@@ -1,21 +1,21 @@
 use crate::domain::errors::DomainError;
 use crate::AppState;
 use axum::{
-    extract::{Path, Query, State, ConnectInfo},
+    extract::{ConnectInfo, Path, Query, State},
     http::{header, HeaderMap, StatusCode},
-    response::{IntoResponse, Response, AppendHeaders},
+    response::{AppendHeaders, IntoResponse, Response},
     Extension, Json,
 };
-use std::net::SocketAddr;
+use base64::Engine;
 use chrono::NaiveDate;
 use rand::RngCore;
 use serde::Deserialize;
 use serde_json::{json, Value};
+use std::net::SocketAddr;
 use std::sync::Arc;
-use uuid::Uuid;
-use base64::Engine;
 use tokio::task_local;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 task_local! {
     pub static REQUEST_ID: String;
@@ -28,6 +28,11 @@ impl IntoResponse for DomainError {
                 StatusCode::NOT_FOUND,
                 "ROOM_NOT_FOUND",
                 "La habitación solicitada no existe".to_string(),
+            ),
+            DomainError::HotelNotFound => (
+                StatusCode::NOT_FOUND,
+                "HOTEL_NOT_FOUND",
+                "El hotel solicitado no existe".to_string(),
             ),
             DomainError::RoomAlreadyExists => (
                 StatusCode::CONFLICT,
@@ -65,11 +70,14 @@ impl IntoResponse for DomainError {
                 "UNAUTHORIZED",
                 "No autorizado".to_string(),
             ),
-            DomainError::InfrastructureError(msg) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "INFRA_ERROR",
-                msg,
+            DomainError::Forbidden => (
+                StatusCode::FORBIDDEN,
+                "FORBIDDEN",
+                "No tiene permisos para realizar esta acción".to_string(),
             ),
+            DomainError::InfrastructureError(msg) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "INFRA_ERROR", msg)
+            }
         };
 
         let request_id = REQUEST_ID
@@ -210,16 +218,23 @@ pub async fn create_room_handler(
 
     let room = state
         .room_service
-        .create_room(hotel_id, payload.room_number, payload.room_type, payload.price_cents)
+        .create_room(
+            hotel_id,
+            payload.room_number,
+            payload.room_type,
+            payload.price_cents,
+        )
         .await?;
 
-    state.audit_service.record(
-        Some(hotel_id),
-        Some(user_id),
-        &format!("room.created: {}", room.room_number),
-        Some(ip),
-    )
-    .await;
+    state
+        .audit_service
+        .record(
+            Some(hotel_id),
+            Some(user_id),
+            &format!("room.created: {}", room.room_number),
+            Some(ip),
+        )
+        .await;
 
     Ok((StatusCode::CREATED, Json(json!(room))))
 }
@@ -249,10 +264,17 @@ pub async fn update_room_status_handler(
         "OCCUPIED" => crate::domain::models::RoomStatus::Occupied,
         "DIRTY" => crate::domain::models::RoomStatus::Dirty,
         "MAINTENANCE" => crate::domain::models::RoomStatus::Maintenance,
-        _ => return Err(DomainError::InvalidInput("Estado de habitación inválido".to_string())),
+        _ => {
+            return Err(DomainError::InvalidInput(
+                "Estado de habitación inválido".to_string(),
+            ))
+        }
     };
 
-    state.room_service.update_room_status(hotel_id, room_id, status).await?;
+    state
+        .room_service
+        .update_room_status(hotel_id, room_id, status)
+        .await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 
@@ -336,12 +358,20 @@ pub async fn update_booking_handler(
     Json(payload): Json<UpdateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    
+
     let status = match payload.status.as_deref() {
-        Some("Confirmed") | Some("CONFIRMED") => Some(crate::domain::models::BookingStatus::Confirmed),
-        Some("CheckedIn") | Some("CHECKED_IN") => Some(crate::domain::models::BookingStatus::CheckedIn),
-        Some("CheckedOut") | Some("CHECKED_OUT") => Some(crate::domain::models::BookingStatus::CheckedOut),
-        Some("Cancelled") | Some("CANCELLED") => Some(crate::domain::models::BookingStatus::Cancelled),
+        Some("Confirmed") | Some("CONFIRMED") => {
+            Some(crate::domain::models::BookingStatus::Confirmed)
+        }
+        Some("CheckedIn") | Some("CHECKED_IN") => {
+            Some(crate::domain::models::BookingStatus::CheckedIn)
+        }
+        Some("CheckedOut") | Some("CHECKED_OUT") => {
+            Some(crate::domain::models::BookingStatus::CheckedOut)
+        }
+        Some("Cancelled") | Some("CANCELLED") => {
+            Some(crate::domain::models::BookingStatus::Cancelled)
+        }
         _ => None,
     };
 
@@ -362,45 +392,32 @@ pub async fn update_booking_handler(
 }
 
 pub async fn list_guests_handler(
-
     State(state): State<Arc<AppState>>,
 
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
-
 ) -> Result<Json<Value>, DomainError> {
-
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
     let guests = state.guest_service.list_guests(hotel_id).await?;
 
     Ok(Json(json!(guests)))
-
 }
 
-
-
 pub async fn create_guest_handler(
-
     State(state): State<Arc<AppState>>,
 
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 
     Json(payload): Json<CreateGuestRequest>,
-
 ) -> Result<Json<Value>, DomainError> {
-
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
     let created = state
-
         .guest_service
-
         .create_guest(hotel_id, payload.full_name, payload.email, payload.phone)
-
         .await?;
 
     Ok(Json(json!(created)))
-
 }
 
 #[utoipa::path(
@@ -428,17 +445,18 @@ pub async fn login_handler(
     let user = match state
         .auth_service
         .verify_user(payload.hotel_id, &payload.username, &payload.password)
-        .await {
-            Ok(u) => u,
-            Err(e) => {
-                tracing::warn!(
-                    ip = %ip,
-                    username = %payload.username,
-                    "Intento de login fallido"
-                );
-                return Err(e);
-            }
-        };
+        .await
+    {
+        Ok(u) => u,
+        Err(e) => {
+            tracing::warn!(
+                ip = %ip,
+                username = %payload.username,
+                "Intento de login fallido"
+            );
+            return Err(e);
+        }
+    };
 
     let exp = state.auth_service.access_exp();
 
@@ -453,20 +471,19 @@ pub async fn login_handler(
         crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
             .map_err(DomainError::InfrastructureError)?;
 
-    let (refresh_token, _): (String, crate::domain::models::RefreshToken) =
-        state.auth_service.issue_refresh_token(user.hotel_id, user.id).await?;
+    let (refresh_token, _): (String, crate::domain::models::RefreshToken) = state
+        .auth_service
+        .issue_refresh_token(user.hotel_id, user.id)
+        .await?;
     let refresh_cookie = build_refresh_cookie(&refresh_token, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
     let csrf_token = generate_csrf_token();
     let csrf_cookie = build_csrf_cookie(&csrf_token, &state.config);
 
-    state.audit_service.record(
-        Some(user.hotel_id),
-        Some(user.id),
-        "auth.login",
-        Some(ip),
-    )
-    .await;
+    state
+        .audit_service
+        .record(Some(user.hotel_id), Some(user.id), "auth.login", Some(ip))
+        .await;
 
     Ok((
         StatusCode::OK,
@@ -491,7 +508,7 @@ pub async fn refresh_handler(
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
     // CSRF check is now performed by auth_middleware for this endpoint
-    
+
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
@@ -501,7 +518,12 @@ pub async fn refresh_handler(
         return Err(DomainError::Unauthorized);
     }
 
-    let (hotel_id, user_id, new_refresh, _): (Uuid, Uuid, String, crate::domain::models::RefreshToken) = state
+    let (hotel_id, user_id, new_refresh, _): (
+        Uuid,
+        Uuid,
+        String,
+        crate::domain::models::RefreshToken,
+    ) = state
         .auth_service
         .rotate_refresh_token(&refresh_token)
         .await?;
@@ -555,7 +577,7 @@ pub async fn logout_handler(
 ) -> Result<Response, DomainError> {
     let ip = addr.ip().to_string();
     // CSRF check is now performed by auth_middleware for this endpoint
-    
+
     let refresh_token = payload
         .and_then(|value| value.0.refresh_token)
         .or_else(|| extract_refresh_cookie(&headers))
@@ -582,11 +604,17 @@ pub async fn logout_handler(
         .auth_service
         .revoke_refresh_token(&refresh_token)
         .await?;
-    state.auth_service.revoke_user_tokens(hotel_id, user_id).await?;
+    state
+        .auth_service
+        .revoke_user_tokens(hotel_id, user_id)
+        .await?;
     let expired_cookie = clear_refresh_cookie(&state.config);
     let expired_access = clear_access_cookie(&state.config);
     let expired_csrf = clear_csrf_cookie(&state.config);
-    state.audit_service.record(Some(hotel_id), Some(user_id), "auth.logout", Some(ip)).await;
+    state
+        .audit_service
+        .record(Some(hotel_id), Some(user_id), "auth.logout", Some(ip))
+        .await;
     Ok((
         StatusCode::OK,
         AppendHeaders([
@@ -600,30 +628,21 @@ pub async fn logout_handler(
 }
 
 pub async fn me_handler(
-
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 
     State(state): State<Arc<AppState>>,
-
 ) -> Result<Json<Value>, DomainError> {
-
     let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
 
-    let hotel_id = uuid::Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let hotel_id =
+        uuid::Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
     let user: crate::domain::models::User = state
-
         .user_repo
-
         .find_by_id(hotel_id, user_id)
-
         .await
-
         .map_err(DomainError::InfrastructureError)?
-
         .ok_or(DomainError::Unauthorized)?;
-
-
 
     Ok(Json(json!({
 
@@ -636,7 +655,6 @@ pub async fn me_handler(
         "role": user.role
 
     })))
-
 }
 
 #[derive(Deserialize)]
@@ -670,14 +688,28 @@ pub async fn delete_user_handler(
 ) -> Result<Json<Value>, DomainError> {
     let current_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    
+
     if user_id == current_user_id {
-        return Err(DomainError::InvalidInput("No puedes eliminar tu propia cuenta".to_string()));
+        return Err(DomainError::InvalidInput(
+            "No puedes eliminar tu propia cuenta".to_string(),
+        ));
     }
 
-    state.user_repo.delete(hotel_id, user_id).await.map_err(DomainError::InfrastructureError)?;
-    
-    state.audit_service.record(Some(hotel_id), Some(current_user_id), &format!("user.deleted: {}", user_id), None).await;
+    state
+        .user_repo
+        .delete(hotel_id, user_id)
+        .await
+        .map_err(DomainError::InfrastructureError)?;
+
+    state
+        .audit_service
+        .record(
+            Some(hotel_id),
+            Some(current_user_id),
+            &format!("user.deleted: {}", user_id),
+            None,
+        )
+        .await;
 
     Ok(Json(json!({ "status": "ok" })))
 }
@@ -711,21 +743,27 @@ pub async fn create_user_handler(
         .await
         .map_err(DomainError::InfrastructureError)?;
 
-    state.audit_service.record(Some(hotel_id), Some(created.id), "user.created", None).await;
+    state
+        .audit_service
+        .record(Some(hotel_id), Some(created.id), "user.created", None)
+        .await;
 
-    Ok(Json(json!({ "id": created.id, "username": created.username, "role": created.role })))
+    Ok(Json(
+        json!({ "id": created.id, "username": created.username, "role": created.role }),
+    ))
 }
 
 fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
-    let cookies_header = headers.get(header::COOKIE).and_then(|value| value.to_str().ok());
-    cookies_header
-        .and_then(|cookies| {
-            cookies
-                .split(';')
-                .map(|cookie| cookie.trim())
-                .find(|cookie| cookie.starts_with("refresh_token="))
-                .map(|cookie| cookie.trim_start_matches("refresh_token=").to_string())
-        })
+    let cookies_header = headers
+        .get(header::COOKIE)
+        .and_then(|value| value.to_str().ok());
+    cookies_header.and_then(|cookies| {
+        cookies
+            .split(';')
+            .map(|cookie| cookie.trim())
+            .find(|cookie| cookie.starts_with("refresh_token="))
+            .map(|cookie| cookie.trim_start_matches("refresh_token=").to_string())
+    })
 }
 
 pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
@@ -839,7 +877,10 @@ pub async fn create_hotel_handler(
     Json(payload): Json<CreateHotelRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let _ = claims;
-    let hotel = state.hotel_service.create_hotel(payload.name, payload.address).await?;
+    let hotel = state
+        .hotel_service
+        .create_hotel(payload.name, payload.address)
+        .await?;
     Ok(Json(json!(hotel)))
 }
 
@@ -857,14 +898,17 @@ pub async fn add_extra_charge_handler(
     Json(payload): Json<AddExtraChargeRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    
-    let charge = state.billing_service.add_extra_charge(
-        hotel_id,
-        booking_id,
-        payload.description,
-        payload.amount_cents,
-        payload.category,
-    ).await?;
+
+    let charge = state
+        .billing_service
+        .add_extra_charge(
+            hotel_id,
+            booking_id,
+            payload.description,
+            payload.amount_cents,
+            payload.category,
+        )
+        .await?;
 
     Ok(Json(json!(charge)))
 }
@@ -875,8 +919,11 @@ pub async fn list_extra_charges_handler(
     Path(booking_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    
-    let charges = state.billing_service.list_extra_charges(hotel_id, booking_id).await?;
+
+    let charges = state
+        .billing_service
+        .list_extra_charges(hotel_id, booking_id)
+        .await?;
     Ok(Json(json!(charges)))
 }
 
@@ -890,8 +937,11 @@ pub async fn get_current_balance_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let (total, cash, card) = state.cash_closure_service.get_current_balance(hotel_id).await?;
-    
+    let (total, cash, card) = state
+        .cash_closure_service
+        .get_current_balance(hotel_id)
+        .await?;
+
     Ok(Json(json!({
         "total_amount_cents": total,
         "cash_amount_cents": cash,
@@ -907,13 +957,15 @@ pub async fn close_cash_handler(
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
 
-    let closure = state.cash_closure_service.close_cash(
-        hotel_id,
-        user_id,
-        payload.notes,
-    ).await?;
+    let closure = state
+        .cash_closure_service
+        .close_cash(hotel_id, user_id, payload.notes)
+        .await?;
 
-    state.audit_service.record(Some(hotel_id), Some(user_id), "cash.closed", None).await;
+    state
+        .audit_service
+        .record(Some(hotel_id), Some(user_id), "cash.closed", None)
+        .await;
 
     Ok(Json(json!(closure)))
 }
@@ -1006,7 +1058,10 @@ pub async fn list_dirty_rooms_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let rooms = state.housekeeping_service.list_dirty_rooms(hotel_id).await?;
+    let rooms = state
+        .housekeeping_service
+        .list_dirty_rooms(hotel_id)
+        .await?;
     Ok(Json(json!(rooms)))
 }
 
@@ -1027,7 +1082,10 @@ pub async fn start_cleaning_handler(
     Path(room_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    state.housekeeping_service.start_cleaning(hotel_id, room_id).await?;
+    state
+        .housekeeping_service
+        .start_cleaning(hotel_id, room_id)
+        .await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 
@@ -1048,7 +1106,10 @@ pub async fn finish_cleaning_handler(
     Path(room_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    state.housekeeping_service.finish_cleaning(hotel_id, room_id).await?;
+    state
+        .housekeeping_service
+        .finish_cleaning(hotel_id, room_id)
+        .await?;
     Ok(Json(json!({ "status": "ok" })))
 }
 #[utoipa::path(
@@ -1069,12 +1130,19 @@ pub async fn get_revenue_report_handler(
     Query(params): Query<DateRangeParams>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let start = params.start.unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
-    let end = params.end.unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
-    
-    let report = state.reporting_service.get_revenue_report(hotel_id, start, end).await
+    let start = params
+        .start
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
+    let end = params
+        .end
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+
+    let report = state
+        .reporting_service
+        .get_revenue_report(hotel_id, start, end)
+        .await
         .map_err(DomainError::InfrastructureError)?;
-    
+
     Ok(Json(json!(report)))
 }
 
@@ -1096,11 +1164,18 @@ pub async fn get_occupancy_report_handler(
     Query(params): Query<DateRangeParams>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let start = params.start.unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
-    let end = params.end.unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
-    
-    let report = state.reporting_service.get_occupancy_report(hotel_id, start, end).await
+    let start = params
+        .start
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date() - chrono::Duration::days(30));
+    let end = params
+        .end
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+
+    let report = state
+        .reporting_service
+        .get_occupancy_report(hotel_id, start, end)
+        .await
         .map_err(DomainError::InfrastructureError)?;
-    
+
     Ok(Json(json!(report)))
 }

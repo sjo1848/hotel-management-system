@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Lock, User } from "lucide-react";
+import { Building2, Loader2, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import { useToast } from "@/components/ui/toast";
 const LoginPage = () => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [hotelId, setHotelId] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -21,7 +22,7 @@ const LoginPage = () => {
     setLoading(true);
     setErrorV("");
     try {
-      await login(username, password);
+      await login(username, password, hotelId);
       // Toast handled by auth context usually, but we can do it here too
       navigate("/", { replace: true });
     } catch (error) {
@@ -65,6 +66,21 @@ const LoginPage = () => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2 group">
+            <Label htmlFor="hotel-id" className="text-slate-300 group-focus-within:text-white transition-colors">Hotel ID</Label>
+            <div className="relative transition-all duration-300 group-focus-within:scale-[1.02]">
+              <Building2 className="absolute left-3 top-3 h-5 w-5 text-slate-500 group-focus-within:text-secondary transition-colors" />
+              <Input
+                id="hotel-id"
+                value={hotelId}
+                onChange={(e) => setHotelId(e.target.value)}
+                className="pl-10 bg-white/5 border-slate-700/50 text-white placeholder:text-slate-600 focus:border-secondary/50 focus:ring-secondary/20 h-12 rounded-xl backdrop-blur-sm"
+                placeholder="UUID del hotel"
+                required
+              />
+            </div>
+          </div>
+
           <div className="space-y-2 group">
             <Label htmlFor="username" className="text-slate-300 group-focus-within:text-white transition-colors">Usuario Global</Label>
             <div className="relative transition-all duration-300 group-focus-within:scale-[1.02]">

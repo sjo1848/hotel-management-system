@@ -1,16 +1,14 @@
+use crate::infrastructure::web::openapi::ApiDoc;
 use axum::{
     extract::DefaultBodyLimit,
     http::{
-        header::{ACCEPT, AUTHORIZATION, CONTENT_TYPE, COOKIE, HeaderName},
+        header::{HeaderName, ACCEPT, AUTHORIZATION, CONTENT_TYPE, COOKIE},
         HeaderValue, Method,
     },
     middleware,
-    routing::{get, post, patch, delete},
+    routing::{delete, get, patch, post},
     Router,
 };
-use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
-use crate::infrastructure::web::openapi::ApiDoc;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
@@ -18,20 +16,31 @@ use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
-    create_booking_handler, create_guest_handler, create_room_handler, create_user_handler, get_dashboard_kpis_handler,
-    finish_cleaning_handler, get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
-    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler, list_guests_handler,
-    list_invoices_handler, list_users_handler, delete_user_handler, login_handler, logout_handler, me_handler, readiness_check,
-    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler, update_booking_handler,
-    update_room_status_handler, list_hotels_handler, create_hotel_handler, add_extra_charge_handler, list_extra_charges_handler,
-    get_current_balance_handler, close_cash_handler,
+    add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
+    create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
+    finish_cleaning_handler, get_current_balance_handler, get_dashboard_kpis_handler,
+    get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
+    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler,
+    list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
+    list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
+    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
+    update_booking_handler, update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
-    auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware, metrics::track_metrics,
-    security_headers::security_headers_middleware, rate_limit_logger::rate_limit_logger_middleware,
+    auth::auth_middleware,
+    metrics::track_metrics,
+    rate_limit_logger::rate_limit_logger_middleware,
+    rbac::{
+        analytics_read, hotels_read, hotels_write, invoices_read, reports_occupancy_read,
+        reports_revenue_read, rooms_write, users_delete, users_read, users_write,
+    },
+    request_id::request_id_middleware,
+    security_headers::security_headers_middleware,
 };
 
 pub fn create_router(state: Arc<AppState>) -> Router {
@@ -81,11 +90,17 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE, ACCEPT, COOKIE, HeaderName::from_static("x-csrf-token")])
+        .allow_headers([
+            AUTHORIZATION,
+            CONTENT_TYPE,
+            ACCEPT,
+            COOKIE,
+            HeaderName::from_static("x-csrf-token"),
+        ])
         .allow_credentials(true);
 
     // --- Routes Definition ---
-    
+
     let auth_router_v1 = Router::new()
         .route("/api/v1/auth/login", post(login_handler))
         .route("/api/v1/auth/refresh", post(refresh_handler))
@@ -95,27 +110,77 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     let api_v1 = Router::new()
         .merge(auth_router_v1)
-        .route("/api/v1/hotels", get(list_hotels_handler).post(create_hotel_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/rooms", get(get_rooms_handler).merge(post(create_room_handler).layer(middleware::from_fn(admin_only))))
+        .route(
+            "/api/v1/hotels",
+            get(list_hotels_handler)
+                .layer(middleware::from_fn(hotels_read))
+                .merge(post(create_hotel_handler).layer(middleware::from_fn(hotels_write))),
+        )
+        .route(
+            "/api/v1/rooms",
+            get(get_rooms_handler)
+                .merge(post(create_room_handler).layer(middleware::from_fn(rooms_write))),
+        )
         .route("/api/v1/rooms/available", get(search_rooms_handler))
-        .route("/api/v1/rooms/:id/status", patch(update_room_status_handler))
-        .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
+        .route(
+            "/api/v1/rooms/:id/status",
+            patch(update_room_status_handler),
+        )
+        .route(
+            "/api/v1/bookings",
+            get(list_bookings_handler).post(create_booking_handler),
+        )
         .route("/api/v1/bookings/:id", patch(update_booking_handler))
-        .route("/api/v1/bookings/:id/extra-charges", get(list_extra_charges_handler).post(add_extra_charge_handler))
-        .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
+        .route(
+            "/api/v1/bookings/:id/extra-charges",
+            get(list_extra_charges_handler).post(add_extra_charge_handler),
+        )
+        .route(
+            "/api/v1/guests",
+            get(list_guests_handler).post(create_guest_handler),
+        )
         .route("/api/v1/auth/me", get(me_handler))
-        .route("/api/v1/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/users/:id", delete(delete_user_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
+        .route(
+            "/api/v1/users",
+            get(list_users_handler)
+                .layer(middleware::from_fn(users_read))
+                .merge(post(create_user_handler).layer(middleware::from_fn(users_write))),
+        )
+        .route(
+            "/api/v1/users/:id",
+            delete(delete_user_handler).layer(middleware::from_fn(users_delete)),
+        )
+        .route(
+            "/api/v1/analytics/kpis",
+            get(get_dashboard_kpis_handler).layer(middleware::from_fn(analytics_read)),
+        )
         .route("/api/v1/billing/balance", get(get_current_balance_handler))
         .route("/api/v1/billing/close-cash", post(close_cash_handler))
-        .route("/api/v1/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler))
+        .route(
+            "/api/v1/invoices",
+            get(list_invoices_handler).layer(middleware::from_fn(invoices_read)),
+        )
+        .route(
+            "/api/v1/bookings/:id/invoice",
+            get(get_invoice_by_booking_handler),
+        )
         .route("/api/v1/housekeeping/dirty", get(list_dirty_rooms_handler))
-        .route("/api/v1/housekeeping/:id/start", post(start_cleaning_handler))
-        .route("/api/v1/housekeeping/:id/finish", post(finish_cleaning_handler))
-        .route("/api/v1/reports/revenue", get(get_revenue_report_handler).layer(middleware::from_fn(admin_only)))
-        .route("/api/v1/reports/occupancy", get(get_occupancy_report_handler).layer(middleware::from_fn(admin_only)));
+        .route(
+            "/api/v1/housekeeping/:id/start",
+            post(start_cleaning_handler),
+        )
+        .route(
+            "/api/v1/housekeeping/:id/finish",
+            post(finish_cleaning_handler),
+        )
+        .route(
+            "/api/v1/reports/revenue",
+            get(get_revenue_report_handler).layer(middleware::from_fn(reports_revenue_read)),
+        )
+        .route(
+            "/api/v1/reports/occupancy",
+            get(get_occupancy_report_handler).layer(middleware::from_fn(reports_occupancy_read)),
+        );
 
     let auth_layer = middleware::from_fn_with_state(state.clone(), auth_middleware);
 
@@ -124,14 +189,20 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route("/", get(root_handler))
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))
-        .route("/metrics", get(move || {
-            let handle = metrics_handle.clone();
-            async move { handle.render() }
-        }))
+        .route(
+            "/metrics",
+            get(move || {
+                let handle = metrics_handle.clone();
+                async move { handle.render() }
+            }),
+        )
         .merge(api_v1)
         .route_layer(auth_layer)
         .layer(middleware::from_fn(track_metrics))
-        .layer(middleware::from_fn_with_state(state.clone(), security_headers_middleware))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            security_headers_middleware,
+        ))
         .layer(middleware::from_fn(rate_limit_logger_middleware)) // Log general de rate limit
         .layer(GovernorLayer { config: api_rate })
         .layer(cors)
@@ -144,7 +215,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 fn per_minute_to_period_ms(per_minute: u32) -> u64 {
     let per_minute = per_minute.max(1);
     let ms = 60_000u64 / per_minute as u64;
-    if ms == 0 { 1 } else { ms }
+    if ms == 0 {
+        1
+    } else {
+        ms
+    }
 }
 
 fn parse_cors_origins(raw: &str) -> Vec<HeaderValue> {

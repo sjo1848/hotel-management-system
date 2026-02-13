@@ -19,11 +19,12 @@ describe('authService', () => {
     it('should call client.post with correct params and return token', async () => {
       const mockResponse = { data: { access_token: 'fake-token', expires_in: 3600, role: 'admin' } };
       (client.post as any).mockResolvedValue(mockResponse);
+      const hotelId = '8f01bf7e-f0d2-4353-82e6-44e9c3379bcf';
 
-      const result = await authService.login('user', 'pass');
+      const result = await authService.login('user', 'pass', hotelId);
 
       expect(client.post).toHaveBeenCalledWith('/auth/login', {
-        hotel_id: '00000000-0000-0000-0000-000000000001',
+        hotel_id: hotelId,
         username: 'user',
         password: 'pass',
       });
@@ -34,7 +35,9 @@ describe('authService', () => {
       const mockError = new Error('Login failed');
       (client.post as any).mockRejectedValue(mockError);
 
-      await expect(authService.login('user', 'wrong-pass')).rejects.toThrow('Login failed');
+      await expect(
+        authService.login('user', 'wrong-pass', '8f01bf7e-f0d2-4353-82e6-44e9c3379bcf'),
+      ).rejects.toThrow('Login failed');
     });
   });
 
