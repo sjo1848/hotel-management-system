@@ -211,12 +211,9 @@ pub async fn get_rooms_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let rooms: Vec<crate::domain::models::Room> = state
-        .room_repo
-        .find_all(hotel_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let rooms: Vec<crate::domain::models::Room> = operations.room_service.list_rooms(hotel_id).await?;
     Ok(Json(json!(rooms)))
 }
 
@@ -319,12 +316,12 @@ pub async fn search_rooms_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Query(params): Query<SearchParams>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let rooms: Vec<crate::domain::models::Room> = state
-        .room_repo
-        .find_available(hotel_id, params.start, params.end)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let rooms: Vec<crate::domain::models::Room> = operations
+        .room_service
+        .find_available_rooms(hotel_id, params.start, params.end)
+        .await?;
     Ok(Json(json!(rooms)))
 }
 

@@ -46,6 +46,25 @@ impl RoomService {
             .map_err(map_room_repo_error)
     }
 
+    pub async fn list_rooms(&self, hotel_id: Uuid) -> Result<Vec<Room>, DomainError> {
+        self.room_repo
+            .find_all(hotel_id)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn find_available_rooms(
+        &self,
+        hotel_id: Uuid,
+        start: chrono::NaiveDate,
+        end: chrono::NaiveDate,
+    ) -> Result<Vec<Room>, DomainError> {
+        self.room_repo
+            .find_available(hotel_id, start, end)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
     pub async fn update_room_status(
         &self,
         hotel_id: Uuid,
