@@ -16,7 +16,6 @@ use tower_http::{
     cors::{AllowOrigin, CorsLayer},
     trace::TraceLayer,
 };
-use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::app_state::AppState;

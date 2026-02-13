@@ -36,3 +36,29 @@ groups:
         annotations:
           summary: "Latencia P95 elevada"
           description: "P95 > 1s sostenido por 10 minutos en endpoints de negocio."
+
+      - alert: HMSUiTelemetryIngestionGap
+        expr: |
+          sum(rate(http_requests_total{path="/api/v1/analytics/kpis",status=~"2.."}[15m])) > 0
+          and
+          sum(rate(ui_telemetry_events_total[15m])) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Sin eventos de telemetría UI"
+          description: "Hay tráfico de dashboard pero no se están ingiriendo eventos ui_telemetry_events_total."
+
+      - alert: HMSCloseCashFailureRateHigh
+        expr: |
+          (
+            sum(rate(ui_telemetry_events_total{event="close_cash_failure"}[30m]))
+            /
+            clamp_min(sum(rate(ui_telemetry_events_total{event=~"close_cash_success|close_cash_failure"}[30m])), 0.000001)
+          ) > 0.30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta tasa de fallos en cierre de caja (UI)"
+          description: "Más del 30% de eventos close_cash son failure en los últimos 30 minutos."
