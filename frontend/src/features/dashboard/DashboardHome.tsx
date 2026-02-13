@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,7 @@ const DashboardHome = () => {
   const [occupancyData, setOccupancyData] = useState<OccupancyReportItem[]>([]);
   const [balance, setBalance] = useState<CashBalance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -128,8 +129,9 @@ const DashboardHome = () => {
     </div>
   );
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const [kpiRes, revRes, occRes, balRes] = await Promise.all([
         getDashboardKpis(),
@@ -143,16 +145,17 @@ const DashboardHome = () => {
       setBalance(balRes);
     } catch (error) {
       console.error("Dashboard error:", error);
+      setLoadError("No se pudo cargar el dashboard. Reintentá.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadDashboardData();
-  }, []);
+  }, [loadDashboardData]);
 
-  const handleCloseCash = async () => {
+  const handleCloseCash = useCallback(async () => {
     if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) return;
     setIsClosing(true);
     try {
@@ -164,7 +167,11 @@ const DashboardHome = () => {
     } finally {
       setIsClosing(false);
     }
-  };
+  }, [loadDashboardData, toast]);
+
+  const handleDrawerSuccess = useCallback(async () => {
+    await loadDashboardData();
+  }, [loadDashboardData]);
 
   const formattedRevenueData = revenueData.map(item => ({
     ...item,
@@ -184,6 +191,23 @@ const DashboardHome = () => {
         <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Vista General</h2>
         <p className="text-slate-500 font-medium mt-2">Estado operativo del hotel en tiempo real.</p>
       </div>
+
+      {loadError ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
+          <p className="text-sm font-semibold text-rose-700">{loadError}</p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-lg border-rose-200 bg-white text-rose-700 hover:bg-rose-100"
+            onClick={() => {
+              void loadDashboardData();
+            }}
+          >
+            Reintentar
+          </Button>
+        </div>
+      ) : null}
 
       {/* KPI GRID */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -420,9 +444,7 @@ const DashboardHome = () => {
         bookingId={selectedBookingId}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        onSuccess={async () => {
-          await loadDashboardData();
-        }}
+        onSuccess={handleDrawerSuccess}
       />
     </div>
   );
