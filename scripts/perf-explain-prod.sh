@@ -3,11 +3,12 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $0 --database-url URL --hotel-id UUID --start-date YYYY-MM-DD --end-date YYYY-MM-DD [options]
+Usage: $0 --database-url URL (--hotel-id UUID | --hotel-name NAME) --start-date YYYY-MM-DD --end-date YYYY-MM-DD [options]
 
 Required:
   --database-url URL         PostgreSQL connection string (prefer read replica in prod)
   --hotel-id UUID            Tenant/hotel id to profile
+  --hotel-name NAME          Tenant/hotel name to resolve hotel_id (e.g. "Hotel Viena")
   --start-date YYYY-MM-DD    Report window start date
   --end-date YYYY-MM-DD      Report window end date
 
@@ -22,6 +23,7 @@ USAGE
 
 DATABASE_URL="${DATABASE_URL:-}"
 HOTEL_ID=""
+HOTEL_NAME=""
 START_DATE=""
 END_DATE=""
 ROOM_ID=""
@@ -33,6 +35,7 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --database-url) DATABASE_URL="$2"; shift 2 ;;
     --hotel-id) HOTEL_ID="$2"; shift 2 ;;
+    --hotel-name) HOTEL_NAME="$2"; shift 2 ;;
     --start-date) START_DATE="$2"; shift 2 ;;
     --end-date) END_DATE="$2"; shift 2 ;;
     --room-id) ROOM_ID="$2"; shift 2 ;;
@@ -49,13 +52,23 @@ if ! command -v psql >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -z "$DATABASE_URL" || -z "$HOTEL_ID" || -z "$START_DATE" || -z "$END_DATE" ]]; then
+if [[ -z "$DATABASE_URL" || -z "$START_DATE" || -z "$END_DATE" ]]; then
   echo "Missing required flags" >&2
   usage
   exit 1
 fi
 
-if ! [[ "$HOTEL_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+if [[ -z "$HOTEL_ID" && -z "$HOTEL_NAME" ]]; then
+  echo "Provide --hotel-id or --hotel-name" >&2
+  usage
+  exit 1
+fi
+if [[ -n "$HOTEL_ID" && -n "$HOTEL_NAME" ]]; then
+  echo "Use only one of --hotel-id or --hotel-name" >&2
+  usage
+  exit 1
+fi
+if [[ -n "$HOTEL_ID" ]] && ! [[ "$HOTEL_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
   echo "Invalid --hotel-id (expected UUID format)" >&2
   exit 1
 fi
@@ -79,6 +92,21 @@ fi
 TS="$(date -u +"%Y%m%dT%H%M%SZ")"
 RUN_DIR="$OUTPUT_DIR/$TS"
 mkdir -p "$RUN_DIR/queries"
+
+if [[ -z "$HOTEL_ID" ]]; then
+  HOTEL_ID="$(
+    psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -v hotel_name="$HOTEL_NAME" \
+      -c "SELECT id::text
+          FROM hotels
+          WHERE LOWER(name) = LOWER(:'hotel_name')
+          ORDER BY created_at DESC NULLS LAST, id
+          LIMIT 1;" | tr -d '[:space:]'
+  )"
+  if [[ -z "$HOTEL_ID" ]]; then
+    echo "No hotel found by name: $HOTEL_NAME" >&2
+    exit 1
+  fi
+fi
 
 if [[ -z "$ROOM_ID" ]]; then
   ROOM_ID="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "SELECT id::text FROM rooms WHERE hotel_id = '$HOTEL_ID' ORDER BY created_at DESC NULLS LAST, id LIMIT 1;" | tr -d '[:space:]')"
@@ -183,6 +211,9 @@ REPORT="$RUN_DIR/report.md"
   echo "- generated_at_utc: $NOW_ISO"
   echo "- app_name: $APP_NAME"
   echo "- hotel_id: $HOTEL_ID"
+  if [[ -n "$HOTEL_NAME" ]]; then
+    echo "- hotel_name: $HOTEL_NAME"
+  fi
   echo "- room_id: $ROOM_ID"
   echo "- range: $START_DATE..$END_DATE"
   echo "- statement_timeout_ms: $STATEMENT_TIMEOUT_MS"
