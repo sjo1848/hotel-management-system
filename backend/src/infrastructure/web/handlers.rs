@@ -376,13 +376,11 @@ pub async fn list_bookings_handler(
         (Some(start), Some(end)) => booking_ctx
             .booking_service
             .list_bookings_in_range(hotel_id, start, end)
-            .await
-            .map_err(DomainError::InfrastructureError)?,
+            .await?,
         _ => booking_ctx
             .booking_service
             .list_bookings(hotel_id)
-            .await
-            .map_err(DomainError::InfrastructureError)?,
+            .await?,
     };
     Ok(Json(json!(bookings)))
 }

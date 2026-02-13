@@ -253,8 +253,11 @@ impl BookingService {
         Ok(updated_booking)
     }
 
-    pub async fn list_bookings(&self, hotel_id: Uuid) -> Result<Vec<Booking>, String> {
-        self.booking_repo.find_all(hotel_id).await
+    pub async fn list_bookings(&self, hotel_id: Uuid) -> Result<Vec<Booking>, DomainError> {
+        self.booking_repo
+            .find_all(hotel_id)
+            .await
+            .map_err(DomainError::InfrastructureError)
     }
 
     pub async fn list_bookings_in_range(
@@ -262,9 +265,22 @@ impl BookingService {
         hotel_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
-    ) -> Result<Vec<Booking>, String> {
-        self.booking_repo.find_by_range(hotel_id, start, end).await
+    ) -> Result<Vec<Booking>, DomainError> {
+        validate_range(start, end)?;
+        self.booking_repo
+            .find_by_range(hotel_id, start, end)
+            .await
+            .map_err(DomainError::InfrastructureError)
     }
+}
+
+fn validate_range(start: NaiveDate, end: NaiveDate) -> Result<(), DomainError> {
+    if end < start {
+        return Err(DomainError::InvalidInput(
+            "Rango de fechas inválido: 'end' debe ser mayor o igual a 'start'".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 fn map_repo_error(message: String) -> DomainError {
@@ -329,5 +345,13 @@ mod tests {
             map_invoice_repo_error("INVOICE_HOTEL_NOT_FOUND".to_string()),
             DomainError::HotelNotFound
         ));
+    }
+
+    #[test]
+    fn list_bookings_in_range_rejects_inverted_dates() {
+        let start = chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap();
+        let end = chrono::NaiveDate::from_ymd_opt(2026, 2, 19).unwrap();
+        let result = validate_range(start, end);
+        assert!(matches!(result, Err(DomainError::InvalidInput(_))));
     }
 }
