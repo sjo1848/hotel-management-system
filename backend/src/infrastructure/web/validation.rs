@@ -56,6 +56,15 @@ pub fn validate_booking_dates(
     Ok(())
 }
 
+pub fn validate_date_range(start: NaiveDate, end: NaiveDate) -> Result<(), DomainError> {
+    if end < start {
+        return Err(DomainError::InvalidInput(
+            "Rango de fechas inválido: 'end' debe ser mayor o igual a 'start'".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 pub fn parse_booking_status_input(
     status: Option<&str>,
 ) -> Result<Option<BookingStatus>, DomainError> {
@@ -95,6 +104,14 @@ mod tests {
     #[test]
     fn validate_len_range_rejects_short_values() {
         let result = validate_len_range("username", "ab", 3, 50);
+        assert!(matches!(result, Err(DomainError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn validate_date_range_rejects_inverted_range() {
+        let start = chrono::NaiveDate::from_ymd_opt(2026, 2, 15).unwrap();
+        let end = chrono::NaiveDate::from_ymd_opt(2026, 2, 14).unwrap();
+        let result = validate_date_range(start, end);
         assert!(matches!(result, Err(DomainError::InvalidInput(_))));
     }
 }

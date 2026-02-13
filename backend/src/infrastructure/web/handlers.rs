@@ -1,7 +1,7 @@
 use crate::domain::errors::DomainError;
 use crate::infrastructure::web::validation::{
-    parse_booking_status_input, validate_booking_dates, validate_email, validate_len_range,
-    validate_non_empty_trimmed, validate_positive_amount, validate_role,
+    parse_booking_status_input, validate_booking_dates, validate_date_range, validate_email,
+    validate_len_range, validate_non_empty_trimmed, validate_positive_amount, validate_role,
 };
 use crate::AppState;
 use axum::{
@@ -1264,6 +1264,7 @@ pub async fn get_revenue_report_handler(
     let end = params
         .end
         .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    validate_date_range(start, end)?;
 
     let report = state
         .reporting_service
@@ -1298,6 +1299,7 @@ pub async fn get_occupancy_report_handler(
     let end = params
         .end
         .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    validate_date_range(start, end)?;
 
     let report = state
         .reporting_service
