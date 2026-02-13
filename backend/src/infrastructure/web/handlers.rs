@@ -452,7 +452,10 @@ pub async fn login_handler(
     let ip = addr.ip().to_string();
     let hotel_id_input = payload.hotel_id.trim();
 
-    if hotel_id_input.is_empty() || payload.username.trim().is_empty() || payload.password.trim().is_empty() {
+    if hotel_id_input.is_empty()
+        || payload.username.trim().is_empty()
+        || payload.password.trim().is_empty()
+    {
         return Err(DomainError::InvalidInput(
             "Hotel, usuario y contraseña son obligatorios".to_string(),
         ));

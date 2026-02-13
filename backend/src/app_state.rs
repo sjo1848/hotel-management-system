@@ -1,17 +1,18 @@
-use crate::application::auth_service::AuthService;
-use crate::application::booking_service::BookingService;
 use crate::application::analytics_service::AnalyticsService;
-use crate::application::room_service::RoomService;
-use crate::application::reporting_service::ReportingService;
-use crate::application::guest_service::GuestService;
-use crate::application::housekeeping_service::HousekeepingService;
 use crate::application::audit_service::AuditService;
-use crate::application::hotel_service::HotelService;
+use crate::application::auth_service::AuthService;
 use crate::application::billing_service::BillingService;
+use crate::application::booking_service::BookingService;
 use crate::application::cash_closure_service::CashClosureService;
+use crate::application::guest_service::GuestService;
+use crate::application::hotel_service::HotelService;
+use crate::application::housekeeping_service::HousekeepingService;
+use crate::application::reporting_service::ReportingService;
+use crate::application::room_service::RoomService;
 use crate::config::AppConfig;
 use crate::domain::repositories::{
-    AuditRepository, CashClosureRepository, ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository, UserRepository,
+    AuditRepository, CashClosureRepository, ExtraChargeRepository, GuestRepository,
+    HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository, UserRepository,
 };
 use std::sync::Arc;
 

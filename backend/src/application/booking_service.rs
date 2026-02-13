@@ -1,8 +1,10 @@
+use crate::application::audit_service::AuditService;
+use crate::application::room_service::RoomService;
 use crate::domain::errors::DomainError;
 use crate::domain::models::{Booking, BookingStatus, Invoice, RoomStatus};
-use crate::domain::repositories::{BookingRepository, GuestRepository, InvoiceRepository, RoomRepository};
-use crate::application::room_service::RoomService;
-use crate::application::audit_service::AuditService;
+use crate::domain::repositories::{
+    BookingRepository, GuestRepository, InvoiceRepository, RoomRepository,
+};
 use chrono::NaiveDate;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -96,13 +98,21 @@ impl BookingService {
 
         new_booking.calculate_total_price(room.price_cents);
 
-        let saved_booking = self.booking_repo
+        let saved_booking = self
+            .booking_repo
             .save(new_booking)
             .await
             .map_err(map_repo_error)?;
 
-        self.audit_service.record(Some(hotel_id), guest_id, &format!("New Booking created: {}", saved_booking.id), None).await;
-        
+        self.audit_service
+            .record(
+                Some(hotel_id),
+                guest_id,
+                &format!("New Booking created: {}", saved_booking.id),
+                None,
+            )
+            .await;
+
         Ok(saved_booking)
     }
 
@@ -182,7 +192,8 @@ impl BookingService {
 
         booking.calculate_total_price(room.price_cents);
 
-        let updated_booking = self.booking_repo
+        let updated_booking = self
+            .booking_repo
             .update(booking)
             .await
             .map_err(map_repo_error)?;
@@ -190,20 +201,51 @@ impl BookingService {
         // Side effect: Update room status based on booking status using RoomService
         match updated_booking.status {
             BookingStatus::CheckedIn => {
-                let _ = self.room_service.update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Occupied).await;
-                self.audit_service.record(Some(hotel_id), None, &format!("Check-in: Booking {}", updated_booking.id), None).await;
-            },
+                let _ = self
+                    .room_service
+                    .update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Occupied)
+                    .await;
+                self.audit_service
+                    .record(
+                        Some(hotel_id),
+                        None,
+                        &format!("Check-in: Booking {}", updated_booking.id),
+                        None,
+                    )
+                    .await;
+            }
             BookingStatus::CheckedOut => {
-                let _ = self.room_service.update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Dirty).await;
-                self.audit_service.record(Some(hotel_id), None, &format!("Check-out: Booking {}", updated_booking.id), None).await;
-                
+                let _ = self
+                    .room_service
+                    .update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Dirty)
+                    .await;
+                self.audit_service
+                    .record(
+                        Some(hotel_id),
+                        None,
+                        &format!("Check-out: Booking {}", updated_booking.id),
+                        None,
+                    )
+                    .await;
+
                 // Automate Invoice generation
-                let invoice = Invoice::new(hotel_id, updated_booking.id, updated_booking.total_price_cents);
+                let invoice = Invoice::new(
+                    hotel_id,
+                    updated_booking.id,
+                    updated_booking.total_price_cents,
+                );
                 let _ = self.invoice_repo.save(invoice).await;
-            },
+            }
             BookingStatus::Cancelled => {
-                self.audit_service.record(Some(hotel_id), None, &format!("Cancellation: Booking {}", updated_booking.id), None).await;
-            },
+                self.audit_service
+                    .record(
+                        Some(hotel_id),
+                        None,
+                        &format!("Cancellation: Booking {}", updated_booking.id),
+                        None,
+                    )
+                    .await;
+            }
             _ => {}
         }
 

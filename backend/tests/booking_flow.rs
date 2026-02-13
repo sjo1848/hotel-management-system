@@ -1,24 +1,30 @@
+use chrono::NaiveDate;
+use hms_backend::application::audit_service::AuditService;
 use hms_backend::application::booking_service::BookingService;
 use hms_backend::application::room_service::RoomService;
-use hms_backend::application::audit_service::AuditService;
 use hms_backend::domain::errors::DomainError;
-use hms_backend::domain::repositories::{AuditRepository, BookingRepository, GuestRepository, InvoiceRepository, RoomRepository};
+use hms_backend::domain::repositories::{
+    AuditRepository, BookingRepository, GuestRepository, InvoiceRepository, RoomRepository,
+};
 use hms_backend::infrastructure::repository::postgres::PostgresRoomRepository;
-use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
 use hms_backend::infrastructure::repository::postgres_audit::PostgresAuditRepository;
+use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
 use hms_backend::infrastructure::repository::postgres_guest::PostgresGuestRepository;
 use hms_backend::infrastructure::repository::postgres_invoice::PostgresInvoiceRepository;
-use chrono::NaiveDate;
 use std::sync::Arc;
 use uuid::Uuid;
 
 #[sqlx::test]
 async fn booking_flow_creates_total_price(pool: sqlx::PgPool) {
     let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
-    let booking_repo = Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
-    let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
-    let guest_repo = Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
-    let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let booking_repo =
+        Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
+    let audit_repo =
+        Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let guest_repo =
+        Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
+    let invoice_repo =
+        Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
     let audit_service = Arc::new(AuditService::new(audit_repo));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let service = BookingService::new(
@@ -61,10 +67,14 @@ async fn booking_flow_creates_total_price(pool: sqlx::PgPool) {
 #[sqlx::test]
 async fn booking_flow_rejects_unknown_guest_id(pool: sqlx::PgPool) {
     let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
-    let booking_repo = Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
-    let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
-    let guest_repo = Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
-    let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let booking_repo =
+        Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
+    let audit_repo =
+        Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let guest_repo =
+        Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
+    let invoice_repo =
+        Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
     let audit_service = Arc::new(AuditService::new(audit_repo));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let service = BookingService::new(

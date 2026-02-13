@@ -46,7 +46,12 @@ impl RoomService {
             .map_err(map_room_repo_error)
     }
 
-    pub async fn update_room_status(&self, hotel_id: Uuid, id: Uuid, status: RoomStatus) -> Result<(), DomainError> {
+    pub async fn update_room_status(
+        &self,
+        hotel_id: Uuid,
+        id: Uuid,
+        status: RoomStatus,
+    ) -> Result<(), DomainError> {
         let room = self
             .room_repo
             .find_by_id(hotel_id, id)
@@ -65,19 +70,23 @@ impl RoomService {
     }
 
     pub async fn mark_as_dirty(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
-        self.update_room_status(hotel_id, id, RoomStatus::Dirty).await
+        self.update_room_status(hotel_id, id, RoomStatus::Dirty)
+            .await
     }
 
     pub async fn mark_as_occupied(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
-        self.update_room_status(hotel_id, id, RoomStatus::Occupied).await
+        self.update_room_status(hotel_id, id, RoomStatus::Occupied)
+            .await
     }
 
     pub async fn mark_as_available(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
-        self.update_room_status(hotel_id, id, RoomStatus::Available).await
+        self.update_room_status(hotel_id, id, RoomStatus::Available)
+            .await
     }
 
     pub async fn mark_as_maintenance(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
-        self.update_room_status(hotel_id, id, RoomStatus::Maintenance).await
+        self.update_room_status(hotel_id, id, RoomStatus::Maintenance)
+            .await
     }
 }
 

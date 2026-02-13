@@ -80,7 +80,12 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(bookings)
     }
 
-    async fn find_by_range(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Booking>, String> {
+    async fn find_by_range(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Booking>, String> {
         let records = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings 
              WHERE hotel_id = $1 AND (check_in < $3 AND check_out > $2)
@@ -277,14 +282,17 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(!has_overlap.unwrap_or(false))
     }
 
-    async fn get_dashboard_stats(&self, hotel_id: Uuid) -> Result<crate::domain::models::DashboardKpis, String> {
+    async fn get_dashboard_stats(
+        &self,
+        hotel_id: Uuid,
+    ) -> Result<crate::domain::models::DashboardKpis, String> {
         let now = chrono::Utc::now().naive_utc().date();
         let start_of_month = NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
-        
+
         // 1. Revenue this month
         let revenue: (i64,) = sqlx::query_as(
             "SELECT COALESCE(SUM(total_price_cents), 0)::BIGINT FROM bookings 
-             WHERE hotel_id = $1 AND status != 'CANCELLED' AND check_in >= $2"
+             WHERE hotel_id = $1 AND status != 'CANCELLED' AND check_in >= $2",
         )
         .bind(hotel_id)
         .bind(start_of_month)
@@ -321,7 +329,7 @@ impl BookingRepository for PostgresBookingRepository {
         let occupied_today: (i64,) = sqlx::query_as(
             "SELECT COUNT(DISTINCT room_id) FROM bookings 
              WHERE hotel_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN') 
-             AND check_in <= $2 AND check_out > $2"
+             AND check_in <= $2 AND check_out > $2",
         )
         .bind(hotel_id)
         .bind(now)
@@ -340,7 +348,7 @@ impl BookingRepository for PostgresBookingRepository {
             "SELECT b.id, b.guest_name, r.room_number, b.status 
              FROM bookings b 
              JOIN rooms r ON b.room_id = r.id 
-             WHERE b.hotel_id = $1 AND b.check_in = $2 AND b.status = 'CONFIRMED'"
+             WHERE b.hotel_id = $1 AND b.check_in = $2 AND b.status = 'CONFIRMED'",
         )
         .bind(hotel_id)
         .bind(now)
@@ -348,27 +356,30 @@ impl BookingRepository for PostgresBookingRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        let arrivals_today = arrivals_records.into_iter().map(|row| {
-            let status_str: String = row.try_get("status").unwrap();
-            crate::domain::models::BookingAlert {
-                booking_id: row.try_get("id").unwrap(),
-                guest_name: row.try_get("guest_name").unwrap(),
-                room_number: row.try_get("room_number").unwrap(),
-                status: match status_str.as_str() {
-                    "CHECKED_IN" => BookingStatus::CheckedIn,
-                    "CHECKED_OUT" => BookingStatus::CheckedOut,
-                    "CANCELLED" => BookingStatus::Cancelled,
-                    _ => BookingStatus::Confirmed,
-                },
-            }
-        }).collect();
+        let arrivals_today = arrivals_records
+            .into_iter()
+            .map(|row| {
+                let status_str: String = row.try_get("status").unwrap();
+                crate::domain::models::BookingAlert {
+                    booking_id: row.try_get("id").unwrap(),
+                    guest_name: row.try_get("guest_name").unwrap(),
+                    room_number: row.try_get("room_number").unwrap(),
+                    status: match status_str.as_str() {
+                        "CHECKED_IN" => BookingStatus::CheckedIn,
+                        "CHECKED_OUT" => BookingStatus::CheckedOut,
+                        "CANCELLED" => BookingStatus::Cancelled,
+                        _ => BookingStatus::Confirmed,
+                    },
+                }
+            })
+            .collect();
 
         // 6. Departures Today
         let departures_records = sqlx::query(
             "SELECT b.id, b.guest_name, r.room_number, b.status 
              FROM bookings b 
              JOIN rooms r ON b.room_id = r.id 
-             WHERE b.hotel_id = $1 AND b.check_out = $2 AND b.status = 'CHECKED_IN'"
+             WHERE b.hotel_id = $1 AND b.check_out = $2 AND b.status = 'CHECKED_IN'",
         )
         .bind(hotel_id)
         .bind(now)
@@ -376,20 +387,23 @@ impl BookingRepository for PostgresBookingRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        let departures_today = departures_records.into_iter().map(|row| {
-            let status_str: String = row.try_get("status").unwrap();
-            crate::domain::models::BookingAlert {
-                booking_id: row.try_get("id").unwrap(),
-                guest_name: row.try_get("guest_name").unwrap(),
-                room_number: row.try_get("room_number").unwrap(),
-                status: match status_str.as_str() {
-                    "CHECKED_IN" => BookingStatus::CheckedIn,
-                    "CHECKED_OUT" => BookingStatus::CheckedOut,
-                    "CANCELLED" => BookingStatus::Cancelled,
-                    _ => BookingStatus::Confirmed,
-                },
-            }
-        }).collect();
+        let departures_today = departures_records
+            .into_iter()
+            .map(|row| {
+                let status_str: String = row.try_get("status").unwrap();
+                crate::domain::models::BookingAlert {
+                    booking_id: row.try_get("id").unwrap(),
+                    guest_name: row.try_get("guest_name").unwrap(),
+                    room_number: row.try_get("room_number").unwrap(),
+                    status: match status_str.as_str() {
+                        "CHECKED_IN" => BookingStatus::CheckedIn,
+                        "CHECKED_OUT" => BookingStatus::CheckedOut,
+                        "CANCELLED" => BookingStatus::Cancelled,
+                        _ => BookingStatus::Confirmed,
+                    },
+                }
+            })
+            .collect();
 
         Ok(crate::domain::models::DashboardKpis {
             revenue_month_cents: revenue.0,
@@ -403,13 +417,18 @@ impl BookingRepository for PostgresBookingRepository {
         })
     }
 
-    async fn get_revenue_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+    async fn get_revenue_report(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
         let records = sqlx::query(
             "SELECT check_in as date, SUM(total_price_cents)::BIGINT as revenue_cents 
              FROM bookings 
              WHERE hotel_id = $1 AND status != 'CANCELLED' AND check_in >= $2 AND check_in <= $3 
              GROUP BY check_in 
-             ORDER BY check_in ASC"
+             ORDER BY check_in ASC",
         )
         .bind(hotel_id)
         .bind(start)
@@ -418,15 +437,21 @@ impl BookingRepository for PostgresBookingRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        Ok(records.into_iter().map(|row| {
-            crate::domain::models::RevenueReport {
+        Ok(records
+            .into_iter()
+            .map(|row| crate::domain::models::RevenueReport {
                 date: row.try_get("date").unwrap(),
                 revenue_cents: row.try_get("revenue_cents").unwrap(),
-            }
-        }).collect())
+            })
+            .collect())
     }
 
-    async fn get_occupancy_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+    async fn get_occupancy_report(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
         let records = sqlx::query(
             r#"
             WITH dates AS (
@@ -443,7 +468,7 @@ impl BookingRepository for PostgresBookingRepository {
                 rc.total as total_rooms
             FROM dates d, room_counts rc
             ORDER BY d.day ASC
-            "#
+            "#,
         )
         .bind(hotel_id)
         .bind(start)
@@ -452,22 +477,25 @@ impl BookingRepository for PostgresBookingRepository {
         .await
         .map_err(|e| e.to_string())?;
 
-        Ok(records.into_iter().map(|row| {
-            let occupied_rooms: i64 = row.try_get("occupied_rooms").unwrap_or(0);
-            let total_rooms: i64 = row.try_get("total_rooms").unwrap_or(0);
-            let occupancy_rate = if total_rooms > 0 {
-                (occupied_rooms as f64 / total_rooms as f64) * 100.0
-            } else {
-                0.0
-            };
+        Ok(records
+            .into_iter()
+            .map(|row| {
+                let occupied_rooms: i64 = row.try_get("occupied_rooms").unwrap_or(0);
+                let total_rooms: i64 = row.try_get("total_rooms").unwrap_or(0);
+                let occupancy_rate = if total_rooms > 0 {
+                    (occupied_rooms as f64 / total_rooms as f64) * 100.0
+                } else {
+                    0.0
+                };
 
-            crate::domain::models::OccupancyReport {
-                date: row.try_get("date").unwrap(),
-                occupied_rooms,
-                total_rooms,
-                occupancy_rate,
-            }
-        }).collect())
+                crate::domain::models::OccupancyReport {
+                    date: row.try_get("date").unwrap(),
+                    occupied_rooms,
+                    total_rooms,
+                    occupancy_rate,
+                }
+            })
+            .collect())
     }
 }
 

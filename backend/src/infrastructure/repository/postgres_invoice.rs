@@ -48,7 +48,11 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         Ok(invoice)
     }
 
-    async fn find_by_booking(&self, hotel_id: Uuid, booking_id: Uuid) -> Result<Option<Invoice>, String> {
+    async fn find_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+    ) -> Result<Option<Invoice>, String> {
         let record = sqlx::query(
             "SELECT id, hotel_id, booking_id, amount_cents, status, created_at FROM invoices WHERE hotel_id = $1 AND booking_id = $2",
         )
@@ -60,7 +64,9 @@ impl InvoiceRepository for PostgresInvoiceRepository {
 
         Ok(record.map(|row| {
             let status_str: String = row.try_get("status").unwrap();
-            let pm_str: String = row.try_get("payment_method").unwrap_or_else(|_| "CASH".to_string());
+            let pm_str: String = row
+                .try_get("payment_method")
+                .unwrap_or_else(|_| "CASH".to_string());
             Invoice {
                 id: row.try_get("id").unwrap(),
                 hotel_id: row.try_get("hotel_id").unwrap(),
@@ -94,7 +100,9 @@ impl InvoiceRepository for PostgresInvoiceRepository {
             .into_iter()
             .map(|row| {
                 let status_str: String = row.try_get("status").unwrap();
-                let pm_str: String = row.try_get("payment_method").unwrap_or_else(|_| "CASH".to_string());
+                let pm_str: String = row
+                    .try_get("payment_method")
+                    .unwrap_or_else(|_| "CASH".to_string());
                 Invoice {
                     id: row.try_get("id").unwrap(),
                     hotel_id: row.try_get("hotel_id").unwrap(),
@@ -118,10 +126,12 @@ impl InvoiceRepository for PostgresInvoiceRepository {
 
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String> {
         // Use UNIX epoch when there is no prior closure to avoid out-of-range timestamp binds.
-        let last_closure_time = sqlx::query("SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1")
-            .bind(hotel_id)
-            .fetch_one(&self.pool)
-            .await;
+        let last_closure_time = sqlx::query(
+            "SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1",
+        )
+        .bind(hotel_id)
+        .fetch_one(&self.pool)
+        .await;
 
         let start_time = match last_closure_time {
             Ok(row) => row

@@ -34,7 +34,11 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
         Ok(charge)
     }
 
-    async fn find_by_booking(&self, hotel_id: Uuid, booking_id: Uuid) -> Result<Vec<ExtraCharge>, String> {
+    async fn find_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+    ) -> Result<Vec<ExtraCharge>, String> {
         let records = sqlx::query(
             "SELECT id, hotel_id, booking_id, description, amount_cents, category, created_at 
              FROM extra_charges 
@@ -55,7 +59,9 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
                 booking_id: row.try_get("booking_id").unwrap(),
                 description: row.try_get("description").unwrap(),
                 amount_cents: row.try_get("amount_cents").unwrap(),
-                category: row.try_get("category").unwrap_or_else(|_| "GENERAL".to_string()),
+                category: row
+                    .try_get("category")
+                    .unwrap_or_else(|_| "GENERAL".to_string()),
                 created_at: row.try_get("created_at").unwrap(),
             })
             .collect())

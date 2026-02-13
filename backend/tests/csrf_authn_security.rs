@@ -6,7 +6,7 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
-    housekeeping_service::HousekeepingService, hotel_service::HotelService,
+    hotel_service::HotelService, housekeeping_service::HousekeepingService,
     reporting_service::ReportingService, room_service::RoomService,
 };
 use hms_backend::config::AppConfig;
@@ -74,10 +74,7 @@ async fn csrf_and_authn_contract_is_enforced(pool: sqlx::PgPool) {
     let login_cookies = collect_set_cookie_values(&login_response);
     let refresh_token = extract_cookie_value(&login_cookies, "refresh_token").unwrap();
     let csrf_token = extract_cookie_value(&login_cookies, "csrf_token").unwrap();
-    let refresh_cookie = format!(
-        "refresh_token={}; csrf_token={}",
-        refresh_token, csrf_token
-    );
+    let refresh_cookie = format!("refresh_token={}; csrf_token={}", refresh_token, csrf_token);
 
     // Refresh without CSRF must fail.
     let refresh_no_csrf = send_request(
@@ -204,7 +201,8 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         as Arc<dyn CashClosureRepository>;
     let invoice_repo =
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
-    let hotel_repo = Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
+    let hotel_repo =
+        Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));

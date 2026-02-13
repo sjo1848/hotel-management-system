@@ -99,7 +99,11 @@ impl RoomRepository for PostgresRoomRepository {
         }))
     }
 
-    async fn find_by_room_number(&self, hotel_id: Uuid, room_number: &str) -> Result<Option<Room>, String> {
+    async fn find_by_room_number(
+        &self,
+        hotel_id: Uuid,
+        room_number: &str,
+    ) -> Result<Option<Room>, String> {
         let record = sqlx::query(
             "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1 AND room_number = $2",
         )
@@ -128,7 +132,12 @@ impl RoomRepository for PostgresRoomRepository {
         }))
     }
 
-    async fn update_status(&self, hotel_id: Uuid, id: Uuid, status: RoomStatus) -> Result<(), String> {
+    async fn update_status(
+        &self,
+        hotel_id: Uuid,
+        id: Uuid,
+        status: RoomStatus,
+    ) -> Result<(), String> {
         let status_str = match status {
             RoomStatus::Available => "AVAILABLE",
             RoomStatus::Occupied => "OCCUPIED",
@@ -148,7 +157,12 @@ impl RoomRepository for PostgresRoomRepository {
         Ok(())
     }
 
-    async fn find_available(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
+    async fn find_available(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Room>, String> {
         let records = sqlx::query(
             r#"
             SELECT r.id, r.hotel_id, r.room_number, r.room_type, r.status, r.price_cents

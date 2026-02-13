@@ -1,4 +1,6 @@
-use crate::domain::models::{AuditEvent, Booking, Guest, Hotel, Invoice, RefreshToken, Room, User, ExtraCharge, CashClosure};
+use crate::domain::models::{
+    AuditEvent, Booking, CashClosure, ExtraCharge, Guest, Hotel, Invoice, RefreshToken, Room, User,
+};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use uuid::Uuid;
@@ -17,16 +19,35 @@ pub trait RoomRepository: Send + Sync {
     async fn create(&self, room: Room) -> Result<Room, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Room>, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Room>, String>;
-    async fn find_by_room_number(&self, hotel_id: Uuid, room_number: &str) -> Result<Option<Room>, String>;
-    async fn update_status(&self, hotel_id: Uuid, id: Uuid, status: crate::domain::models::RoomStatus) -> Result<(), String>;
-    async fn find_available(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String>;
+    async fn find_by_room_number(
+        &self,
+        hotel_id: Uuid,
+        room_number: &str,
+    ) -> Result<Option<Room>, String>;
+    async fn update_status(
+        &self,
+        hotel_id: Uuid,
+        id: Uuid,
+        status: crate::domain::models::RoomStatus,
+    ) -> Result<(), String>;
+    async fn find_available(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Room>, String>;
 }
 
 #[async_trait]
 pub trait BookingRepository: Send + Sync {
     async fn save(&self, booking: Booking) -> Result<Booking, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Booking>, String>;
-    async fn find_by_range(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Booking>, String>;
+    async fn find_by_range(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<Booking>, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Booking>, String>;
     async fn update(&self, booking: Booking) -> Result<Booking, String>;
     async fn find_by_room(&self, hotel_id: Uuid, room_id: Uuid) -> Result<Vec<Booking>, String>;
@@ -45,9 +66,22 @@ pub trait BookingRepository: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<bool, String>;
-    async fn get_dashboard_stats(&self, hotel_id: Uuid) -> Result<crate::domain::models::DashboardKpis, String>;
-    async fn get_revenue_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String>;
-    async fn get_occupancy_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String>;
+    async fn get_dashboard_stats(
+        &self,
+        hotel_id: Uuid,
+    ) -> Result<crate::domain::models::DashboardKpis, String>;
+    async fn get_revenue_report(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<crate::domain::models::RevenueReport>, String>;
+    async fn get_occupancy_report(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<crate::domain::models::OccupancyReport>, String>;
 }
 
 #[async_trait]
@@ -59,7 +93,11 @@ pub trait GuestRepository: Send + Sync {
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
-    async fn find_by_username(&self, hotel_id: Uuid, username: &str) -> Result<Option<User>, String>;
+    async fn find_by_username(
+        &self,
+        hotel_id: Uuid,
+        username: &str,
+    ) -> Result<Option<User>, String>;
     async fn create(&self, user: User) -> Result<User, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<User>, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<User>, String>;
@@ -82,14 +120,22 @@ pub trait AuditRepository: Send + Sync {
 #[async_trait]
 pub trait ExtraChargeRepository: Send + Sync {
     async fn add(&self, charge: ExtraCharge) -> Result<ExtraCharge, String>;
-    async fn find_by_booking(&self, hotel_id: Uuid, booking_id: Uuid) -> Result<Vec<ExtraCharge>, String>;
+    async fn find_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+    ) -> Result<Vec<ExtraCharge>, String>;
     async fn delete(&self, hotel_id: Uuid, id: Uuid) -> Result<(), String>;
 }
 
 #[async_trait]
 pub trait InvoiceRepository: Send + Sync {
     async fn save(&self, invoice: Invoice) -> Result<Invoice, String>;
-    async fn find_by_booking(&self, hotel_id: Uuid, booking_id: Uuid) -> Result<Option<Invoice>, String>;
+    async fn find_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+    ) -> Result<Option<Invoice>, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, String>;
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String>; // Total, Cash, Card
 }

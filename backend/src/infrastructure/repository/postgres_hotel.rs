@@ -33,11 +33,14 @@ impl HotelRepository for PostgresHotelRepository {
             .await
             .map_err(|e| e.to_string())?;
 
-        Ok(records.into_iter().map(|row| Hotel {
-            id: row.try_get("id").unwrap(),
-            name: row.try_get("name").unwrap(),
-            address: row.try_get("address").ok(),
-        }).collect())
+        Ok(records
+            .into_iter()
+            .map(|row| Hotel {
+                id: row.try_get("id").unwrap(),
+                name: row.try_get("name").unwrap(),
+                address: row.try_get("address").ok(),
+            })
+            .collect())
     }
 
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Hotel>, String> {
@@ -55,11 +58,13 @@ impl HotelRepository for PostgresHotelRepository {
     }
 
     async fn find_by_name_ci(&self, name: &str) -> Result<Option<Hotel>, String> {
-        let record = sqlx::query("SELECT id, name, address FROM hotels WHERE LOWER(name) = LOWER($1) LIMIT 1")
-            .bind(name)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| e.to_string())?;
+        let record = sqlx::query(
+            "SELECT id, name, address FROM hotels WHERE LOWER(name) = LOWER($1) LIMIT 1",
+        )
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| Hotel {
             id: row.try_get("id").unwrap(),

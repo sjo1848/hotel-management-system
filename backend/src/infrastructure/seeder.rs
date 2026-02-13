@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use uuid::Uuid;
 use crate::config::AppConfig;
 use crate::domain::models::{Room, RoomStatus, User};
 use crate::domain::repositories::{RoomRepository, UserRepository};
 use crate::infrastructure::web::passwords::hash_password;
+use std::sync::Arc;
+use uuid::Uuid;
 
 pub const DEFAULT_HOTEL_ID: &str = "00000000-0000-0000-0000-000000000001";
 
@@ -11,7 +11,10 @@ pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRep
     let hotel_id = Uuid::parse_str(DEFAULT_HOTEL_ID).unwrap();
 
     // If admin already exists, skip
-    if let Ok(Some(_)) = user_repo.find_by_username(hotel_id, &config.admin_user).await {
+    if let Ok(Some(_)) = user_repo
+        .find_by_username(hotel_id, &config.admin_user)
+        .await
+    {
         return;
     }
 

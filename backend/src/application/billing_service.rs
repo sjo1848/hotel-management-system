@@ -1,6 +1,6 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::ExtraCharge;
-use crate::domain::repositories::{ExtraChargeRepository, BookingRepository};
+use crate::domain::repositories::{BookingRepository, ExtraChargeRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -29,7 +29,8 @@ impl BillingService {
         category: String,
     ) -> Result<ExtraCharge, DomainError> {
         // Verificar que la reserva existe y pertenece al hotel
-        let booking = self.booking_repo
+        let booking = self
+            .booking_repo
             .find_by_id(hotel_id, booking_id)
             .await
             .map_err(DomainError::InfrastructureError)?
@@ -51,8 +52,9 @@ impl BillingService {
         // Actualizar el total_price_cents de la reserva sumando el nuevo cargo
         let mut updated_booking = booking;
         updated_booking.total_price_cents += amount_cents;
-        
-        let _: Result<crate::domain::models::Booking, String> = self.booking_repo.update(updated_booking).await;
+
+        let _: Result<crate::domain::models::Booking, String> =
+            self.booking_repo.update(updated_booking).await;
 
         Ok(saved)
     }
@@ -62,7 +64,10 @@ impl BillingService {
         hotel_id: Uuid,
         booking_id: Uuid,
     ) -> Result<Vec<ExtraCharge>, DomainError> {
-        let result: Result<Vec<ExtraCharge>, String> = self.extra_charge_repo.find_by_booking(hotel_id, booking_id).await;
+        let result: Result<Vec<ExtraCharge>, String> = self
+            .extra_charge_repo
+            .find_by_booking(hotel_id, booking_id)
+            .await;
         result.map_err(DomainError::InfrastructureError)
     }
 }

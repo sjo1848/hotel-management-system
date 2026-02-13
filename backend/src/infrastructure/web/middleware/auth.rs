@@ -1,12 +1,12 @@
+use crate::app_state::AppState;
+use crate::domain::errors::DomainError;
+use crate::infrastructure::web::utils::{csrf_valid, requires_csrf};
 use axum::{
-    extract::{State, Request},
+    extract::{Request, State},
     middleware::Next,
     response::Response,
 };
 use std::sync::Arc;
-use crate::app_state::AppState;
-use crate::domain::errors::DomainError;
-use crate::infrastructure::web::utils::{csrf_valid, requires_csrf};
 
 pub async fn auth_middleware(
     State(state): State<Arc<AppState>>,
@@ -44,7 +44,7 @@ pub async fn auth_middleware(
         .headers()
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|value| value.to_str().ok());
-    
+
     let token = if let Some(value) = auth_header {
         if value.starts_with("Bearer ") {
             value.trim_start_matches("Bearer ").trim().to_string()

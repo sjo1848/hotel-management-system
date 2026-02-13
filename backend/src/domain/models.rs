@@ -1,7 +1,7 @@
 use chrono::NaiveDate;
 use serde::Serialize;
-use uuid::Uuid;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, ToSchema, PartialEq)]
 pub enum RoomStatus {

@@ -1,34 +1,37 @@
-use sqlx::postgres::PgPoolOptions;
-use std::net::SocketAddr;
-use std::sync::Arc;
-use opentelemetry::KeyValue;
-use opentelemetry_otlp::WithExportConfig;
-use opentelemetry_sdk::{trace as sdktrace, Resource};
 use hms_backend::app_state::AppState;
 use hms_backend::application::{
-    analytics_service::AnalyticsService, auth_service::AuthService, booking_service::BookingService,
-    room_service::RoomService, reporting_service::ReportingService,
-    guest_service::GuestService, housekeeping_service::HousekeepingService,
-    audit_service::AuditService, hotel_service::HotelService, billing_service::BillingService,
-    cash_closure_service::CashClosureService,
+    analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
+    billing_service::BillingService, booking_service::BookingService,
+    cash_closure_service::CashClosureService, guest_service::GuestService,
+    hotel_service::HotelService, housekeeping_service::HousekeepingService,
+    reporting_service::ReportingService, room_service::RoomService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
-    AuditRepository, BookingRepository, CashClosureRepository, ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository,
+    AuditRepository, BookingRepository, CashClosureRepository, ExtraChargeRepository,
+    GuestRepository, HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository,
     UserRepository,
 };
 use hms_backend::infrastructure::{
     repository::{
         postgres::PostgresRoomRepository, postgres_audit::PostgresAuditRepository,
-        postgres_booking::PostgresBookingRepository, postgres_guest::PostgresGuestRepository,
-        postgres_invoice::PostgresInvoiceRepository,
-        postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
-        postgres_hotel::PostgresHotelRepository, postgres_extra_charge::PostgresExtraChargeRepository,
+        postgres_booking::PostgresBookingRepository,
         postgres_cash_closure::PostgresCashClosureRepository,
+        postgres_extra_charge::PostgresExtraChargeRepository,
+        postgres_guest::PostgresGuestRepository, postgres_hotel::PostgresHotelRepository,
+        postgres_invoice::PostgresInvoiceRepository,
+        postgres_refresh_token::PostgresRefreshTokenRepository,
+        postgres_user::PostgresUserRepository,
     },
     seeder,
     web::routes::create_router,
 };
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{trace as sdktrace, Resource};
+use sqlx::postgres::PgPoolOptions;
+use std::net::SocketAddr;
+use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 fn init_tracing(config: &AppConfig) {
@@ -107,21 +110,35 @@ async fn main() {
 
     // 5. Initialize Repositories
     let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
-    let booking_repo = Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
-    let guest_repo = Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
+    let booking_repo =
+        Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
+    let guest_repo =
+        Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone())) as Arc<dyn UserRepository>;
-    let refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(pool.clone())) as Arc<dyn RefreshTokenRepository>;
-    let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
-    let extra_charge_repo = Arc::new(PostgresExtraChargeRepository::new(pool.clone())) as Arc<dyn ExtraChargeRepository>;
-    let cash_closure_repo = Arc::new(PostgresCashClosureRepository::new(pool.clone())) as Arc<dyn CashClosureRepository>;
-    let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
-    let hotel_repo = Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
+    let refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(pool.clone()))
+        as Arc<dyn RefreshTokenRepository>;
+    let audit_repo =
+        Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let extra_charge_repo = Arc::new(PostgresExtraChargeRepository::new(pool.clone()))
+        as Arc<dyn ExtraChargeRepository>;
+    let cash_closure_repo = Arc::new(PostgresCashClosureRepository::new(pool.clone()))
+        as Arc<dyn CashClosureRepository>;
+    let invoice_repo =
+        Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let hotel_repo =
+        Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
 
     // 6. Initialize Services
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let hotel_service = Arc::new(HotelService::new(hotel_repo.clone()));
-    let billing_service = Arc::new(BillingService::new(extra_charge_repo.clone(), booking_repo.clone()));
-    let cash_closure_service = Arc::new(CashClosureService::new(cash_closure_repo.clone(), invoice_repo.clone()));
+    let billing_service = Arc::new(BillingService::new(
+        extra_charge_repo.clone(),
+        booking_repo.clone(),
+    ));
+    let cash_closure_service = Arc::new(CashClosureService::new(
+        cash_closure_repo.clone(),
+        invoice_repo.clone(),
+    ));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let booking_service = Arc::new(BookingService::new(
         booking_repo.clone(),
@@ -134,7 +151,11 @@ async fn main() {
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
-    let housekeeping_service = Arc::new(HousekeepingService::new(room_repo.clone(), room_service.clone(), audit_service.clone()));
+    let housekeeping_service = Arc::new(HousekeepingService::new(
+        room_repo.clone(),
+        room_service.clone(),
+        audit_service.clone(),
+    ));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -179,7 +200,10 @@ async fn main() {
     println!("🚀 HMS Elite (Hexagonal) escuchando en {}", addr);
 
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .unwrap();
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await
+    .unwrap();
 }

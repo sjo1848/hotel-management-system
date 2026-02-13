@@ -1,5 +1,5 @@
-use axum::body::Body;
 use axum::body::to_bytes;
+use axum::body::Body;
 use axum::extract::ConnectInfo;
 use axum::http::{header, Method, Request, StatusCode};
 use hms_backend::app_state::AppState;
@@ -7,7 +7,7 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
-    housekeeping_service::HousekeepingService, hotel_service::HotelService,
+    hotel_service::HotelService, housekeeping_service::HousekeepingService,
     reporting_service::ReportingService, room_service::RoomService,
 };
 use hms_backend::config::AppConfig;
@@ -18,7 +18,8 @@ use hms_backend::domain::repositories::{
 };
 use hms_backend::infrastructure::repository::{
     postgres::PostgresRoomRepository, postgres_audit::PostgresAuditRepository,
-    postgres_booking::PostgresBookingRepository, postgres_cash_closure::PostgresCashClosureRepository,
+    postgres_booking::PostgresBookingRepository,
+    postgres_cash_closure::PostgresCashClosureRepository,
     postgres_extra_charge::PostgresExtraChargeRepository, postgres_guest::PostgresGuestRepository,
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
     postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
@@ -52,12 +53,7 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
 
     let admin_token = make_token(&config.jwt_secret, admin_id, hotel_id, "admin");
     let ops_token = make_token(&config.jwt_secret, ops_id, hotel_id, "ops");
-    let reception_token = make_token(
-        &config.jwt_secret,
-        reception_id,
-        hotel_id,
-        "receptionist",
-    );
+    let reception_token = make_token(&config.jwt_secret, reception_id, hotel_id, "receptionist");
     let hk_token = make_token(&config.jwt_secret, hk_id, hotel_id, "housekeeping");
 
     // Admin can read users.
@@ -219,7 +215,8 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         as Arc<dyn CashClosureRepository>;
     let invoice_repo =
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
-    let hotel_repo = Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
+    let hotel_repo =
+        Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
@@ -312,10 +309,9 @@ async fn assert_status(
     request
         .extensions_mut()
         .insert(SocketAddr::from(([127, 0, 0, 1], 40000)));
-    request.extensions_mut().insert(ConnectInfo(SocketAddr::from((
-        [127, 0, 0, 1],
-        40000,
-    ))));
+    request
+        .extensions_mut()
+        .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40000))));
 
     let response = app.clone().oneshot(request).await.unwrap();
     let status = response.status();

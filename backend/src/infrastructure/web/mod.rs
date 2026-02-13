@@ -1,10 +1,10 @@
 pub mod handlers;
 pub mod jwt;
 pub mod passwords;
-pub mod utils;
 #[cfg(test)]
 pub mod test_cookie_builders;
+pub mod utils;
 
 pub mod middleware;
-pub mod routes;
 pub mod openapi;
+pub mod routes;

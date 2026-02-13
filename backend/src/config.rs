@@ -27,9 +27,10 @@ impl AppConfig {
     pub fn from_env() -> Self {
         let app_env = env::var("APP_ENV").unwrap_or_else(|_| "dev".to_string());
         let is_prod = app_env.to_lowercase() == "prod";
-        let database_url =
-            env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://admin:password123@db:5432/hms_core".to_string());
-        let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
+        let database_url = env::var("DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://admin:password123@db:5432/hms_core".to_string());
+        let jwt_secret =
+            env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
         let auth_required = env::var("AUTH_REQUIRED")
             .unwrap_or_else(|_| "true".to_string())
             .to_lowercase()
@@ -59,8 +60,7 @@ impl AppConfig {
             .unwrap_or_else(|_| "false".to_string())
             .to_lowercase()
             == "true";
-        let cookie_samesite =
-            env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
+        let cookie_samesite = env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
         let db_max_connections = env::var("DB_MAX_CONNECTIONS")
             .ok()
             .and_then(|value| value.parse::<u32>().ok())
@@ -75,8 +75,8 @@ impl AppConfig {
             == "true";
         let otel_exporter_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
             .unwrap_or_else(|_| "http://otel-collector:4317".to_string());
-        let otel_service_name = env::var("OTEL_SERVICE_NAME")
-            .unwrap_or_else(|_| "hms-backend".to_string());
+        let otel_service_name =
+            env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "hms-backend".to_string());
 
         if is_prod {
             if jwt_secret == "dev-secret-change-me" {

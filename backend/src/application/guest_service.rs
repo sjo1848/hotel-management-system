@@ -28,7 +28,9 @@ impl GuestService {
         phone: Option<String>,
     ) -> Result<Guest, DomainError> {
         if full_name.trim().is_empty() {
-            return Err(DomainError::InvalidInput("El nombre no puede estar vacío".to_string()));
+            return Err(DomainError::InvalidInput(
+                "El nombre no puede estar vacío".to_string(),
+            ));
         }
 
         if !email.contains('@') {

@@ -1,8 +1,8 @@
 use axum::{
-    extract::{Request, ConnectInfo},
+    extract::{ConnectInfo, Request},
+    http::StatusCode,
     middleware::Next,
     response::Response,
-    http::StatusCode,
 };
 use std::net::SocketAddr;
 

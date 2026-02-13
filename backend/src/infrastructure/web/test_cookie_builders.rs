@@ -22,11 +22,21 @@ fn build_refresh_cookie_httponly_in_dev_without_secure() {
         cookie_samesite: String::from("Lax"),
         db_max_connections: 0,
         port: 0,
+        app_env: String::from("dev"),
+        otel_enabled: false,
+        otel_exporter_endpoint: String::new(),
+        otel_service_name: String::new(),
     };
     let token = "test_refresh_token";
     let cookie = build_refresh_cookie(token, &config);
-    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in dev config");
-    assert!(!cookie.contains("Secure"), "Secure should be absent in dev config");
+    assert!(
+        cookie.contains("HttpOnly"),
+        "HttpOnly should be present in dev config"
+    );
+    assert!(
+        !cookie.contains("Secure"),
+        "Secure should be absent in dev config"
+    );
 }
 
 #[test]
@@ -48,11 +58,21 @@ fn build_access_cookie_httponly_in_dev_without_secure() {
         cookie_samesite: String::from("Lax"),
         db_max_connections: 0,
         port: 0,
+        app_env: String::from("dev"),
+        otel_enabled: false,
+        otel_exporter_endpoint: String::new(),
+        otel_service_name: String::new(),
     };
     let token = "test_access_token";
     let cookie = build_access_cookie(token, &config);
-    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in dev config");
-    assert!(!cookie.contains("Secure"), "Secure should be absent in dev config");
+    assert!(
+        cookie.contains("HttpOnly"),
+        "HttpOnly should be present in dev config"
+    );
+    assert!(
+        !cookie.contains("Secure"),
+        "Secure should be absent in dev config"
+    );
 }
 
 #[test]
@@ -74,10 +94,17 @@ fn build_refresh_cookie_with_httponly_in_prod() {
         cookie_samesite: String::from("Lax"),
         db_max_connections: 0,
         port: 0,
+        app_env: String::from("prod"),
+        otel_enabled: false,
+        otel_exporter_endpoint: String::new(),
+        otel_service_name: String::new(),
     };
     let token = "test_refresh_token";
     let cookie = build_refresh_cookie(token, &config);
-    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in prod config");
+    assert!(
+        cookie.contains("HttpOnly"),
+        "HttpOnly should be present in prod config"
+    );
 }
 
 #[test]
@@ -99,8 +126,15 @@ fn build_access_cookie_with_httponly_in_prod() {
         cookie_samesite: String::from("Lax"),
         db_max_connections: 0,
         port: 0,
+        app_env: String::from("prod"),
+        otel_enabled: false,
+        otel_exporter_endpoint: String::new(),
+        otel_service_name: String::new(),
     };
     let token = "test_access_token";
     let cookie = build_access_cookie(token, &config);
-    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in prod config");
+    assert!(
+        cookie.contains("HttpOnly"),
+        "HttpOnly should be present in prod config"
+    );
 }

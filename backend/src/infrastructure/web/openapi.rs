@@ -1,6 +1,6 @@
-use utoipa::OpenApi;
 use crate::domain::models::*;
 use crate::infrastructure::web::handlers::*;
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(

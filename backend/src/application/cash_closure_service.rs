@@ -20,7 +20,10 @@ impl CashClosureService {
         }
     }
 
-    pub async fn get_current_balance(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), DomainError> {
+    pub async fn get_current_balance(
+        &self,
+        hotel_id: Uuid,
+    ) -> Result<(i64, i64, i64), DomainError> {
         self.invoice_repo
             .get_unclosed_total(hotel_id)
             .await

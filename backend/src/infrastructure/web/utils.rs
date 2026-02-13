@@ -19,7 +19,7 @@ pub fn csrf_valid(headers: &HeaderMap) -> bool {
         .get(axum::http::header::COOKIE)
         .and_then(|value| value.to_str().ok())
         .and_then(|cookies| extract_cookie_value(cookies, "csrf_token"));
-    
+
     match (header_token, cookie_token) {
         (Some(header_token), Some(cookie_token)) => header_token == cookie_token,
         _ => false,
