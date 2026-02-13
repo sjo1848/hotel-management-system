@@ -7,16 +7,20 @@ cd "$ROOT_DIR"
 usage() {
   cat <<USAGE
 Uso:
-  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--skip-tests]
+  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--env-file <path>] [--profile <auto|dev|prod>] [--skip-tests]
 
 Opciones:
   --target-ref <git_ref>  Ref a desplegar (default: origin/main)
+  --env-file <path>       Archivo de variables de entorno (default: .env)
+  --profile <...>         Perfil de despliegue (default: auto)
   --skip-tests            Omite health/smoke tests post-deploy
 USAGE
 }
 
 TARGET_REF="origin/main"
 SKIP_TESTS=false
+ENV_FILE=".env"
+DEPLOY_PROFILE="auto"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -32,6 +36,24 @@ while [ $# -gt 0 ]; do
     --skip-tests)
       SKIP_TESTS=true
       shift
+      ;;
+    --env-file)
+      if [ $# -lt 2 ]; then
+        echo "❌ Falta valor para --env-file"
+        usage
+        exit 1
+      fi
+      ENV_FILE="$2"
+      shift 2
+      ;;
+    --profile)
+      if [ $# -lt 2 ]; then
+        echo "❌ Falta valor para --profile"
+        usage
+        exit 1
+      fi
+      DEPLOY_PROFILE="$2"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -49,6 +71,14 @@ if ! command -v docker >/dev/null 2>&1; then
   echo "❌ docker no está disponible en el host"
   exit 1
 fi
+if [ ! -f "$ENV_FILE" ]; then
+  echo "❌ No se encontró env file: $ENV_FILE"
+  exit 1
+fi
+if [[ "$DEPLOY_PROFILE" != "auto" && "$DEPLOY_PROFILE" != "dev" && "$DEPLOY_PROFILE" != "prod" ]]; then
+  echo "❌ --profile debe ser auto|dev|prod"
+  exit 1
+fi
 
 PREV_REF="$(git rev-parse --verify HEAD)"
 DEPLOY_TS="$(date +%Y%m%d_%H%M%S)"
@@ -57,6 +87,26 @@ BACKUP_DIR="${BACKUP_DIR:-./scripts/backups}"
 BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
 
 rollback_needed=false
+COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.yml)
+
+resolve_profile() {
+  if [ "$DEPLOY_PROFILE" != "auto" ]; then
+    echo "$DEPLOY_PROFILE"
+    return
+  fi
+
+  local profile
+  profile="$(awk -F= '/^APP_ENV=/{print tolower($2)}' "$ENV_FILE" | tail -n1 | tr -d '\"' | tr -d "'" | tr -d ' ')"
+  if [ "$profile" = "prod" ] || [ "$profile" = "production" ]; then
+    echo "prod"
+  else
+    echo "dev"
+  fi
+}
+
+compose_up() {
+  docker compose "${COMPOSE_ARGS[@]}" up -d --build
+}
 
 rollback() {
   if [ "$rollback_needed" != true ]; then
@@ -71,7 +121,7 @@ rollback() {
   fi
 
   echo "🔁 Restaurando servicios al commit previo..."
-  if ! docker compose up -d --build; then
+  if ! compose_up; then
     echo "❌ No se pudo restaurar servicios al commit previo"
     exit 1
   fi
@@ -95,6 +145,16 @@ trap rollback ERR
 echo "🚀 Iniciando despliegue con rollback automático"
 echo "• Ref actual: $(git rev-parse --short "$PREV_REF")"
 echo "• Ref objetivo: $TARGET_REF"
+echo "• Env file: $ENV_FILE"
+
+RUNTIME_PROFILE="$(resolve_profile)"
+if [ "$RUNTIME_PROFILE" = "prod" ]; then
+  COMPOSE_ARGS+=( -f docker-compose.prod.yml )
+  echo "• Profile: prod (overlay docker-compose.prod.yml)"
+  ./scripts/validate-prod-env.sh --env-file "$ENV_FILE"
+else
+  echo "• Profile: dev"
+fi
 
 echo "📦 Creando backup pre-deploy..."
 FILENAME="$BACKUP_NAME" BACKUP_DIR="$BACKUP_DIR" ./scripts/backup.sh
@@ -113,7 +173,7 @@ TARGET_COMMIT="$(git rev-parse --verify "$TARGET_REF")"
 git checkout -q "$TARGET_COMMIT"
 
 echo "🏗️  Aplicando despliegue del commit $(git rev-parse --short HEAD)..."
-docker compose up -d --build
+compose_up
 
 if [ "$SKIP_TESTS" = false ]; then
   echo "🩺 Ejecutando health + smoke tests..."

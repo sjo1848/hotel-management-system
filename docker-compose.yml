@@ -33,20 +33,23 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       RUST_LOG: debug
       JWT_SECRET: ${JWT_SECRET}
-      AUTH_REQUIRED: "true"
-      CORS_ORIGIN: http://localhost:5173,https://app.tudominio.com
+      JWT_KID: ${JWT_KID:-v1}
+      AUTH_REQUIRED: ${AUTH_REQUIRED:-true}
+      APP_ENV: ${APP_ENV:-dev}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
       ADMIN_USER: ${ADMIN_USER}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       ADMIN_ROLE: ${ADMIN_ROLE}
-      ACCESS_TTL_MINUTES: "15"
-      REFRESH_TTL_DAYS: "7"
-      RATE_LIMIT_PER_MINUTE: "60"
-      LOGIN_LIMIT_PER_MINUTE: "10"
-      COOKIE_SECURE: "false"
-      COOKIE_SAMESITE: "Lax"
-      OTEL_ENABLED: "true"
-      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
-      OTEL_SERVICE_NAME: "hms-backend"
+      ACCESS_TTL_MINUTES: ${ACCESS_TTL_MINUTES:-15}
+      REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-7}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      LOGIN_LIMIT_PER_MINUTE: ${LOGIN_LIMIT_PER_MINUTE:-10}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      OTEL_ENABLED: ${OTEL_ENABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-hms-backend}
     depends_on:
       - db
       - otel-collector

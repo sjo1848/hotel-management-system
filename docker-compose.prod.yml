@@ -1,0 +1,13 @@
+services:
+  backend:
+    environment:
+      APP_ENV: ${APP_ENV:-prod}
+      AUTH_REQUIRED: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in production}
+      JWT_KID: ${JWT_KID:?JWT_KID is required in production}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in production}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:?COOKIE_DOMAIN is required in production}
+      OTEL_ENABLED: ${OTEL_ENABLED:-true}
