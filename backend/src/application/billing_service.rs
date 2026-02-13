@@ -53,8 +53,12 @@ impl BillingService {
         let mut updated_booking = booking;
         updated_booking.total_price_cents += amount_cents;
 
-        let _: Result<crate::domain::models::Booking, String> =
-            self.booking_repo.update(updated_booking).await;
+        if let Err(update_error) = self.booking_repo.update(updated_booking).await {
+            // Intento de compensación para evitar inconsistencias silenciosas:
+            // si falló actualizar booking, revertimos el cargo recién creado.
+            let _ = self.extra_charge_repo.delete(hotel_id, saved.id).await;
+            return Err(map_booking_repo_error(update_error));
+        }
 
         Ok(saved)
     }
@@ -80,6 +84,18 @@ fn map_extra_charge_repo_error(message: String) -> DomainError {
     }
 }
 
+fn map_booking_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "BOOKING_NOT_FOUND" => DomainError::BookingNotFound,
+        "BOOKING_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        "BOOKING_ROOM_NOT_FOUND" => DomainError::RoomNotFound,
+        "BOOKING_GUEST_NOT_FOUND" => DomainError::GuestNotFound,
+        "BOOKING_INVALID_DATES" => DomainError::InvalidBookingDates,
+        "BOOKING_OVERLAP" => DomainError::RoomNotAvailable,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -93,6 +109,34 @@ mod tests {
         assert!(matches!(
             map_extra_charge_repo_error("EXTRA_CHARGE_HOTEL_NOT_FOUND".to_string()),
             DomainError::HotelNotFound
+        ));
+    }
+
+    #[test]
+    fn map_booking_repo_error_maps_functional_markers() {
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_NOT_FOUND".to_string()),
+            DomainError::BookingNotFound
+        ));
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_ROOM_NOT_FOUND".to_string()),
+            DomainError::RoomNotFound
+        ));
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_GUEST_NOT_FOUND".to_string()),
+            DomainError::GuestNotFound
+        ));
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_INVALID_DATES".to_string()),
+            DomainError::InvalidBookingDates
+        ));
+        assert!(matches!(
+            map_booking_repo_error("BOOKING_OVERLAP".to_string()),
+            DomainError::RoomNotAvailable
         ));
     }
 }
