@@ -58,8 +58,11 @@ jobs:
       - name: Legacy Schema Convergence
         run: ./scripts/check-legacy-schema-convergence.sh
 
-      - name: Run CI Script
+      - name: Backend Unit Gate (fmt/clippy/lib/contract)
         run: ./scripts/ci-backend.sh
+
+      - name: Backend Integration Gate (sqlx)
+        run: ./scripts/ci-backend-integration.sh
 
       - name: Security Regression Tests (AuthZ + CSRF/AuthN)
         run: ./scripts/backend-security-regression.sh

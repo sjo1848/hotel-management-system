@@ -15,6 +15,7 @@ echo "==> clippy"
 cargo clippy --all-targets --all-features -- -D warnings
 
 echo "==> test"
-DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core} cargo test -- --test-threads=1
+cargo test --lib -- --test-threads=1
+cargo test --test openapi_contract
 
 popd >/dev/null

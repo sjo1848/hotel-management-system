@@ -47,5 +47,3 @@ run_sqlx_test_with_retry() {
 
 run_sqlx_test_with_retry "rbac_authorization"
 run_sqlx_test_with_retry "csrf_authn_security"
-run_sqlx_test_with_retry "booking_flow"
-run_sqlx_test_with_retry "operational_flow"
