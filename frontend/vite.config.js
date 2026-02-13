@@ -18,6 +18,20 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("recharts")) return "charts";
+          if (id.includes("date-fns")) return "date";
+          if (id.includes("lucide-react")) return "icons";
+          if (id.includes("react-router")) return "router";
+          return "vendor";
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: "jsdom",
