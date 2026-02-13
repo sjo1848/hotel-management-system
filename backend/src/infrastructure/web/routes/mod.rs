@@ -32,6 +32,7 @@ use crate::infrastructure::web::handlers::{
     update_booking_handler, update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
+    api_contract::api_contract_headers_middleware,
     auth::auth_middleware,
     metrics::track_metrics,
     rate_limit_logger::rate_limit_logger_middleware,
@@ -233,6 +234,7 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .layer(middleware::from_fn(rate_limit_logger_middleware)) // Log general de rate limit
         .layer(GovernorLayer { config: api_rate })
         .layer(cors)
+        .layer(middleware::from_fn(api_contract_headers_middleware))
         .layer(DefaultBodyLimit::max(1024 * 1024))
         .layer(TraceLayer::new_for_http())
         .layer(middleware::from_fn(request_id_middleware))

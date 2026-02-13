@@ -4,3 +4,4 @@ pub mod rbac;
 pub mod metrics;
 pub mod security_headers;
 pub mod rate_limit_logger;
+pub mod api_contract;

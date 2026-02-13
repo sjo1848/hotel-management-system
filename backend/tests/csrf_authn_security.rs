@@ -63,6 +63,13 @@ async fn csrf_and_authn_contract_is_enforced(pool: sqlx::PgPool) {
     )
     .await;
     assert_eq!(login_response.status(), StatusCode::OK);
+    assert_eq!(
+        login_response
+            .headers()
+            .get("x-api-version")
+            .and_then(|v| v.to_str().ok()),
+        Some("v1")
+    );
 
     let login_cookies = collect_set_cookie_values(&login_response);
     let refresh_token = extract_cookie_value(&login_cookies, "refresh_token").unwrap();
