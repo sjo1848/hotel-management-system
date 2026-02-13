@@ -36,8 +36,11 @@ use crate::infrastructure::web::middleware::{
     metrics::track_metrics,
     rate_limit_logger::rate_limit_logger_middleware,
     rbac::{
-        analytics_read, hotels_read, hotels_write, invoices_read, reports_occupancy_read,
-        reports_revenue_read, rooms_write, users_delete, users_read, users_write,
+        analytics_read, billing_balance_read, billing_close_cash_write, bookings_read,
+        bookings_update, bookings_write, extra_charges_read, extra_charges_write, guests_read,
+        guests_write, hotels_read, hotels_write, housekeeping_read, housekeeping_write,
+        invoice_read, invoices_read, reports_occupancy_read, reports_revenue_read, rooms_read,
+        rooms_search, rooms_status_write, rooms_write, users_delete, users_read, users_write,
     },
     request_id::request_id_middleware,
     security_headers::security_headers_middleware,
@@ -119,25 +122,40 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/rooms",
             get(get_rooms_handler)
+                .layer(middleware::from_fn(rooms_read))
                 .merge(post(create_room_handler).layer(middleware::from_fn(rooms_write))),
         )
-        .route("/api/v1/rooms/available", get(search_rooms_handler))
+        .route(
+            "/api/v1/rooms/available",
+            get(search_rooms_handler).layer(middleware::from_fn(rooms_search)),
+        )
         .route(
             "/api/v1/rooms/:id/status",
-            patch(update_room_status_handler),
+            patch(update_room_status_handler).layer(middleware::from_fn(rooms_status_write)),
         )
         .route(
             "/api/v1/bookings",
-            get(list_bookings_handler).post(create_booking_handler),
+            get(list_bookings_handler)
+                .layer(middleware::from_fn(bookings_read))
+                .merge(post(create_booking_handler).layer(middleware::from_fn(bookings_write))),
         )
-        .route("/api/v1/bookings/:id", patch(update_booking_handler))
+        .route(
+            "/api/v1/bookings/:id",
+            patch(update_booking_handler).layer(middleware::from_fn(bookings_update)),
+        )
         .route(
             "/api/v1/bookings/:id/extra-charges",
-            get(list_extra_charges_handler).post(add_extra_charge_handler),
+            get(list_extra_charges_handler)
+                .layer(middleware::from_fn(extra_charges_read))
+                .merge(
+                    post(add_extra_charge_handler).layer(middleware::from_fn(extra_charges_write)),
+                ),
         )
         .route(
             "/api/v1/guests",
-            get(list_guests_handler).post(create_guest_handler),
+            get(list_guests_handler)
+                .layer(middleware::from_fn(guests_read))
+                .merge(post(create_guest_handler).layer(middleware::from_fn(guests_write))),
         )
         .route("/api/v1/auth/me", get(me_handler))
         .route(
@@ -154,24 +172,33 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/v1/analytics/kpis",
             get(get_dashboard_kpis_handler).layer(middleware::from_fn(analytics_read)),
         )
-        .route("/api/v1/billing/balance", get(get_current_balance_handler))
-        .route("/api/v1/billing/close-cash", post(close_cash_handler))
+        .route(
+            "/api/v1/billing/balance",
+            get(get_current_balance_handler).layer(middleware::from_fn(billing_balance_read)),
+        )
+        .route(
+            "/api/v1/billing/close-cash",
+            post(close_cash_handler).layer(middleware::from_fn(billing_close_cash_write)),
+        )
         .route(
             "/api/v1/invoices",
             get(list_invoices_handler).layer(middleware::from_fn(invoices_read)),
         )
         .route(
             "/api/v1/bookings/:id/invoice",
-            get(get_invoice_by_booking_handler),
+            get(get_invoice_by_booking_handler).layer(middleware::from_fn(invoice_read)),
         )
-        .route("/api/v1/housekeeping/dirty", get(list_dirty_rooms_handler))
+        .route(
+            "/api/v1/housekeeping/dirty",
+            get(list_dirty_rooms_handler).layer(middleware::from_fn(housekeeping_read)),
+        )
         .route(
             "/api/v1/housekeeping/:id/start",
-            post(start_cleaning_handler),
+            post(start_cleaning_handler).layer(middleware::from_fn(housekeeping_write)),
         )
         .route(
             "/api/v1/housekeeping/:id/finish",
-            post(finish_cleaning_handler),
+            post(finish_cleaning_handler).layer(middleware::from_fn(housekeeping_write)),
         )
         .route(
             "/api/v1/reports/revenue",
