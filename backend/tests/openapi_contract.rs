@@ -28,7 +28,10 @@ fn openapi_server_matches_runtime() {
             .unwrap_or(false)
     });
 
-    assert!(has_local, "OpenAPI servers must include http://localhost:3001");
+    assert!(
+        has_local,
+        "OpenAPI servers must include http://localhost:3001"
+    );
 }
 
 #[test]
