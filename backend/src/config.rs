@@ -198,11 +198,7 @@ fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
     if inputs.cors_origin == "*" {
         panic!("CORS_ORIGIN cannot be '*' in production.");
     }
-    let cookie_domain = inputs
-        .cookie_domain
-        .unwrap_or("")
-        .trim()
-        .to_lowercase();
+    let cookie_domain = inputs.cookie_domain.unwrap_or("").trim().to_lowercase();
     if cookie_domain.is_empty() {
         panic!("COOKIE_DOMAIN must be set in production.");
     }

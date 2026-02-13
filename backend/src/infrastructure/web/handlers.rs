@@ -694,7 +694,12 @@ pub async fn logout_handler(
     let expired_csrf = clear_csrf_cookie(&state.config);
     state
         .audit_service
-        .record(Some(revoked.hotel_id), Some(revoked.user_id), "auth.logout", Some(ip))
+        .record(
+            Some(revoked.hotel_id),
+            Some(revoked.user_id),
+            "auth.logout",
+            Some(ip),
+        )
         .await;
     Ok((
         StatusCode::OK,
