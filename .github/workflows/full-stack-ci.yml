@@ -56,10 +56,7 @@ jobs:
         run: ./scripts/ci-backend.sh
 
       - name: Security Regression Tests (AuthZ + CSRF/AuthN)
-        run: |
-          cd backend
-          DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core} cargo test --test rbac_authorization
-          DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core} cargo test --test csrf_authn_security
+        run: ./scripts/backend-security-regression.sh
 
   frontend:
     name: Frontend CI
