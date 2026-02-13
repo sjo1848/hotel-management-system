@@ -1,36 +1,49 @@
 use hms_backend::application::booking_service::BookingService;
-use hms_backend::domain::repositories::{BookingRepository, RoomRepository};
+use hms_backend::application::room_service::RoomService;
+use hms_backend::application::audit_service::AuditService;
+use hms_backend::domain::repositories::{BookingRepository, RoomRepository, AuditRepository, InvoiceRepository};
 use hms_backend::infrastructure::repository::postgres::PostgresRoomRepository;
 use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
+use hms_backend::infrastructure::repository::postgres_audit::PostgresAuditRepository;
+use hms_backend::infrastructure::repository::postgres_invoice::PostgresInvoiceRepository;
 use chrono::NaiveDate;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[sqlx::test]
 async fn booking_flow_creates_total_price(pool: sqlx::PgPool) {
-    let room_repo = PostgresRoomRepository::new(pool.clone());
-    let booking_repo = PostgresBookingRepository::new(pool.clone());
+    let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
+    let booking_repo = Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
+    let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let audit_service = Arc::new(AuditService::new(audit_repo));
+    let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let service = BookingService::new(
-        std::sync::Arc::new(booking_repo) as std::sync::Arc<dyn BookingRepository>,
-        std::sync::Arc::new(room_repo) as std::sync::Arc<dyn RoomRepository>,
+        booking_repo,
+        room_repo,
+        room_service.clone(),
+        audit_service,
+        invoice_repo,
     );
 
-    let room_id = Uuid::new_v4();
-    sqlx::query(
-        "INSERT INTO rooms (id, room_number, room_type, status, price_cents)
-         VALUES ($1, $2, $3, $4, $5)"
-    )
-    .bind(room_id)
-    .bind("A101")
-    .bind("Suite")
-    .bind("AVAILABLE")
-    .bind(12000_i64)
-    .execute(&pool)
-    .await
-    .unwrap();
+    let hotel_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Booking")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let room = room_service
+        .create_room(hotel_id, "A101".to_string(), "Suite".to_string(), 12000_i64)
+        .await
+        .unwrap();
 
     let booking = service
         .execute(
-            room_id,
+            hotel_id,
+            room.id,
+            None,
             "QA Guest".to_string(),
             NaiveDate::from_ymd_opt(2025, 2, 10).unwrap(),
             NaiveDate::from_ymd_opt(2025, 2, 12).unwrap(),

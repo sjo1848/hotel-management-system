@@ -54,6 +54,11 @@ impl IntoResponse for DomainError {
                 "BOOKING_NOT_FOUND",
                 "La reserva solicitada no existe".to_string(),
             ),
+            DomainError::InvoiceNotFound => (
+                StatusCode::NOT_FOUND,
+                "INVOICE_NOT_FOUND",
+                "La factura solicitada no existe".to_string(),
+            ),
             DomainError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
             DomainError::Unauthorized => (
                 StatusCode::UNAUTHORIZED,
@@ -127,6 +132,7 @@ pub struct CreateGuestRequest {
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
+    pub hotel_id: Uuid,
     pub username: String,
     pub password: String,
 }
@@ -421,7 +427,7 @@ pub async fn login_handler(
 
     let user = match state
         .auth_service
-        .verify_user(&payload.username, &payload.password)
+        .verify_user(payload.hotel_id, &payload.username, &payload.password)
         .await {
             Ok(u) => u,
             Err(e) => {
@@ -822,11 +828,7 @@ pub async fn list_hotels_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    // Solo admin de Sede Central puede ver todos los hoteles
-    if claims.hotel_id != "00000000-0000-0000-0000-000000000001" {
-        return Err(DomainError::Unauthorized);
-    }
-
+    let _ = claims;
     let hotels = state.hotel_service.list_hotels().await?;
     Ok(Json(json!(hotels)))
 }
@@ -836,11 +838,7 @@ pub async fn create_hotel_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateHotelRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    // Solo admin de Sede Central puede crear hoteles
-    if claims.hotel_id != "00000000-0000-0000-0000-000000000001" {
-        return Err(DomainError::Unauthorized);
-    }
-
+    let _ = claims;
     let hotel = state.hotel_service.create_hotel(payload.name, payload.address).await?;
     Ok(Json(json!(hotel)))
 }
@@ -991,7 +989,7 @@ pub async fn get_invoice_by_booking_handler(
 
     match invoice {
         Some(inv) => Ok(Json(json!(inv))),
-        None => Err(DomainError::InfrastructureError("Factura no encontrada para esta reserva".to_string())),
+        None => Err(DomainError::InvoiceNotFound),
     }
 }
 

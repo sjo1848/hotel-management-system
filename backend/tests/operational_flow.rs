@@ -12,6 +12,7 @@ use hms_backend::infrastructure::repository::{
 };
 use chrono::NaiveDate;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[sqlx::test]
 async fn full_operational_cycle(pool: sqlx::PgPool) {
@@ -37,6 +38,13 @@ async fn full_operational_cycle(pool: sqlx::PgPool) {
     );
 
     let hotel_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Ops")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
 
     // 2. Create Room (Catalog)
     let room = room_service.create_room(hotel_id, "505".to_string(), "Penthouse".to_string(), 50000).await.unwrap();

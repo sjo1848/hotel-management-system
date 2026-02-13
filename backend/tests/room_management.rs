@@ -11,6 +11,13 @@ async fn room_service_creates_room(pool: sqlx::PgPool) {
     );
 
     let hotel_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Rooms 1")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
     let room_number = "101".to_string();
     let room_type = "Deluxe".to_string();
     let price_cents = 15000;
@@ -37,6 +44,13 @@ async fn room_service_enforces_transitions(pool: sqlx::PgPool) {
     );
 
     let hotel_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Rooms 2")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
     let room = service
         .create_room(hotel_id, "202".to_string(), "Standard".to_string(), 10000)
         .await

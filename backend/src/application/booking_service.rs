@@ -91,6 +91,7 @@ impl BookingService {
         Ok(saved_booking)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_booking(
         &self,
         hotel_id: Uuid,

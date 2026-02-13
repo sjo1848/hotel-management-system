@@ -7,6 +7,7 @@ pub enum DomainError {
     RoomAlreadyExists,
     InvalidRoomStatusTransition,
     BookingNotFound,
+    InvoiceNotFound,
     InvalidBookingDates,
     InvalidInput(String),
     Unauthorized,

@@ -15,6 +15,7 @@ pub struct AppConfig {
     pub login_limit_per_minute: u32,
     pub cookie_secure: bool,
     pub cookie_samesite: String,
+    pub db_max_connections: u32,
     pub port: u16,
 }
 
@@ -56,6 +57,10 @@ impl AppConfig {
             == "true";
         let cookie_samesite =
             env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string());
+        let db_max_connections = env::var("DB_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .unwrap_or(15);
         let port = env::var("PORT")
             .ok()
             .and_then(|value| value.parse::<u16>().ok())
@@ -93,6 +98,7 @@ impl AppConfig {
             login_limit_per_minute,
             cookie_secure,
             cookie_samesite,
+            db_max_connections,
             port,
         }
     }

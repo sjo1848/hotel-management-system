@@ -123,7 +123,7 @@ impl InvoiceRepository for PostgresInvoiceRepository {
             .await;
         
         let start_time = match last_closure_time {
-            Ok(row) => row.try_get("last_time").unwrap_or_else(|_| chrono::NaiveDateTime::MIN),
+            Ok(row) => row.try_get("last_time").unwrap_or(chrono::NaiveDateTime::MIN),
             Err(_) => chrono::NaiveDateTime::MIN,
         };
 

@@ -1,4 +1,4 @@
-use axum::http::{HeaderMap, Request, Method}; // Added Request and Method
+use axum::http::{HeaderMap, Method, Request}; // Added Request and Method
 
 pub fn extract_cookie_value(cookies: &str, name: &str) -> Option<String> {
     let needle = format!("{}=", name);
@@ -28,7 +28,7 @@ pub fn csrf_valid(headers: &HeaderMap) -> bool {
 
 pub fn requires_csrf(req: &Request<axum::body::Body>) -> bool {
     let method = req.method();
-    if method == &Method::GET || method == &Method::HEAD || method == &Method::OPTIONS {
+    if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
         return false;
     }
     let path = req.uri().path();

@@ -2,11 +2,18 @@ use hms_backend::domain::models::{Booking, BookingStatus, Room, RoomStatus};
 use hms_backend::domain::repositories::{BookingRepository, RoomRepository};
 use hms_backend::infrastructure::repository::postgres::PostgresRoomRepository;
 use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
-use chrono::NaiveDate;
 use uuid::Uuid;
 
 #[sqlx::test]
 async fn analytics_kpis_calculation_is_accurate(pool: sqlx::PgPool) {
+    let hotel_id = Uuid::new_v4();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Analytics")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
     let room_repo = PostgresRoomRepository::new(pool.clone());
     let booking_repo = PostgresBookingRepository::new(pool.clone());
 
@@ -14,6 +21,7 @@ async fn analytics_kpis_calculation_is_accurate(pool: sqlx::PgPool) {
     for i in 1..=2 {
         let room = Room {
             id: Uuid::new_v4(),
+            hotel_id,
             room_number: format!("10{}", i),
             room_type: "SINGLE".to_string(),
             status: RoomStatus::Available,
@@ -23,10 +31,11 @@ async fn analytics_kpis_calculation_is_accurate(pool: sqlx::PgPool) {
     }
 
     // 2. Setup: Create 1 active booking for today
-    let room1 = room_repo.find_all().await.unwrap()[0].clone();
+    let room1 = room_repo.find_all(hotel_id).await.unwrap()[0].clone();
     let today = chrono::Utc::now().naive_utc().date();
     let booking = Booking {
         id: Uuid::new_v4(),
+        hotel_id,
         room_id: room1.id,
         guest_id: None,
         guest_name: "John Doe".to_string(),
@@ -38,7 +47,7 @@ async fn analytics_kpis_calculation_is_accurate(pool: sqlx::PgPool) {
     booking_repo.save(booking).await.unwrap();
 
     // 3. Act: Get Stats
-    let kpis = booking_repo.get_dashboard_stats().await.unwrap();
+    let kpis = booking_repo.get_dashboard_stats(hotel_id).await.unwrap();
 
     // 4. Assert
     assert_eq!(kpis.revenue_month_cents, 10000);

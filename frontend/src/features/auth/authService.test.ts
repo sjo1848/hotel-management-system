@@ -22,7 +22,11 @@ describe('authService', () => {
 
       const result = await authService.login('user', 'pass');
 
-      expect(client.post).toHaveBeenCalledWith('/auth/login', { username: 'user', password: 'pass' });
+      expect(client.post).toHaveBeenCalledWith('/auth/login', {
+        hotel_id: '00000000-0000-0000-0000-000000000001',
+        username: 'user',
+        password: 'pass',
+      });
       expect(result).toEqual(mockResponse.data);
     });
 

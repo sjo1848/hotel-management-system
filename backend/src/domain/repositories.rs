@@ -57,7 +57,7 @@ pub trait GuestRepository: Send + Sync {
 
 #[async_trait]
 pub trait UserRepository: Send + Sync {
-    async fn find_by_username(&self, username: &str) -> Result<Option<User>, String>;
+    async fn find_by_username(&self, hotel_id: Uuid, username: &str) -> Result<Option<User>, String>;
     async fn create(&self, user: User) -> Result<User, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<User>, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<User>, String>;

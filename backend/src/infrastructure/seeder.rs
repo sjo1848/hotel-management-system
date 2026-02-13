@@ -8,8 +8,10 @@ use crate::infrastructure::web::passwords::hash_password;
 pub const DEFAULT_HOTEL_ID: &str = "00000000-0000-0000-0000-000000000001";
 
 pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRepository>) {
+    let hotel_id = Uuid::parse_str(DEFAULT_HOTEL_ID).unwrap();
+
     // If admin already exists, skip
-    if let Ok(Some(_)) = user_repo.find_by_username(&config.admin_user).await {
+    if let Ok(Some(_)) = user_repo.find_by_username(hotel_id, &config.admin_user).await {
         return;
     }
 
@@ -17,8 +19,6 @@ pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRep
         Ok(value) => value,
         Err(_) => return,
     };
-
-    let hotel_id = Uuid::parse_str(DEFAULT_HOTEL_ID).unwrap();
 
     let _ = user_repo
         .create(User {

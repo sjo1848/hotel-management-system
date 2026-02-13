@@ -10,8 +10,14 @@ export type LoginResponse = {
 
 export type MeResponse = User;
 
-export const login = async (username: string, password: string) => {
-  const response = await client.post("/auth/login", { username, password });
+const DEFAULT_HOTEL_ID = "00000000-0000-0000-0000-000000000001";
+
+export const login = async (
+  username: string,
+  password: string,
+  hotelId: string = DEFAULT_HOTEL_ID,
+) => {
+  const response = await client.post("/auth/login", { hotel_id: hotelId, username, password });
   return response.data as LoginResponse;
 };
 

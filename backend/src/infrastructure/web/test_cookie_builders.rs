@@ -4,7 +4,7 @@ use super::handlers::{build_access_cookie, build_refresh_cookie};
 use crate::config::AppConfig;
 
 #[test]
-fn build_refresh_cookie_no_httponly_in_dev() {
+fn build_refresh_cookie_httponly_in_dev_without_secure() {
     let config = AppConfig {
         cookie_secure: false, // Dev config
         // other fields don't matter for this test, fill with dummy values
@@ -20,14 +20,17 @@ fn build_refresh_cookie_no_httponly_in_dev() {
         rate_limit_per_minute: 0,
         login_limit_per_minute: 0,
         cookie_samesite: String::from("Lax"),
+        db_max_connections: 0,
+        port: 0,
     };
     let token = "test_refresh_token";
     let cookie = build_refresh_cookie(token, &config);
-    assert!(!cookie.contains("HttpOnly"), "HttpOnly should be absent in dev config");
+    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in dev config");
+    assert!(!cookie.contains("Secure"), "Secure should be absent in dev config");
 }
 
 #[test]
-fn build_access_cookie_no_httponly_in_dev() {
+fn build_access_cookie_httponly_in_dev_without_secure() {
     let config = AppConfig {
         cookie_secure: false, // Dev config
         // other fields don't matter for this test, fill with dummy values
@@ -43,10 +46,13 @@ fn build_access_cookie_no_httponly_in_dev() {
         rate_limit_per_minute: 0,
         login_limit_per_minute: 0,
         cookie_samesite: String::from("Lax"),
+        db_max_connections: 0,
+        port: 0,
     };
     let token = "test_access_token";
     let cookie = build_access_cookie(token, &config);
-    assert!(!cookie.contains("HttpOnly"), "HttpOnly should be absent in dev config");
+    assert!(cookie.contains("HttpOnly"), "HttpOnly should be present in dev config");
+    assert!(!cookie.contains("Secure"), "Secure should be absent in dev config");
 }
 
 #[test]
@@ -66,6 +72,8 @@ fn build_refresh_cookie_with_httponly_in_prod() {
         rate_limit_per_minute: 0,
         login_limit_per_minute: 0,
         cookie_samesite: String::from("Lax"),
+        db_max_connections: 0,
+        port: 0,
     };
     let token = "test_refresh_token";
     let cookie = build_refresh_cookie(token, &config);
@@ -89,6 +97,8 @@ fn build_access_cookie_with_httponly_in_prod() {
         rate_limit_per_minute: 0,
         login_limit_per_minute: 0,
         cookie_samesite: String::from("Lax"),
+        db_max_connections: 0,
+        port: 0,
     };
     let token = "test_access_token";
     let cookie = build_access_cookie(token, &config);

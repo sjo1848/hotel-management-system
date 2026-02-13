@@ -94,6 +94,7 @@ mod tests {
     fn booking_validates_dates() {
         let booking = Booking {
             id: Uuid::new_v4(),
+            hotel_id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
             guest_id: None,
             guest_name: "Test".to_string(),
@@ -110,6 +111,7 @@ mod tests {
     fn booking_rejects_invalid_dates() {
         let booking = Booking {
             id: Uuid::new_v4(),
+            hotel_id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
             guest_id: None,
             guest_name: "Test".to_string(),
@@ -126,6 +128,7 @@ mod tests {
     fn booking_overlap_detection() {
         let booking = Booking {
             id: Uuid::new_v4(),
+            hotel_id: Uuid::new_v4(),
             room_id: Uuid::new_v4(),
             guest_id: None,
             guest_name: "Test".to_string(),

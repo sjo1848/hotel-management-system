@@ -16,10 +16,11 @@ impl PostgresUserRepository {
 
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
-    async fn find_by_username(&self, username: &str) -> Result<Option<User>, String> {
+    async fn find_by_username(&self, hotel_id: Uuid, username: &str) -> Result<Option<User>, String> {
         let record = sqlx::query(
-            "SELECT id, hotel_id, username, password_hash, role FROM users WHERE username = $1",
+            "SELECT id, hotel_id, username, password_hash, role FROM users WHERE hotel_id = $1 AND username = $2",
         )
+        .bind(hotel_id)
         .bind(username)
         .fetch_optional(&self.pool)
         .await

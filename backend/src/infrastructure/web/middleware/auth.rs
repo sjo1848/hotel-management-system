@@ -68,10 +68,6 @@ pub async fn auth_middleware(
     let claims = crate::infrastructure::web::jwt::decode_token(&token, &state.config.jwt_secret)
         .map_err(|_| DomainError::Unauthorized)?;
 
-    if requires_csrf(&req) && !csrf_valid(req.headers()) {
-        return Err(DomainError::InvalidInput("CSRF token inválido".to_string()));
-    }
-
     // Role check is now handled by RBAC middleware
 
     let mut req = req;

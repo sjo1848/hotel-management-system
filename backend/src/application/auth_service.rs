@@ -40,10 +40,10 @@ impl AuthService {
         (self.access_ttl_minutes * 60).max(0) as usize
     }
 
-    pub async fn verify_user(&self, username: &str, password: &str) -> Result<User, DomainError> {
+    pub async fn verify_user(&self, hotel_id: Uuid, username: &str, password: &str) -> Result<User, DomainError> {
         let user = self
             .user_repo
-            .find_by_username(username)
+            .find_by_username(hotel_id, username)
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::Unauthorized)?;
