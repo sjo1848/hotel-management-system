@@ -66,7 +66,7 @@ impl RoomService {
         self.room_repo
             .update_status(hotel_id, id, status)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_room_repo_error)
     }
 
     pub async fn mark_as_dirty(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
@@ -97,7 +97,36 @@ fn map_room_repo_error(message: String) -> DomainError {
         || normalized.contains("rooms_room_number_key")
     {
         DomainError::RoomAlreadyExists
+    } else if message == "ROOM_NOT_FOUND" {
+        DomainError::RoomNotFound
+    } else if normalized.contains("23503")
+        && (normalized.contains("rooms_hotel_id_fkey")
+            || normalized.contains("foreign key constraint"))
+    {
+        DomainError::HotelNotFound
     } else {
         DomainError::InfrastructureError(message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_room_repo_error_maps_hotel_fk_violation() {
+        let error = "db error: 23503 violation of foreign key constraint \"rooms_hotel_id_fkey\"";
+        assert!(matches!(
+            map_room_repo_error(error.to_string()),
+            DomainError::HotelNotFound
+        ));
+    }
+
+    #[test]
+    fn map_room_repo_error_maps_room_not_found_marker() {
+        assert!(matches!(
+            map_room_repo_error("ROOM_NOT_FOUND".to_string()),
+            DomainError::RoomNotFound
+        ));
     }
 }

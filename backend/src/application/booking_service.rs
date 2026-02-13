@@ -267,9 +267,46 @@ impl BookingService {
 }
 
 fn map_repo_error(message: String) -> DomainError {
-    if message == "BOOKING_OVERLAP" {
-        DomainError::RoomNotAvailable
-    } else {
-        DomainError::InfrastructureError(message)
+    match message.as_str() {
+        "BOOKING_OVERLAP" => DomainError::RoomNotAvailable,
+        "BOOKING_ROOM_NOT_FOUND" => DomainError::RoomNotFound,
+        "BOOKING_GUEST_NOT_FOUND" => DomainError::GuestNotFound,
+        "BOOKING_NOT_FOUND" => DomainError::BookingNotFound,
+        "BOOKING_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        "BOOKING_INVALID_DATES" => DomainError::InvalidBookingDates,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_repo_error_maps_functional_booking_errors() {
+        assert!(matches!(
+            map_repo_error("BOOKING_OVERLAP".to_string()),
+            DomainError::RoomNotAvailable
+        ));
+        assert!(matches!(
+            map_repo_error("BOOKING_ROOM_NOT_FOUND".to_string()),
+            DomainError::RoomNotFound
+        ));
+        assert!(matches!(
+            map_repo_error("BOOKING_GUEST_NOT_FOUND".to_string()),
+            DomainError::GuestNotFound
+        ));
+        assert!(matches!(
+            map_repo_error("BOOKING_NOT_FOUND".to_string()),
+            DomainError::BookingNotFound
+        ));
+        assert!(matches!(
+            map_repo_error("BOOKING_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
+        assert!(matches!(
+            map_repo_error("BOOKING_INVALID_DATES".to_string()),
+            DomainError::InvalidBookingDates
+        ));
     }
 }

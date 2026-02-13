@@ -163,7 +163,7 @@ impl BookingRepository for PostgresBookingRepository {
             BookingStatus::Cancelled => "CANCELLED",
         };
 
-        sqlx::query(
+        let result = sqlx::query(
             "UPDATE bookings
              SET guest_id = $1, guest_name = $2, check_in = $3, check_out = $4, total_price_cents = $5, status = $6
              WHERE hotel_id = $7 AND id = $8",
@@ -179,6 +179,10 @@ impl BookingRepository for PostgresBookingRepository {
         .execute(&self.pool)
         .await
         .map_err(map_db_error)?;
+
+        if result.rows_affected() == 0 {
+            return Err("BOOKING_NOT_FOUND".to_string());
+        }
 
         Ok(booking)
     }
@@ -504,6 +508,24 @@ fn map_db_error(error: sqlx::Error) -> String {
         if let Some(code) = db_error.code() {
             if code == "23P01" {
                 return "BOOKING_OVERLAP".to_string();
+            }
+            if code == "23514" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "valid_dates" {
+                    return "BOOKING_INVALID_DATES".to_string();
+                }
+            }
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "fk_bookings_hotel_room" {
+                    return "BOOKING_ROOM_NOT_FOUND".to_string();
+                }
+                if constraint_name == "fk_bookings_hotel_guest" {
+                    return "BOOKING_GUEST_NOT_FOUND".to_string();
+                }
+                if constraint_name == "bookings_hotel_id_fkey" {
+                    return "BOOKING_HOTEL_NOT_FOUND".to_string();
+                }
             }
         }
     }

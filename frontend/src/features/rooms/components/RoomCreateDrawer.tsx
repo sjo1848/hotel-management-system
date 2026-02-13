@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { createRoom } from "../services/roomService";
+import { getErrorMessage } from "@/api/errors";
 
 type RoomCreateDrawerProps = {
   isOpen: boolean;
@@ -59,13 +60,13 @@ const RoomCreateDrawer = ({
       onSuccess();
       onClose();
       setFormData({ room_number: "", room_type: "Standard", price_cents: 0 }); // Reset
-    } catch (error: any) {
-        const errorMsg = error.response?.data?.message || "No se pudo crear la habitación";
-        toast({
-            title: "Error al crear",
-            description: errorMsg,
-            variant: "error",
-        });
+    } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error, "No se pudo crear la habitación");
+      toast({
+        title: "Error al crear",
+        description: errorMsg,
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

@@ -146,13 +146,17 @@ impl RoomRepository for PostgresRoomRepository {
             RoomStatus::Maintenance => "MAINTENANCE",
         };
 
-        sqlx::query("UPDATE rooms SET status = $1 WHERE hotel_id = $2 AND id = $3")
+        let result = sqlx::query("UPDATE rooms SET status = $1 WHERE hotel_id = $2 AND id = $3")
             .bind(status_str)
             .bind(hotel_id)
             .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        if result.rows_affected() == 0 {
+            return Err("ROOM_NOT_FOUND".to_string());
+        }
 
         Ok(())
     }

@@ -92,12 +92,16 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn delete(&self, hotel_id: Uuid, id: Uuid) -> Result<(), String> {
-        sqlx::query("DELETE FROM users WHERE hotel_id = $1 AND id = $2")
+        let result = sqlx::query("DELETE FROM users WHERE hotel_id = $1 AND id = $2")
             .bind(hotel_id)
             .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
+
+        if result.rows_affected() == 0 {
+            return Err("USER_NOT_FOUND".to_string());
+        }
         Ok(())
     }
 }

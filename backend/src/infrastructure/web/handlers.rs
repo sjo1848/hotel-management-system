@@ -1,4 +1,8 @@
 use crate::domain::errors::DomainError;
+use crate::infrastructure::web::validation::{
+    parse_booking_status_input, validate_booking_dates, validate_email, validate_len_range,
+    validate_non_empty_trimmed, validate_positive_amount, validate_role,
+};
 use crate::AppState;
 use axum::{
     extract::{ConnectInfo, Path, Query, State},
@@ -34,6 +38,11 @@ impl IntoResponse for DomainError {
                 "HOTEL_NOT_FOUND",
                 "El hotel solicitado no existe".to_string(),
             ),
+            DomainError::HotelAlreadyExists => (
+                StatusCode::CONFLICT,
+                "HOTEL_ALREADY_EXISTS",
+                "Ya existe un hotel con ese nombre".to_string(),
+            ),
             DomainError::RoomAlreadyExists => (
                 StatusCode::CONFLICT,
                 "ROOM_ALREADY_EXISTS",
@@ -53,6 +62,11 @@ impl IntoResponse for DomainError {
                 StatusCode::CONFLICT,
                 "USER_ALREADY_EXISTS",
                 "Ya existe un usuario con ese nombre en este hotel".to_string(),
+            ),
+            DomainError::UserNotFound => (
+                StatusCode::NOT_FOUND,
+                "USER_NOT_FOUND",
+                "El usuario solicitado no existe".to_string(),
             ),
             DomainError::InvalidRoomStatusTransition => (
                 StatusCode::BAD_REQUEST,
@@ -227,11 +241,17 @@ pub async fn create_room_handler(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<CreateRoomRequest>,
 ) -> Result<(StatusCode, Json<Value>), DomainError> {
+    let operations = state.operations_context();
     let ip = addr.ip().to_string();
     let user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    validate_non_empty_trimmed("room_number", &payload.room_number)?;
+    validate_len_range("room_number", &payload.room_number, 1, 10)?;
+    validate_non_empty_trimmed("room_type", &payload.room_type)?;
+    validate_len_range("room_type", &payload.room_type, 1, 50)?;
+    validate_positive_amount("price_cents", payload.price_cents)?;
 
-    let room = state
+    let room = operations
         .room_service
         .create_room(
             hotel_id,
@@ -273,6 +293,7 @@ pub async fn update_room_status_handler(
     Path(room_id): Path<Uuid>,
     Json(payload): Json<UpdateRoomStatusRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let status = match payload.status.to_uppercase().as_str() {
         "AVAILABLE" => crate::domain::models::RoomStatus::Available,
@@ -286,7 +307,7 @@ pub async fn update_room_status_handler(
         }
     };
 
-    state
+    operations
         .room_service
         .update_room_status(hotel_id, room_id, status)
         .await?;
@@ -322,15 +343,14 @@ pub async fn create_booking_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Json(payload): Json<CreateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    if payload.guest_name.trim().is_empty() {
-        return Err(DomainError::InvalidInput(
-            "El nombre del huésped es obligatorio".to_string(),
-        ));
-    }
+    validate_non_empty_trimmed("guest_name", &payload.guest_name)?;
+    validate_len_range("guest_name", &payload.guest_name, 1, 100)?;
+    validate_booking_dates(payload.check_in, payload.check_out)?;
 
     // Especificamos el tipo para evitar el error de "never type fallback"
-    let booking: crate::domain::models::Booking = state
+    let booking: crate::domain::models::Booking = booking_ctx
         .booking_service
         .execute(
             hotel_id,
@@ -350,14 +370,15 @@ pub async fn list_bookings_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Query(params): Query<BookingFilterParams>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let bookings: Vec<crate::domain::models::Booking> = match (params.start, params.end) {
-        (Some(start), Some(end)) => state
+        (Some(start), Some(end)) => booking_ctx
             .booking_service
             .list_bookings_in_range(hotel_id, start, end)
             .await
             .map_err(DomainError::InfrastructureError)?,
-        _ => state
+        _ => booking_ctx
             .booking_service
             .list_bookings(hotel_id)
             .await
@@ -372,29 +393,24 @@ pub async fn update_booking_handler(
     Path(booking_id): Path<Uuid>,
     Json(payload): Json<UpdateBookingRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
+    let actor_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    if let Some(name) = payload.guest_name.as_deref() {
+        validate_non_empty_trimmed("guest_name", name)?;
+        validate_len_range("guest_name", name, 1, 100)?;
+    }
+    if let (Some(check_in), Some(check_out)) = (payload.check_in, payload.check_out) {
+        validate_booking_dates(check_in, check_out)?;
+    }
+    let status = parse_booking_status_input(payload.status.as_deref())?;
 
-    let status = match payload.status.as_deref() {
-        Some("Confirmed") | Some("CONFIRMED") => {
-            Some(crate::domain::models::BookingStatus::Confirmed)
-        }
-        Some("CheckedIn") | Some("CHECKED_IN") => {
-            Some(crate::domain::models::BookingStatus::CheckedIn)
-        }
-        Some("CheckedOut") | Some("CHECKED_OUT") => {
-            Some(crate::domain::models::BookingStatus::CheckedOut)
-        }
-        Some("Cancelled") | Some("CANCELLED") => {
-            Some(crate::domain::models::BookingStatus::Cancelled)
-        }
-        _ => None,
-    };
-
-    let booking: crate::domain::models::Booking = state
-        .booking_service
-        .update_booking(
+    let booking: crate::domain::models::Booking = booking_ctx
+        .booking_transaction_service
+        .update_booking_transactional(
             hotel_id,
             booking_id,
+            Some(actor_user_id),
             payload.guest_id,
             payload.guest_name,
             payload.check_in,
@@ -411,9 +427,10 @@ pub async fn list_guests_handler(
 
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
-    let guests = state.guest_service.list_guests(hotel_id).await?;
+    let guests = operations.guest_service.list_guests(hotel_id).await?;
 
     Ok(Json(json!(guests)))
 }
@@ -425,9 +442,14 @@ pub async fn create_guest_handler(
 
     Json(payload): Json<CreateGuestRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    validate_non_empty_trimmed("full_name", &payload.full_name)?;
+    validate_len_range("full_name", &payload.full_name, 2, 120)?;
+    validate_email(&payload.email)?;
+    validate_len_range("email", &payload.email, 5, 150)?;
 
-    let created = state
+    let created = operations
         .guest_service
         .create_guest(hotel_id, payload.full_name, payload.email, payload.phone)
         .await?;
@@ -449,17 +471,14 @@ pub async fn login_handler(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Response, DomainError> {
+    let auth_ctx = state.auth_context();
     let ip = addr.ip().to_string();
     let hotel_id_input = payload.hotel_id.trim();
-
-    if hotel_id_input.is_empty()
-        || payload.username.trim().is_empty()
-        || payload.password.trim().is_empty()
-    {
-        return Err(DomainError::InvalidInput(
-            "Hotel, usuario y contraseña son obligatorios".to_string(),
-        ));
-    }
+    validate_non_empty_trimmed("hotel_id", hotel_id_input)?;
+    validate_non_empty_trimmed("username", &payload.username)?;
+    validate_len_range("username", &payload.username, 3, 80)?;
+    validate_non_empty_trimmed("password", &payload.password)?;
+    validate_len_range("password", &payload.password, 8, 128)?;
 
     let hotel_id = if let Ok(uuid) = Uuid::parse_str(hotel_id_input) {
         uuid
@@ -475,7 +494,7 @@ pub async fn login_handler(
             })?
     };
 
-    let user = match state
+    let user = match auth_ctx
         .auth_service
         .verify_user(hotel_id, &payload.username, &payload.password)
         .await
@@ -491,7 +510,7 @@ pub async fn login_handler(
         }
     };
 
-    let exp = state.auth_service.access_exp();
+    let exp = auth_ctx.auth_service.access_exp();
 
     let claims = crate::infrastructure::web::jwt::Claims {
         sub: user.id.to_string(),
@@ -500,11 +519,14 @@ pub async fn login_handler(
         exp,
     };
 
-    let access_token =
-        crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
-            .map_err(DomainError::InfrastructureError)?;
+    let access_token = crate::infrastructure::web::jwt::encode_token(
+        &claims,
+        &state.config.jwt_secret,
+        &state.config.jwt_kid,
+    )
+    .map_err(DomainError::InfrastructureError)?;
 
-    let (refresh_token, _): (String, crate::domain::models::RefreshToken) = state
+    let (refresh_token, _): (String, crate::domain::models::RefreshToken) = auth_ctx
         .auth_service
         .issue_refresh_token(user.hotel_id, user.id)
         .await?;
@@ -527,7 +549,7 @@ pub async fn login_handler(
         ]),
         Json(json!(LoginResponse {
             access_token,
-            expires_in: state.auth_service.access_ttl_seconds(),
+            expires_in: auth_ctx.auth_service.access_ttl_seconds(),
             hotel_id: user.hotel_id,
             role: user.role,
         })),
@@ -540,6 +562,7 @@ pub async fn refresh_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
+    let auth_ctx = state.auth_context();
     // CSRF check is now performed by auth_middleware for this endpoint
 
     let refresh_token = payload
@@ -556,19 +579,19 @@ pub async fn refresh_handler(
         Uuid,
         String,
         crate::domain::models::RefreshToken,
-    ) = state
+    ) = auth_ctx
         .auth_service
         .rotate_refresh_token(&refresh_token)
         .await?;
 
-    let user: crate::domain::models::User = state
+    let user: crate::domain::models::User = auth_ctx
         .user_repo
         .find_by_id(hotel_id, user_id)
         .await
         .map_err(DomainError::InfrastructureError)?
         .ok_or(DomainError::Unauthorized)?;
 
-    let exp = state.auth_service.access_exp();
+    let exp = auth_ctx.auth_service.access_exp();
     let claims = crate::infrastructure::web::jwt::Claims {
         sub: user.id.to_string(),
         hotel_id: user.hotel_id.to_string(),
@@ -576,9 +599,12 @@ pub async fn refresh_handler(
         exp,
     };
 
-    let access_token =
-        crate::infrastructure::web::jwt::encode_token(&claims, &state.config.jwt_secret)
-            .map_err(DomainError::InfrastructureError)?;
+    let access_token = crate::infrastructure::web::jwt::encode_token(
+        &claims,
+        &state.config.jwt_secret,
+        &state.config.jwt_kid,
+    )
+    .map_err(DomainError::InfrastructureError)?;
 
     let refresh_cookie = build_refresh_cookie(&new_refresh, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
@@ -594,7 +620,7 @@ pub async fn refresh_handler(
         ]),
         Json(json!(LoginResponse {
             access_token,
-            expires_in: state.auth_service.access_ttl_seconds(),
+            expires_in: auth_ctx.auth_service.access_ttl_seconds(),
             hotel_id: user.hotel_id,
             role: user.role,
         })),
@@ -608,6 +634,7 @@ pub async fn logout_handler(
     headers: HeaderMap,
     payload: Option<Json<RefreshRequest>>,
 ) -> Result<Response, DomainError> {
+    let auth_ctx = state.auth_context();
     let ip = addr.ip().to_string();
     // CSRF check is now performed by auth_middleware for this endpoint
 
@@ -633,11 +660,11 @@ pub async fn logout_handler(
             .into_response());
     }
 
-    let (hotel_id, user_id) = state
+    let (hotel_id, user_id) = auth_ctx
         .auth_service
         .revoke_refresh_token(&refresh_token)
         .await?;
-    state
+    auth_ctx
         .auth_service
         .revoke_user_tokens(hotel_id, user_id)
         .await?;
@@ -665,12 +692,13 @@ pub async fn me_handler(
 
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
+    let auth_ctx = state.auth_context();
     let user_id = uuid::Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
 
     let hotel_id =
         uuid::Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
-    let user: crate::domain::models::User = state
+    let user: crate::domain::models::User = auth_ctx
         .user_repo
         .find_by_id(hotel_id, user_id)
         .await
@@ -701,8 +729,9 @@ pub async fn list_users_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
+    let auth_ctx = state.auth_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let users: Vec<crate::domain::models::User> = state
+    let users: Vec<crate::domain::models::User> = auth_ctx
         .user_repo
         .find_all(hotel_id)
         .await
@@ -719,6 +748,7 @@ pub async fn delete_user_handler(
     Path(user_id): Path<Uuid>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let auth_ctx = state.auth_context();
     let current_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
@@ -728,11 +758,11 @@ pub async fn delete_user_handler(
         ));
     }
 
-    state
+    auth_ctx
         .user_repo
         .delete(hotel_id, user_id)
         .await
-        .map_err(DomainError::InfrastructureError)?;
+        .map_err(map_user_repo_error)?;
 
     state
         .audit_service
@@ -752,12 +782,14 @@ pub async fn create_user_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let auth_ctx = state.auth_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
-        return Err(DomainError::InvalidInput(
-            "Usuario y contraseña son obligatorios".to_string(),
-        ));
-    }
+    validate_non_empty_trimmed("username", &payload.username)?;
+    validate_len_range("username", &payload.username, 3, 80)?;
+    validate_non_empty_trimmed("password", &payload.password)?;
+    validate_len_range("password", &payload.password, 8, 128)?;
+    validate_non_empty_trimmed("role", &payload.role)?;
+    validate_role(&payload.role)?;
 
     let hash = crate::infrastructure::web::passwords::hash_password(&payload.password)
         .map_err(DomainError::InfrastructureError)?;
@@ -770,7 +802,7 @@ pub async fn create_user_handler(
         role: payload.role,
     };
 
-    let created: crate::domain::models::User = state
+    let created: crate::domain::models::User = auth_ctx
         .user_repo
         .create(user)
         .await
@@ -793,8 +825,37 @@ fn map_user_repo_error(message: String) -> DomainError {
         || normalized.contains("users_username_key")
     {
         DomainError::UserAlreadyExists
+    } else if message == "USER_NOT_FOUND" {
+        DomainError::UserNotFound
+    } else if normalized.contains("23503")
+        && (normalized.contains("users_hotel_id_fkey")
+            || normalized.contains("foreign key constraint"))
+    {
+        DomainError::HotelNotFound
     } else {
         DomainError::InfrastructureError(message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_user_repo_error_maps_hotel_fk_violation() {
+        let error = "db error: 23503 violation of foreign key constraint \"users_hotel_id_fkey\"";
+        assert!(matches!(
+            map_user_repo_error(error.to_string()),
+            DomainError::HotelNotFound
+        ));
+    }
+
+    #[test]
+    fn map_user_repo_error_maps_user_not_found_marker() {
+        assert!(matches!(
+            map_user_repo_error("USER_NOT_FOUND".to_string()),
+            DomainError::UserNotFound
+        ));
     }
 }
 
@@ -922,6 +983,11 @@ pub async fn create_hotel_handler(
     Json(payload): Json<CreateHotelRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let _ = claims;
+    validate_non_empty_trimmed("name", &payload.name)?;
+    validate_len_range("name", &payload.name, 2, 100)?;
+    if let Some(address) = payload.address.as_deref() {
+        validate_len_range("address", address, 2, 250)?;
+    }
     let hotel = state
         .hotel_service
         .create_hotel(payload.name, payload.address)
@@ -942,9 +1008,15 @@ pub async fn add_extra_charge_handler(
     Path(booking_id): Path<Uuid>,
     Json(payload): Json<AddExtraChargeRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    validate_non_empty_trimmed("description", &payload.description)?;
+    validate_len_range("description", &payload.description, 2, 250)?;
+    validate_non_empty_trimmed("category", &payload.category)?;
+    validate_len_range("category", &payload.category, 2, 50)?;
+    validate_positive_amount("amount_cents", payload.amount_cents)?;
 
-    let charge = state
+    let charge = booking_ctx
         .billing_service
         .add_extra_charge(
             hotel_id,
@@ -963,9 +1035,10 @@ pub async fn list_extra_charges_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Path(booking_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
-    let charges = state
+    let charges = booking_ctx
         .billing_service
         .list_extra_charges(hotel_id, booking_id)
         .await?;
@@ -981,8 +1054,9 @@ pub async fn get_current_balance_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let (total, cash, card) = state
+    let (total, cash, card) = operations
         .cash_closure_service
         .get_current_balance(hotel_id)
         .await?;
@@ -999,10 +1073,14 @@ pub async fn close_cash_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Json(payload): Json<CashClosureRequest>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
+    if let Some(notes) = payload.notes.as_deref() {
+        validate_len_range("notes", notes, 0, 500)?;
+    }
 
-    let closure = state
+    let closure = operations
         .cash_closure_service
         .close_cash(hotel_id, user_id, payload.notes)
         .await?;
@@ -1063,8 +1141,9 @@ pub async fn list_invoices_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let invoices = state
+    let invoices = booking_ctx
         .invoice_repo
         .find_all(hotel_id)
         .await
@@ -1077,8 +1156,9 @@ pub async fn get_invoice_by_booking_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Path(booking_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
+    let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let invoice = state
+    let invoice = booking_ctx
         .invoice_repo
         .find_by_booking(hotel_id, booking_id)
         .await
@@ -1102,8 +1182,9 @@ pub async fn list_dirty_rooms_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let rooms = state
+    let rooms = operations
         .housekeeping_service
         .list_dirty_rooms(hotel_id)
         .await?;
@@ -1126,8 +1207,9 @@ pub async fn start_cleaning_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Path(room_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    state
+    operations
         .housekeeping_service
         .start_cleaning(hotel_id, room_id)
         .await?;
@@ -1150,8 +1232,9 @@ pub async fn finish_cleaning_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Path(room_id): Path<Uuid>,
 ) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    state
+    operations
         .housekeeping_service
         .finish_cleaning(hotel_id, room_id)
         .await?;

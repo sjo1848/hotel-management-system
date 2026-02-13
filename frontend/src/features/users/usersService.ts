@@ -1,4 +1,4 @@
-import client from "@/api/client";
+import { apiDelete, apiGet, apiPost } from "@/api/sdk";
 import { User, UserRole } from "@/types/domain";
 
 export type CreateUserPayload = {
@@ -8,16 +8,13 @@ export type CreateUserPayload = {
 };
 
 export const getUsers = async () => {
-  const response = await client.get("/users");
-  return response.data as User[];
+  return apiGet<User[]>("/users");
 };
 
 export const createUser = async (payload: CreateUserPayload) => {
-  const response = await client.post("/users", payload);
-  return response.data as User;
+  return apiPost<CreateUserPayload, User>("/users", payload);
 };
 
 export const deleteUser = async (id: string) => {
-  const response = await client.delete(`/users/${id}`);
-  return response.data;
+  return apiDelete<{ status: string }>(`/users/${id}`);
 };

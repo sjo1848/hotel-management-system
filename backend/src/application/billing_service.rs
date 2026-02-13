@@ -47,7 +47,7 @@ impl BillingService {
         };
 
         let result: Result<ExtraCharge, String> = self.extra_charge_repo.add(charge).await;
-        let saved = result.map_err(DomainError::InfrastructureError)?;
+        let saved = result.map_err(map_extra_charge_repo_error)?;
 
         // Actualizar el total_price_cents de la reserva sumando el nuevo cargo
         let mut updated_booking = booking;
@@ -69,5 +69,30 @@ impl BillingService {
             .find_by_booking(hotel_id, booking_id)
             .await;
         result.map_err(DomainError::InfrastructureError)
+    }
+}
+
+fn map_extra_charge_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "EXTRA_CHARGE_BOOKING_NOT_FOUND" => DomainError::BookingNotFound,
+        "EXTRA_CHARGE_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_extra_charge_repo_error_maps_functional_markers() {
+        assert!(matches!(
+            map_extra_charge_repo_error("EXTRA_CHARGE_BOOKING_NOT_FOUND".to_string()),
+            DomainError::BookingNotFound
+        ));
+        assert!(matches!(
+            map_extra_charge_repo_error("EXTRA_CHARGE_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
     }
 }

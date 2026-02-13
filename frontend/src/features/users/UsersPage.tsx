@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus, Shield, MoreHorizontal, Fingerprint } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,44 +13,41 @@ import { getUsers, deleteUser } from "./usersService";
 import { User } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import UserCreateDrawer from "./components/UserCreateDrawer";
+import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { getErrorMessage } from "@/api/errors";
 
 const UsersPage = () => {
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const usersQueryKey = "users:list";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const data = await getUsers();
-      setUsers(data);
-    } catch (error) {
-      console.error("Failed to fetch users", error);
-      toast({ 
-        title: "Acceso Denegado", 
-        description: "No tienes permisos para gestionar usuarios.", 
-        variant: "error" 
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: usersData,
+    isLoading: loading,
+    error: usersError,
+    refetch: refetchUsers,
+  } = useResourceQuery<User[]>({
+    queryKey: usersQueryKey,
+    queryFn: getUsers,
+    staleTimeMs: 10_000,
+  });
+  const users = useMemo(() => usersData ?? [], [usersData]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar este usuario?")) return;
     try {
       await deleteUser(id);
       toast({ title: "Usuario eliminado", variant: "success" });
-      fetchUsers();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo eliminar el usuario", variant: "error" });
+      invalidateResource(usersQueryKey);
+      await refetchUsers();
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo eliminar el usuario"),
+        variant: "error",
+      });
     }
   };
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
 
   const columns: Column<User>[] = [
     {
@@ -128,6 +125,11 @@ const UsersPage = () => {
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
+        {usersError && (
+          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
+            {getErrorMessage(usersError, "No tienes permisos para gestionar usuarios.")}
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={users}
@@ -140,7 +142,11 @@ const UsersPage = () => {
       <UserCreateDrawer 
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchUsers}
+        onSuccess={async () => {
+          invalidateResource(usersQueryKey);
+          await refetchUsers();
+          toast({ title: "Listado actualizado", variant: "success" });
+        }}
       />
     </div>
   );

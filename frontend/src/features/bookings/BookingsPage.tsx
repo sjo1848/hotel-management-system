@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, CheckCircle, Clock, XCircle, MoreVertical, Filter, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,41 +16,43 @@ import { useToast } from "@/components/ui/toast";
 import { downloadCSV, cn } from "@/lib/utils";
 import BookingEditDrawer from "./components/BookingEditDrawer";
 import BookingDetailsSheet from "./components/BookingDetailsSheet";
+import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { getErrorMessage } from "@/api/errors";
 
 const BookingsPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
+  const bookingQueryKey = "bookings:list";
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedBooking, setSelectedRoom] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      const data = await getBookings();
-      setBookings(data);
-    } catch (error) {
-      console.error("Failed to fetch bookings", error);
-      toast({ title: "Error", description: "No se pudieron cargar las reservas", variant: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: bookingsData,
+    isLoading: loading,
+    error: bookingLoadError,
+    refetch: refetchBookings,
+  } = useResourceQuery<Booking[]>({
+    queryKey: bookingQueryKey,
+    queryFn: getBookings,
+    staleTimeMs: 10_000,
+  });
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const bookings = useMemo(() => bookingsData ?? [], [bookingsData]);
 
   const handleCancel = async (id: string) => {
     try {
       await updateBooking(id, { status: "Cancelled" });
       toast({ title: "Reserva cancelada", variant: "success" });
-      fetchBookings();
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo cancelar la reserva", variant: "error" });
+      invalidateResource(bookingQueryKey);
+      await refetchBookings();
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo cancelar la reserva"),
+        variant: "error",
+      });
     }
   };
 
@@ -63,7 +65,7 @@ const BookingsPage = () => {
     toast({ title: "Exportación exitosa", description: "El archivo CSV ha sido generado", variant: "success" });
   };
 
-  const filteredBookings = bookings.filter(b => 
+  const filteredBookings = bookings.filter((b) =>
     filterStatus === "all" ? true : b.status === filterStatus
   );
 
@@ -205,6 +207,11 @@ const BookingsPage = () => {
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
+        {bookingLoadError && (
+          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
+            {bookingLoadError}
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={filteredBookings}
@@ -223,7 +230,10 @@ const BookingsPage = () => {
               setIsEditOpen(false);
               setSelectedRoom(null);
             }}
-            onSuccess={fetchBookings}
+            onSuccess={async () => {
+              invalidateResource(bookingQueryKey);
+              await refetchBookings();
+            }}
             onViewDetails={() => setIsDetailsOpen(true)}
           />
           <BookingDetailsSheet

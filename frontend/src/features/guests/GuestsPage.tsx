@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { User, Mail, Phone, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -8,31 +8,27 @@ import { useToast } from "@/components/ui/toast";
 import { format } from "date-fns";
 import GuestCreateDrawer from "./components/GuestCreateDrawer";
 import GuestDetailsSheet from "./components/GuestDetailsSheet";
+import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { getErrorMessage } from "@/api/errors";
 
 const GuestsPage = () => {
   const { toast } = useToast();
-  const [guests, setGuests] = useState<Guest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const guestsQueryKey = "guests:list";
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
 
-  const fetchGuests = async () => {
-    setLoading(true);
-    try {
-      const data = await getGuests();
-      setGuests(data);
-    } catch (error) {
-      console.error("Failed to fetch guests", error);
-      toast({ title: "Error", description: "No se pudo cargar la lista de huéspedes", variant: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchGuests();
-  }, []);
+  const {
+    data: guestsData,
+    isLoading: loading,
+    error: guestsError,
+    refetch: refetchGuests,
+  } = useResourceQuery<Guest[]>({
+    queryKey: guestsQueryKey,
+    queryFn: getGuests,
+    staleTimeMs: 10_000,
+  });
+  const guests = useMemo(() => guestsData ?? [], [guestsData]);
 
   const columns: Column<Guest>[] = [
     {
@@ -123,6 +119,11 @@ const GuestsPage = () => {
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
+        {guestsError && (
+          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
+            {getErrorMessage(guestsError, "No se pudo cargar la lista de huéspedes")}
+          </div>
+        )}
         <DataTable
           columns={columns}
           data={guests}
@@ -135,7 +136,11 @@ const GuestsPage = () => {
       <GuestCreateDrawer 
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchGuests}
+        onSuccess={async () => {
+          invalidateResource(guestsQueryKey);
+          await refetchGuests();
+          toast({ title: "Listado actualizado", variant: "success" });
+        }}
       />
 
       <GuestDetailsSheet

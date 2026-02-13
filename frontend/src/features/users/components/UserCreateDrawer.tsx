@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { createUser, CreateUserPayload } from "../usersService";
 import { UserRole } from "@/types/domain";
+import { getErrorMessage } from "@/api/errors";
 
 type UserCreateDrawerProps = {
   isOpen: boolean;
@@ -56,13 +57,13 @@ const UserCreateDrawer = ({
       onSuccess();
       onClose();
       setFormData({ username: "", password: "", role: "ops" }); // Reset
-    } catch (error: any) {
-        const errorMsg = error.response?.data?.message || "No se pudo crear el usuario";
-        toast({
-            title: "Error de Registro",
-            description: errorMsg,
-            variant: "error",
-        });
+    } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error, "No se pudo crear el usuario");
+      toast({
+        title: "Error de Registro",
+        description: errorMsg,
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

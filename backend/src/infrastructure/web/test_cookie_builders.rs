@@ -10,6 +10,8 @@ fn build_refresh_cookie_httponly_in_dev_without_secure() {
         // other fields don't matter for this test, fill with dummy values
         database_url: String::new(),
         jwt_secret: String::new(),
+        jwt_kid: String::from("test"),
+        jwt_previous_secret: None,
         auth_required: false,
         cors_origin: String::new(),
         admin_user: String::new(),
@@ -46,6 +48,8 @@ fn build_access_cookie_httponly_in_dev_without_secure() {
         // other fields don't matter for this test, fill with dummy values
         database_url: String::new(),
         jwt_secret: String::new(),
+        jwt_kid: String::from("test"),
+        jwt_previous_secret: None,
         auth_required: false,
         cors_origin: String::new(),
         admin_user: String::new(),
@@ -82,6 +86,8 @@ fn build_refresh_cookie_with_httponly_in_prod() {
         // other fields don't matter for this test, fill with dummy values
         database_url: String::new(),
         jwt_secret: String::new(),
+        jwt_kid: String::from("test"),
+        jwt_previous_secret: None,
         auth_required: false,
         cors_origin: String::new(),
         admin_user: String::new(),
@@ -114,6 +120,8 @@ fn build_access_cookie_with_httponly_in_prod() {
         // other fields don't matter for this test, fill with dummy values
         database_url: String::new(),
         jwt_secret: String::new(),
+        jwt_kid: String::from("test"),
+        jwt_previous_secret: None,
         auth_required: false,
         cors_origin: String::new(),
         admin_user: String::new(),

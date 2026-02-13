@@ -32,7 +32,7 @@ impl CashClosureRepository for PostgresCashClosureRepository {
         .bind(&closure.notes)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(closure)
     }
@@ -62,4 +62,21 @@ impl CashClosureRepository for PostgresCashClosureRepository {
             })
             .collect())
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "fk_cash_closures_hotel_user" {
+                    return "CASH_CLOSURE_USER_NOT_FOUND".to_string();
+                }
+                if constraint_name == "cash_closures_hotel_id_fkey" {
+                    return "CASH_CLOSURE_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

@@ -1,4 +1,4 @@
-import client from "@/api/client";
+import { apiGet, apiPatch, apiPost } from "@/api/sdk";
 import { Booking } from "@/types/domain";
 
 export type CreateBookingPayload = {
@@ -15,34 +15,18 @@ export type BookingFilterParams = {
 };
 
 export const createBooking = async (bookingData: CreateBookingPayload) => {
-  try {
-    const response = await client.post("/bookings", bookingData);
-    return response.data as Booking;
-  } catch (error) {
-    console.error("Error creando reserva:", error);
-    throw error;
-  }
+  return apiPost<CreateBookingPayload, Booking>("/bookings", bookingData);
 };
 
 export const getBookings = async (start?: string, end?: string): Promise<Booking[]> => {
-  const params = { start, end };
-  const response = await client.get("/bookings", {
-    params,
-  });
-  return response.data as Booking[];
+  return apiGet<Booking[]>("/bookings", { start, end });
 };
 
 export const updateBooking = async (
   id: string,
   data: Partial<Pick<Booking, "guest_id" | "guest_name" | "check_in" | "check_out" | "status">>,
 ) => {
-  try {
-    const response = await client.patch(`/bookings/${id}`, data);
-    return response.data as Booking;
-  } catch (error) {
-    console.error("Error actualizando reserva:", error);
-    throw error;
-  }
+  return apiPatch<typeof data, Booking>(`/bookings/${id}`, data);
 };
 
 const bookingService = {

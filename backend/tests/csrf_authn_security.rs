@@ -5,6 +5,7 @@ use hms_backend::app_state::AppState;
 use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
+    booking_transaction_service::BookingTransactionService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
     hotel_service::HotelService, housekeeping_service::HousekeepingService,
     reporting_service::ReportingService, room_service::RoomService,
@@ -111,6 +112,23 @@ async fn csrf_and_authn_contract_is_enforced(pool: sqlx::PgPool) {
     )
     .await;
     assert_eq!(refresh_ok.status(), StatusCode::OK);
+    let rotated_cookies = collect_set_cookie_values(&refresh_ok);
+    let rotated_csrf = extract_cookie_value(&rotated_cookies, "csrf_token").unwrap();
+
+    // Replay del refresh token anterior debe fallar (token revocado tras rotación).
+    let refresh_replay = send_request(
+        &app,
+        Method::POST,
+        "/api/v1/auth/refresh",
+        None,
+        Some(format!(
+            "refresh_token={}; csrf_token={}",
+            refresh_token, rotated_csrf
+        )),
+        Some(&rotated_csrf),
+    )
+    .await;
+    assert_eq!(refresh_replay.status(), StatusCode::UNAUTHORIZED);
 
     // Protected endpoint without token must return 401.
     let users_no_auth = send_request(&app, Method::GET, "/api/v1/users", None, None, None).await;
@@ -214,6 +232,7 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         audit_service.clone(),
         invoice_repo.clone(),
     ));
+    let booking_transaction_service = Arc::new(BookingTransactionService::new(pool.clone()));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
@@ -242,6 +261,7 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         room_repo,
         hotel_repo,
         booking_service,
+        booking_transaction_service,
         analytics_service,
         reporting_service,
         guest_service,

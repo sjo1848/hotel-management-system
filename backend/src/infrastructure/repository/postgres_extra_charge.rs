@@ -29,7 +29,7 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
         .bind(&charge.category)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(charge)
     }
@@ -76,4 +76,21 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
             .map_err(|e| e.to_string())?;
         Ok(())
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "fk_extra_charges_hotel_booking" {
+                    return "EXTRA_CHARGE_BOOKING_NOT_FOUND".to_string();
+                }
+                if constraint_name == "extra_charges_hotel_id_fkey" {
+                    return "EXTRA_CHARGE_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

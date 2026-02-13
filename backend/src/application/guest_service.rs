@@ -60,7 +60,26 @@ fn map_guest_repo_error(message: String) -> DomainError {
         || normalized.contains("guests_email_key")
     {
         DomainError::GuestAlreadyExists
+    } else if normalized.contains("23503")
+        && (normalized.contains("guests_hotel_id_fkey")
+            || normalized.contains("foreign key constraint"))
+    {
+        DomainError::HotelNotFound
     } else {
         DomainError::InfrastructureError(message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_guest_repo_error_maps_hotel_fk_violation() {
+        let error = "db error: 23503 violation of foreign key constraint \"guests_hotel_id_fkey\"";
+        assert!(matches!(
+            map_guest_repo_error(error.to_string()),
+            DomainError::HotelNotFound
+        ));
     }
 }

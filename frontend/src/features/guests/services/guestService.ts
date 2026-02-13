@@ -1,14 +1,8 @@
-import client from "@/api/client";
+import { apiGet, apiPost } from "@/api/sdk";
 import { Guest } from "@/types/domain";
 
 export const getGuests = async () => {
-  try {
-    const response = await client.get("/guests");
-    return response.data as Guest[];
-  } catch (error) {
-    console.error("Error fetching guests:", error);
-    throw error;
-  }
+  return apiGet<Guest[]>("/guests");
 };
 
 export type CreateGuestPayload = {
@@ -19,13 +13,7 @@ export type CreateGuestPayload = {
 };
 
 export const createGuest = async (data: CreateGuestPayload) => {
-  try {
-    const response = await client.post("/guests", data);
-    return response.data as Guest;
-  } catch (error) {
-    console.error("Error creating guest:", error);
-    throw error;
-  }
+  return apiPost<CreateGuestPayload, Guest>("/guests", data);
 };
 
 const guestService = {

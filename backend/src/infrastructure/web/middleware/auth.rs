@@ -65,8 +65,12 @@ pub async fn auth_middleware(
             .ok_or(DomainError::Unauthorized)?
     };
 
-    let claims = crate::infrastructure::web::jwt::decode_token(&token, &state.config.jwt_secret)
-        .map_err(|_| DomainError::Unauthorized)?;
+    let claims = crate::infrastructure::web::jwt::decode_token(
+        &token,
+        &state.config.jwt_secret,
+        state.config.jwt_previous_secret.as_deref(),
+    )
+    .map_err(|_| DomainError::Unauthorized)?;
 
     // Role check is now handled by RBAC middleware
 

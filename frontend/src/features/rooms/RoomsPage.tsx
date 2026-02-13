@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   Grid,
   List,
@@ -26,6 +26,8 @@ import BookingDrawer from "@/features/bookings/components/BookingDrawer";
 import RoomCreateDrawer from "./components/RoomCreateDrawer";
 import AvailabilityPicker from "./components/AvailabilityPicker";
 import { useToast } from "@/components/ui/toast";
+import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { getErrorMessage } from "@/api/errors";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -55,8 +57,6 @@ const getStatusBadge = (status: string) => {
 const RoomsPage = () => {
   const { toast } = useToast();
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -64,46 +64,49 @@ const RoomsPage = () => {
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [bookingDates, setBookingDates] = useState<{from: string, to: string} | null>(null);
-
-  const fetchRooms = async (start?: string, end?: string) => {
-    setLoading(true);
-    try {
-      const data = await getAllRooms(start, end);
-      setRooms(data);
-    } catch (error) {
-      console.error("Failed to fetch rooms", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchRooms();
-  }, []);
+  const roomsQueryKey = useMemo(
+    () => `rooms:list:${bookingDates?.from ?? "all"}:${bookingDates?.to ?? "all"}`,
+    [bookingDates?.from, bookingDates?.to],
+  );
+  const {
+    data: roomsData,
+    isLoading: loading,
+    error: roomsError,
+    refetch: refetchRooms,
+  } = useResourceQuery<Room[]>({
+    queryKey: roomsQueryKey,
+    queryFn: () => getAllRooms(bookingDates?.from, bookingDates?.to),
+    staleTimeMs: 10_000,
+  });
+  const rooms = useMemo(() => roomsData ?? [], [roomsData]);
 
   const handleSearchAvailability = (from: string, to: string) => {
     setBookingDates({ from, to });
     setIsSearching(true);
-    fetchRooms(from, to);
   };
 
   const handleClearSearch = () => {
     setBookingDates(null);
     setIsSearching(false);
-    fetchRooms();
   };
 
-  const handleBookingSuccess = () => {
-    fetchRooms(bookingDates?.from, bookingDates?.to);
+  const handleBookingSuccess = async () => {
+    invalidateResource(roomsQueryKey);
+    await refetchRooms();
   };
 
   const handleUpdateStatus = async (roomId: string, status: string) => {
     try {
       await updateRoomStatus(roomId, status);
       toast({ title: "Estado actualizado", variant: "success" });
-      fetchRooms(bookingDates?.from, bookingDates?.to);
-    } catch (error) {
-      toast({ title: "Error", description: "No se pudo actualizar el estado", variant: "error" });
+      invalidateResource(roomsQueryKey);
+      await refetchRooms();
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo actualizar el estado"),
+        variant: "error",
+      });
     }
   };
 
@@ -228,6 +231,12 @@ const RoomsPage = () => {
         onSearch={handleSearchAvailability}
         onClear={handleClearSearch}
       />
+
+      {roomsError && (
+        <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
+          {roomsError}
+        </div>
+      )}
 
       {isSearching && (
         <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-xl mb-6 animate-in fade-in zoom-in duration-300">
@@ -393,7 +402,10 @@ const RoomsPage = () => {
       <RoomCreateDrawer 
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
-        onSuccess={fetchRooms}
+        onSuccess={async () => {
+          invalidateResource(roomsQueryKey);
+          await refetchRooms();
+        }}
       />
     </div>
   );

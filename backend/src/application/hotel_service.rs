@@ -25,7 +25,7 @@ impl HotelService {
         };
 
         let result: Result<Hotel, String> = self.hotel_repo.create(hotel).await;
-        result.map_err(DomainError::InfrastructureError)
+        result.map_err(map_hotel_repo_error)
     }
 
     pub async fn list_hotels(&self) -> Result<Vec<Hotel>, DomainError> {
@@ -38,5 +38,33 @@ impl HotelService {
         result
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::HotelNotFound)
+    }
+}
+
+fn map_hotel_repo_error(message: String) -> DomainError {
+    let normalized = message.to_lowercase();
+    if normalized.contains("duplicate key value")
+        || normalized.contains("hotels_name_key")
+        || normalized.contains("ux_hotels_name_ci")
+    {
+        DomainError::HotelAlreadyExists
+    } else {
+        DomainError::InfrastructureError(message)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_hotel_repo_error_maps_hotel_duplicate_marker() {
+        assert!(matches!(
+            map_hotel_repo_error(
+                "db error: duplicate key value violates unique constraint \"hotels_name_key\""
+                    .to_string()
+            ),
+            DomainError::HotelAlreadyExists
+        ));
     }
 }

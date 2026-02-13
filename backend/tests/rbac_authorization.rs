@@ -6,6 +6,7 @@ use hms_backend::app_state::AppState;
 use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
+    booking_transaction_service::BookingTransactionService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
     hotel_service::HotelService, housekeeping_service::HousekeepingService,
     reporting_service::ReportingService, room_service::RoomService,
@@ -195,7 +196,7 @@ fn make_token(secret: &str, user_id: Uuid, hotel_id: Uuid, role: &str) -> String
         role: role.to_string(),
         exp: 2_000_000_000,
     };
-    encode_token(&claims, secret).unwrap()
+    encode_token(&claims, secret, "test-kid").unwrap()
 }
 
 fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
@@ -228,6 +229,7 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         audit_service.clone(),
         invoice_repo.clone(),
     ));
+    let booking_transaction_service = Arc::new(BookingTransactionService::new(pool.clone()));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
@@ -256,6 +258,7 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         room_repo,
         hotel_repo,
         booking_service,
+        booking_transaction_service,
         analytics_service,
         reporting_service,
         guest_service,

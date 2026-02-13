@@ -3,6 +3,7 @@ pub mod audit_service;
 pub mod auth_service;
 pub mod billing_service;
 pub mod booking_service;
+pub mod booking_transaction_service;
 pub mod cash_closure_service;
 pub mod guest_service;
 pub mod hotel_service;

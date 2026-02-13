@@ -44,6 +44,19 @@ export const setGlobalErrorHandler = (handler: ErrorHandler) => {
   globalErrorHandler = handler;
 };
 
+export type ApiErrorContract = {
+  error_code?: string;
+  message?: string;
+  request_id?: string;
+  details?: Record<string, unknown>;
+  error?: string;
+};
+
+export const parseApiErrorMessage = (payload: ApiErrorContract | undefined): string => {
+  if (!payload) return "Error inesperado en el servidor";
+  return payload.message || payload.error || "Error inesperado en el servidor";
+};
+
 // Interceptor para manejar los Errores de Dominio de forma global
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
@@ -82,11 +95,11 @@ api.interceptors.response.use(
     }
 
     // Si el backend mandó un error tipado (400, 409, 404)
-    const errorData = error.response?.data as { error?: string; message?: string; error_code?: string } | undefined;
+    const errorData = error.response?.data as ApiErrorContract | undefined;
     const isLogin422 = error.response?.status === 422 && requestUrl.includes("/auth/login");
     const message = isLogin422
       ? "Payload inválido. Verificá hotel (nombre o ID), usuario y contraseña."
-      : errorData?.message || errorData?.error || "Error inesperado en el servidor";
+      : parseApiErrorMessage(errorData);
 
     if (globalErrorHandler && error.response?.status !== 401) {
       globalErrorHandler(message, error.response?.status);
@@ -98,7 +111,9 @@ api.interceptors.response.use(
     return Promise.reject({
       status: error.response?.status,
       message: message,
-      code: errorData?.error_code
+      code: errorData?.error_code,
+      requestId: errorData?.request_id,
+      details: errorData?.details,
     });
   },
 );

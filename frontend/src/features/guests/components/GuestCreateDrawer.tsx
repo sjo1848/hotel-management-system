@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { createGuest } from "../services/guestService";
+import { getErrorMessage } from "@/api/errors";
 
 type GuestCreateDrawerProps = {
   isOpen: boolean;
@@ -60,13 +61,13 @@ const GuestCreateDrawer = ({
       onSuccess();
       onClose();
       setFormData({ full_name: "", email: "", phone: "" }); // Reset
-    } catch (error: any) {
-        const errorMsg = error.response?.data?.message || "No se pudo registrar el huésped";
-        toast({
-            title: "Error",
-            description: errorMsg,
-            variant: "error",
-        });
+    } catch (error: unknown) {
+      const errorMsg = getErrorMessage(error, "No se pudo registrar el huésped");
+      toast({
+        title: "Error",
+        description: errorMsg,
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

@@ -55,11 +55,36 @@ impl CashClosureService {
         };
 
         let result: Result<CashClosure, String> = self.closure_repo.create(closure).await;
-        result.map_err(DomainError::InfrastructureError)
+        result.map_err(map_cash_closure_repo_error)
     }
 
     pub async fn list_closures(&self, hotel_id: Uuid) -> Result<Vec<CashClosure>, DomainError> {
         let result: Result<Vec<CashClosure>, String> = self.closure_repo.find_all(hotel_id).await;
         result.map_err(DomainError::InfrastructureError)
+    }
+}
+
+fn map_cash_closure_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "CASH_CLOSURE_USER_NOT_FOUND" => DomainError::UserNotFound,
+        "CASH_CLOSURE_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn map_cash_closure_repo_error_maps_functional_markers() {
+        assert!(matches!(
+            map_cash_closure_repo_error("CASH_CLOSURE_USER_NOT_FOUND".to_string()),
+            DomainError::UserNotFound
+        ));
+        assert!(matches!(
+            map_cash_closure_repo_error("CASH_CLOSURE_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
     }
 }
