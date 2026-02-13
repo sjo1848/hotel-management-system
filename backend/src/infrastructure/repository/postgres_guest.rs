@@ -51,7 +51,7 @@ impl GuestRepository for PostgresGuestRepository {
         .bind(phone)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(guest)
     }
@@ -77,4 +77,24 @@ impl GuestRepository for PostgresGuestRepository {
             created_at: row.try_get("created_at").ok(),
         }))
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23505" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "ux_guests_hotel_email" || constraint_name == "guests_email_key" {
+                    return "GUEST_ALREADY_EXISTS".to_string();
+                }
+            }
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "guests_hotel_id_fkey" {
+                    return "GUEST_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

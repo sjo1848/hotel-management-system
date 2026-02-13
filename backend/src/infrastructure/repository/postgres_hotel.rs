@@ -23,7 +23,7 @@ impl HotelRepository for PostgresHotelRepository {
             .bind(&hotel.address)
             .execute(&self.pool)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(map_db_error)?;
         Ok(hotel)
     }
 
@@ -80,7 +80,21 @@ impl HotelRepository for PostgresHotelRepository {
             .bind(hotel.id)
             .execute(&self.pool)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(map_db_error)?;
         Ok(hotel)
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23505" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "ux_hotels_name_ci" || constraint_name == "hotels_name_key" {
+                    return "HOTEL_ALREADY_EXISTS".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

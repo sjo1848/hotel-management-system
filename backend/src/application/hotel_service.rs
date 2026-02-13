@@ -39,9 +39,21 @@ impl HotelService {
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::HotelNotFound)
     }
+
+    pub async fn find_hotel_id_by_name_ci(&self, name: &str) -> Result<Option<Uuid>, DomainError> {
+        self.hotel_repo
+            .find_by_name_ci(name)
+            .await
+            .map_err(DomainError::InfrastructureError)
+            .map(|hotel| hotel.map(|value| value.id))
+    }
 }
 
 fn map_hotel_repo_error(message: String) -> DomainError {
+    if message == "HOTEL_ALREADY_EXISTS" {
+        return DomainError::HotelAlreadyExists;
+    }
+
     let normalized = message.to_lowercase();
     if normalized.contains("duplicate key value")
         || normalized.contains("hotels_name_key")
@@ -60,10 +72,7 @@ mod tests {
     #[test]
     fn map_hotel_repo_error_maps_hotel_duplicate_marker() {
         assert!(matches!(
-            map_hotel_repo_error(
-                "db error: duplicate key value violates unique constraint \"hotels_name_key\""
-                    .to_string()
-            ),
+            map_hotel_repo_error("HOTEL_ALREADY_EXISTS".to_string()),
             DomainError::HotelAlreadyExists
         ));
     }

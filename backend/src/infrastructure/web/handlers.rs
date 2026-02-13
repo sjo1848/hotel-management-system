@@ -213,7 +213,8 @@ pub async fn get_rooms_handler(
 ) -> Result<Json<Value>, DomainError> {
     let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let rooms: Vec<crate::domain::models::Room> = operations.room_service.list_rooms(hotel_id).await?;
+    let rooms: Vec<crate::domain::models::Room> =
+        operations.room_service.list_rooms(hotel_id).await?;
     Ok(Json(json!(rooms)))
 }
 
@@ -370,14 +371,13 @@ pub async fn list_bookings_handler(
     let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let bookings: Vec<crate::domain::models::Booking> = match (params.start, params.end) {
-        (Some(start), Some(end)) => booking_ctx
-            .booking_service
-            .list_bookings_in_range(hotel_id, start, end)
-            .await?,
-        _ => booking_ctx
-            .booking_service
-            .list_bookings(hotel_id)
-            .await?,
+        (Some(start), Some(end)) => {
+            booking_ctx
+                .booking_service
+                .list_bookings_in_range(hotel_id, start, end)
+                .await?
+        }
+        _ => booking_ctx.booking_service.list_bookings(hotel_id).await?,
     };
     Ok(Json(json!(bookings)))
 }
@@ -479,11 +479,9 @@ pub async fn login_handler(
         uuid
     } else {
         state
-            .hotel_repo
-            .find_by_name_ci(hotel_id_input)
-            .await
-            .map_err(DomainError::InfrastructureError)?
-            .map(|hotel| hotel.id)
+            .hotel_service
+            .find_hotel_id_by_name_ci(hotel_id_input)
+            .await?
             .ok_or_else(|| {
                 DomainError::InvalidInput("Hotel inválido. Usá ID o nombre existente.".to_string())
             })?
@@ -580,11 +578,9 @@ pub async fn refresh_handler(
         .await?;
 
     let user: crate::domain::models::User = auth_ctx
-        .user_repo
-        .find_by_id(hotel_id, user_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?
-        .ok_or(DomainError::Unauthorized)?;
+        .auth_service
+        .get_session_user(hotel_id, user_id)
+        .await?;
 
     let exp = auth_ctx.auth_service.access_exp();
     let claims = crate::infrastructure::web::jwt::Claims {
@@ -694,11 +690,9 @@ pub async fn me_handler(
         uuid::Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
     let user: crate::domain::models::User = auth_ctx
-        .user_repo
-        .find_by_id(hotel_id, user_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?
-        .ok_or(DomainError::Unauthorized)?;
+        .auth_service
+        .get_session_user(hotel_id, user_id)
+        .await?;
 
     Ok(Json(json!({
 
@@ -724,13 +718,8 @@ pub async fn list_users_handler(
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let auth_ctx = state.auth_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let users: Vec<crate::domain::models::User> = auth_ctx
-        .user_repo
-        .find_all(hotel_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let users: Vec<crate::domain::models::User> = state.user_service.list_users(hotel_id).await?;
 
     Ok(Json(json!(users
         .into_iter()
@@ -743,7 +732,6 @@ pub async fn delete_user_handler(
     Path(user_id): Path<Uuid>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
-    let auth_ctx = state.auth_context();
     let current_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
 
@@ -753,11 +741,7 @@ pub async fn delete_user_handler(
         ));
     }
 
-    auth_ctx
-        .user_repo
-        .delete(hotel_id, user_id)
-        .await
-        .map_err(map_user_repo_error)?;
+    state.user_service.delete_user(hotel_id, user_id).await?;
 
     state
         .audit_service
@@ -777,7 +761,6 @@ pub async fn create_user_handler(
     State(state): State<Arc<AppState>>,
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    let auth_ctx = state.auth_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     validate_non_empty_trimmed("username", &payload.username)?;
     validate_len_range("username", &payload.username, 3, 80)?;
@@ -786,22 +769,10 @@ pub async fn create_user_handler(
     validate_non_empty_trimmed("role", &payload.role)?;
     validate_role(&payload.role)?;
 
-    let hash = crate::infrastructure::web::passwords::hash_password(&payload.password)
-        .map_err(DomainError::InfrastructureError)?;
-
-    let user = crate::domain::models::User {
-        id: Uuid::new_v4(),
-        hotel_id,
-        username: payload.username,
-        password_hash: hash,
-        role: payload.role,
-    };
-
-    let created: crate::domain::models::User = auth_ctx
-        .user_repo
-        .create(user)
-        .await
-        .map_err(map_user_repo_error)?;
+    let created: crate::domain::models::User = state
+        .user_service
+        .create_user(hotel_id, payload.username, payload.password, payload.role)
+        .await?;
 
     state
         .audit_service
@@ -811,47 +782,6 @@ pub async fn create_user_handler(
     Ok(Json(
         json!({ "id": created.id, "username": created.username, "role": created.role }),
     ))
-}
-
-fn map_user_repo_error(message: String) -> DomainError {
-    let normalized = message.to_lowercase();
-    if normalized.contains("duplicate key value")
-        || normalized.contains("ux_users_hotel_username")
-        || normalized.contains("users_username_key")
-    {
-        DomainError::UserAlreadyExists
-    } else if message == "USER_NOT_FOUND" {
-        DomainError::UserNotFound
-    } else if normalized.contains("23503")
-        && (normalized.contains("users_hotel_id_fkey")
-            || normalized.contains("foreign key constraint"))
-    {
-        DomainError::HotelNotFound
-    } else {
-        DomainError::InfrastructureError(message)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn map_user_repo_error_maps_hotel_fk_violation() {
-        let error = "db error: 23503 violation of foreign key constraint \"users_hotel_id_fkey\"";
-        assert!(matches!(
-            map_user_repo_error(error.to_string()),
-            DomainError::HotelNotFound
-        ));
-    }
-
-    #[test]
-    fn map_user_repo_error_maps_user_not_found_marker() {
-        assert!(matches!(
-            map_user_repo_error("USER_NOT_FOUND".to_string()),
-            DomainError::UserNotFound
-        ));
-    }
 }
 
 fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
@@ -1096,11 +1026,7 @@ pub async fn readiness_check(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
     let dummy_hotel = Uuid::nil(); // Solo para verificar conexión
-    let _: Vec<crate::domain::models::Room> = state
-        .room_repo
-        .find_all(dummy_hotel)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let _: Vec<crate::domain::models::Room> = state.room_service.list_rooms(dummy_hotel).await?;
     Ok(Json(json!({ "status": "ready" })))
 }
 
@@ -1137,11 +1063,7 @@ pub async fn list_invoices_handler(
 ) -> Result<Json<Value>, DomainError> {
     let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let invoices = booking_ctx
-        .invoice_repo
-        .find_all(hotel_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+    let invoices = booking_ctx.invoice_service.list_invoices(hotel_id).await?;
     Ok(Json(json!(invoices)))
 }
 
@@ -1153,15 +1075,10 @@ pub async fn get_invoice_by_booking_handler(
     let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let invoice = booking_ctx
-        .invoice_repo
-        .find_by_booking(hotel_id, booking_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
-
-    match invoice {
-        Some(inv) => Ok(Json(json!(inv))),
-        None => Err(DomainError::InvoiceNotFound),
-    }
+        .invoice_service
+        .get_invoice_by_booking(hotel_id, booking_id)
+        .await?;
+    Ok(Json(json!(invoice)))
 }
 
 #[utoipa::path(

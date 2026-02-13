@@ -8,7 +8,8 @@ use hms_backend::application::{
     booking_transaction_service::BookingTransactionService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
     hotel_service::HotelService, housekeeping_service::HousekeepingService,
-    reporting_service::ReportingService, room_service::RoomService,
+    invoice_service::InvoiceService, reporting_service::ReportingService,
+    room_service::RoomService, user_service::UserService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
@@ -250,6 +251,8 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         room_service.clone(),
         audit_service.clone(),
     ));
+    let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
+    let user_service = Arc::new(UserService::new(user_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -258,8 +261,6 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     ));
 
     Arc::new(AppState {
-        room_repo,
-        hotel_repo,
         booking_service,
         booking_transaction_service,
         analytics_service,
@@ -270,14 +271,9 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         billing_service,
         cash_closure_service,
         housekeeping_service,
+        invoice_service,
+        user_service,
         audit_service,
-        guest_repo,
-        user_repo,
-        refresh_repo,
-        audit_repo,
-        extra_charge_repo,
-        cash_closure_repo,
-        invoice_repo,
         auth_service,
         config,
     })

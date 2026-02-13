@@ -8,26 +8,22 @@ use crate::application::cash_closure_service::CashClosureService;
 use crate::application::guest_service::GuestService;
 use crate::application::hotel_service::HotelService;
 use crate::application::housekeeping_service::HousekeepingService;
+use crate::application::invoice_service::InvoiceService;
 use crate::application::reporting_service::ReportingService;
 use crate::application::room_service::RoomService;
+use crate::application::user_service::UserService;
 use crate::config::AppConfig;
-use crate::domain::repositories::{
-    AuditRepository, CashClosureRepository, ExtraChargeRepository, GuestRepository,
-    HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository, UserRepository,
-};
 use std::sync::Arc;
 
 pub struct BookingContext<'a> {
     pub booking_service: &'a Arc<BookingService>,
     pub booking_transaction_service: &'a Arc<BookingTransactionService>,
     pub billing_service: &'a Arc<BillingService>,
-    pub invoice_repo: &'a Arc<dyn InvoiceRepository>,
+    pub invoice_service: &'a Arc<InvoiceService>,
 }
 
 pub struct AuthContext<'a> {
     pub auth_service: &'a Arc<AuthService>,
-    pub user_repo: &'a Arc<dyn UserRepository>,
-    pub refresh_repo: &'a Arc<dyn RefreshTokenRepository>,
 }
 
 pub struct OperationsContext<'a> {
@@ -38,8 +34,6 @@ pub struct OperationsContext<'a> {
 }
 
 pub struct AppState {
-    pub room_repo: Arc<dyn RoomRepository>,
-    pub hotel_repo: Arc<dyn HotelRepository>,
     pub booking_service: Arc<BookingService>,
     pub booking_transaction_service: Arc<BookingTransactionService>,
     pub analytics_service: Arc<AnalyticsService>,
@@ -50,14 +44,9 @@ pub struct AppState {
     pub billing_service: Arc<BillingService>,
     pub cash_closure_service: Arc<CashClosureService>,
     pub housekeeping_service: Arc<HousekeepingService>,
+    pub invoice_service: Arc<InvoiceService>,
+    pub user_service: Arc<UserService>,
     pub audit_service: Arc<AuditService>,
-    pub guest_repo: Arc<dyn GuestRepository>,
-    pub user_repo: Arc<dyn UserRepository>,
-    pub refresh_repo: Arc<dyn RefreshTokenRepository>,
-    pub audit_repo: Arc<dyn AuditRepository>,
-    pub extra_charge_repo: Arc<dyn ExtraChargeRepository>,
-    pub cash_closure_repo: Arc<dyn CashClosureRepository>,
-    pub invoice_repo: Arc<dyn InvoiceRepository>,
     pub auth_service: Arc<AuthService>,
     pub config: AppConfig,
 }
@@ -68,15 +57,13 @@ impl AppState {
             booking_service: &self.booking_service,
             booking_transaction_service: &self.booking_transaction_service,
             billing_service: &self.billing_service,
-            invoice_repo: &self.invoice_repo,
+            invoice_service: &self.invoice_service,
         }
     }
 
     pub fn auth_context(&self) -> AuthContext<'_> {
         AuthContext {
             auth_service: &self.auth_service,
-            user_repo: &self.user_repo,
-            refresh_repo: &self.refresh_repo,
         }
     }
 

@@ -54,6 +54,13 @@ impl GuestService {
 }
 
 fn map_guest_repo_error(message: String) -> DomainError {
+    if message == "GUEST_ALREADY_EXISTS" {
+        return DomainError::GuestAlreadyExists;
+    }
+    if message == "GUEST_HOTEL_NOT_FOUND" {
+        return DomainError::HotelNotFound;
+    }
+
     let normalized = message.to_lowercase();
     if normalized.contains("duplicate key value")
         || normalized.contains("ux_guests_hotel_email")
@@ -76,7 +83,7 @@ mod tests {
 
     #[test]
     fn map_guest_repo_error_maps_hotel_fk_violation() {
-        let error = "db error: 23503 violation of foreign key constraint \"guests_hotel_id_fkey\"";
+        let error = "GUEST_HOTEL_NOT_FOUND";
         assert!(matches!(
             map_guest_repo_error(error.to_string()),
             DomainError::HotelNotFound

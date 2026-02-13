@@ -48,7 +48,7 @@ impl UserRepository for PostgresUserRepository {
             .bind(&user.role)
             .execute(&self.pool)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(map_db_error)?;
 
         Ok(user)
     }
@@ -104,4 +104,26 @@ impl UserRepository for PostgresUserRepository {
         }
         Ok(())
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23505" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "ux_users_hotel_username"
+                    || constraint_name == "users_username_key"
+                {
+                    return "USER_ALREADY_EXISTS".to_string();
+                }
+            }
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "users_hotel_id_fkey" {
+                    return "USER_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

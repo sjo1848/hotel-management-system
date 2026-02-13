@@ -110,6 +110,13 @@ impl RoomService {
 }
 
 fn map_room_repo_error(message: String) -> DomainError {
+    if message == "ROOM_ALREADY_EXISTS" {
+        return DomainError::RoomAlreadyExists;
+    }
+    if message == "ROOM_HOTEL_NOT_FOUND" {
+        return DomainError::HotelNotFound;
+    }
+
     let normalized = message.to_lowercase();
     if normalized.contains("duplicate key value")
         || normalized.contains("ux_rooms_hotel_room_number")
@@ -134,7 +141,7 @@ mod tests {
 
     #[test]
     fn map_room_repo_error_maps_hotel_fk_violation() {
-        let error = "db error: 23503 violation of foreign key constraint \"rooms_hotel_id_fkey\"";
+        let error = "ROOM_HOTEL_NOT_FOUND";
         assert!(matches!(
             map_room_repo_error(error.to_string()),
             DomainError::HotelNotFound

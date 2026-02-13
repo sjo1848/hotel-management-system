@@ -8,5 +8,7 @@ pub mod cash_closure_service;
 pub mod guest_service;
 pub mod hotel_service;
 pub mod housekeeping_service;
+pub mod invoice_service;
 pub mod reporting_service;
 pub mod room_service;
+pub mod user_service;

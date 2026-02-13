@@ -35,7 +35,7 @@ impl RoomRepository for PostgresRoomRepository {
         .bind(room.price_cents)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(room)
     }
@@ -211,4 +211,26 @@ impl RoomRepository for PostgresRoomRepository {
             })
             .collect())
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23505" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "ux_rooms_hotel_room_number"
+                    || constraint_name == "rooms_room_number_key"
+                {
+                    return "ROOM_ALREADY_EXISTS".to_string();
+                }
+            }
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "rooms_hotel_id_fkey" {
+                    return "ROOM_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

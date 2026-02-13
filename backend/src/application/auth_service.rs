@@ -149,6 +149,18 @@ impl AuthService {
             .await
             .map_err(map_refresh_repo_error)
     }
+
+    pub async fn get_session_user(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<User, DomainError> {
+        self.user_repo
+            .find_by_id(hotel_id, user_id)
+            .await
+            .map_err(DomainError::InfrastructureError)?
+            .ok_or(DomainError::Unauthorized)
+    }
 }
 
 fn hash_token(raw: &str) -> String {

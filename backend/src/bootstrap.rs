@@ -5,7 +5,8 @@ use crate::application::{
     booking_transaction_service::BookingTransactionService,
     cash_closure_service::CashClosureService, guest_service::GuestService,
     hotel_service::HotelService, housekeeping_service::HousekeepingService,
-    reporting_service::ReportingService, room_service::RoomService,
+    invoice_service::InvoiceService, reporting_service::ReportingService,
+    room_service::RoomService, user_service::UserService,
 };
 use crate::config::AppConfig;
 use crate::domain::repositories::{
@@ -77,6 +78,8 @@ pub async fn build_app_state(pool: PgPool, config: AppConfig) -> Arc<AppState> {
         room_service.clone(),
         audit_service.clone(),
     ));
+    let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
+    let user_service = Arc::new(UserService::new(user_repo.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
@@ -89,8 +92,6 @@ pub async fn build_app_state(pool: PgPool, config: AppConfig) -> Arc<AppState> {
     seeder::seed_rooms_if_empty(room_repo.clone()).await;
 
     Arc::new(AppState {
-        room_repo: room_repo.clone(),
-        hotel_repo: hotel_repo.clone(),
         booking_service,
         booking_transaction_service,
         analytics_service,
@@ -101,15 +102,10 @@ pub async fn build_app_state(pool: PgPool, config: AppConfig) -> Arc<AppState> {
         billing_service,
         cash_closure_service,
         housekeeping_service,
+        invoice_service,
+        user_service,
         audit_service,
-        guest_repo,
-        user_repo: user_repo.clone(),
-        refresh_repo,
-        audit_repo,
-        extra_charge_repo,
-        cash_closure_repo,
         auth_service,
-        invoice_repo,
         config,
     })
 }
