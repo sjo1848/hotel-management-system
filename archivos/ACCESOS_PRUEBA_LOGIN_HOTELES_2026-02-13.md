@@ -1,45 +1,68 @@
 # Accesos de Prueba — Login y Hoteles (2026-02-13)
 
-## Objetivo
-Dejar un set de accesos verificables para pruebas manuales de login multi-tenant.
+## Resumen rápido
+Usá esta combinación en el login:
 
-## Hoteles disponibles
-1. `Hotel Sede Central`
-   - `hotel_id`: `00000000-0000-0000-0000-000000000001`
-2. `Hotel Viena`
-   - `hotel_id`: `ad11ca4b-1fbc-432e-a315-3161eb9b31f8`
+1. `Hotel ID` correcto del usuario.
+2. `Usuario` exacto.
+3. `Clave`: `admin123`.
 
-## Usuarios de prueba (activos)
-Todos estos usuarios tienen contraseña de prueba: `admin123`
+Si `Hotel ID` no coincide con el usuario, el backend responde `401 UNAUTHORIZED`.
 
-### Hotel Sede Central (`00000000-0000-0000-0000-000000000001`)
-1. `admin` (rol: `admin`)
-2. `ops` (rol: `ops`)
-3. `receptionist` (rol: `receptionist`)
-4. `housekeeping` (rol: `housekeeping`)
+## Hoteles y usuarios listos para probar
 
-### Hotel Viena (`ad11ca4b-1fbc-432e-a315-3161eb9b31f8`)
-1. `admin_viena` (rol: `admin`)
+| Hotel | hotel_id | Usuario | Rol | Clave |
+|---|---|---|---|---|
+| Hotel Sede Central | `00000000-0000-0000-0000-000000000001` | `admin` | `admin` | `admin123` |
+| Hotel Sede Central | `00000000-0000-0000-0000-000000000001` | `ops` | `ops` | `admin123` |
+| Hotel Sede Central | `00000000-0000-0000-0000-000000000001` | `receptionist` | `receptionist` | `admin123` |
+| Hotel Sede Central | `00000000-0000-0000-0000-000000000001` | `housekeeping` | `housekeeping` | `admin123` |
+| Hotel Viena | `ad11ca4b-1fbc-432e-a315-3161eb9b31f8` | `admin_viena` | `admin` | `admin123` |
 
-## Cómo probar login
-En la pantalla de login completar:
-1. `Hotel ID`: uno de los `hotel_id` listados arriba.
-2. `Usuario`: uno de los usernames del hotel elegido.
-3. `Clave`: `admin123`
+## Cómo probar en UI (frontend)
+En `http://localhost:5173/login` completar:
 
-## Notas
-1. Estos accesos son de QA/desarrollo y deben rotarse o eliminarse antes de producción.
-2. Si querés, en el siguiente paso dejo también un documento de "matriz esperada de permisos por rol" para validar qué debería poder hacer cada usuario tras login.
+1. `Hotel ID`: copiar de la tabla.
+2. `Usuario`: copiar de la tabla.
+3. `Clave`: `admin123`.
+4. Click en **Acceder al Sistema**.
 
-## Verificación técnica (2026-02-13)
-Prueba ejecutada contra `POST /api/v1/auth/login` en backend levantado por Docker:
+## Cómo probar por API (copiar/pegar)
+
+### Caso válido (debe dar `200`)
+```bash
+curl -i -X POST http://localhost:3001/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"hotel_id":"00000000-0000-0000-0000-000000000001","username":"ops","password":"admin123"}'
+```
+
+### Caso inválido por tenant (debe dar `401`)
+```bash
+curl -i -X POST http://localhost:3001/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"hotel_id":"00000000-0000-0000-0000-000000000001","username":"admin_viena","password":"admin123"}'
+```
+
+## Verificación ejecutada
+Pruebas realizadas el `2026-02-13` sobre backend en Docker:
 
 1. `admin` + hotel central -> `200`
 2. `ops` + hotel central -> `200`
 3. `receptionist` + hotel central -> `200`
 4. `housekeeping` + hotel central -> `200`
 5. `admin_viena` + hotel Viena -> `200`
+6. `admin_viena` + hotel central -> `401` (esperado)
 
-Chequeo de aislamiento tenant:
+## Errores comunes
 
-1. `admin_viena` intentando login con `hotel_id` de sede central -> `401 UNAUTHORIZED` (comportamiento esperado).
+1. `401 UNAUTHORIZED`:
+   - `Hotel ID` incorrecto para ese usuario.
+   - Usuario/clave mal escritos.
+2. No conecta frontend/backend:
+   - verificar contenedores con `docker compose ps`.
+   - backend debe estar en `http://localhost:3001`.
+3. Cambiaste datos en DB y dejó de entrar:
+   - volver a usar los usuarios de esta tabla o regenerar credenciales de QA.
+
+## Nota de seguridad
+Estas credenciales son solo para QA/desarrollo. No usar en producción.
