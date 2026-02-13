@@ -2,7 +2,10 @@ use chrono::NaiveDate;
 use hms_backend::application::booking_transaction_service::BookingTransactionService;
 use hms_backend::domain::errors::DomainError;
 use hms_backend::domain::models::BookingStatus;
+use hms_backend::domain::repositories::BookingTransactionRepository;
+use hms_backend::infrastructure::repository::postgres_booking_transaction::PostgresBookingTransactionRepository;
 use sqlx::Row;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[sqlx::test]
@@ -62,7 +65,9 @@ async fn checkout_is_atomic_room_invoice_audit(pool: sqlx::PgPool) {
     .await
     .unwrap();
 
-    let service = BookingTransactionService::new(pool.clone());
+    let booking_transaction_repo = Arc::new(PostgresBookingTransactionRepository::new(pool.clone()))
+        as Arc<dyn BookingTransactionRepository>;
+    let service = BookingTransactionService::new(booking_transaction_repo);
     let updated = service
         .update_booking_transactional(
             hotel_id,
@@ -172,7 +177,9 @@ async fn invalid_guest_rolls_back_without_side_effects(pool: sqlx::PgPool) {
     .await
     .unwrap();
 
-    let service = BookingTransactionService::new(pool.clone());
+    let booking_transaction_repo = Arc::new(PostgresBookingTransactionRepository::new(pool.clone()))
+        as Arc<dyn BookingTransactionRepository>;
+    let service = BookingTransactionService::new(booking_transaction_repo);
     let result = service
         .update_booking_transactional(
             hotel_id,

@@ -1,5 +1,7 @@
+use crate::domain::errors::DomainError;
 use crate::domain::models::{
-    AuditEvent, Booking, CashClosure, ExtraCharge, Guest, Hotel, Invoice, RefreshToken, Room, User,
+    AuditEvent, Booking, BookingStatus, CashClosure, ExtraCharge, Guest, Hotel, Invoice,
+    RefreshToken, Room, User,
 };
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -82,6 +84,22 @@ pub trait BookingRepository: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<crate::domain::models::OccupancyReport>, String>;
+}
+
+#[async_trait]
+pub trait BookingTransactionRepository: Send + Sync {
+    #[allow(clippy::too_many_arguments)]
+    async fn update_booking_transactional(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+        actor_user_id: Option<Uuid>,
+        guest_id: Option<Uuid>,
+        guest_name: Option<String>,
+        check_in: Option<NaiveDate>,
+        check_out: Option<NaiveDate>,
+        status: Option<BookingStatus>,
+    ) -> Result<Booking, DomainError>;
 }
 
 #[async_trait]

@@ -1,6 +1,7 @@
 pub mod postgres;
 pub mod postgres_audit;
 pub mod postgres_booking;
+pub mod postgres_booking_transaction;
 pub mod postgres_cash_closure;
 pub mod postgres_extra_charge;
 pub mod postgres_guest;

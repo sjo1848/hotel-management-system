@@ -13,13 +13,14 @@ use hms_backend::application::{
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
-    AuditRepository, BookingRepository, CashClosureRepository, ExtraChargeRepository,
-    GuestRepository, HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository,
-    UserRepository,
+    AuditRepository, BookingRepository, BookingTransactionRepository, CashClosureRepository,
+    ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
+    RefreshTokenRepository, RoomRepository, UserRepository,
 };
 use hms_backend::infrastructure::repository::{
     postgres::PostgresRoomRepository, postgres_audit::PostgresAuditRepository,
     postgres_booking::PostgresBookingRepository,
+    postgres_booking_transaction::PostgresBookingTransactionRepository,
     postgres_cash_closure::PostgresCashClosureRepository,
     postgres_extra_charge::PostgresExtraChargeRepository, postgres_guest::PostgresGuestRepository,
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
@@ -207,6 +208,8 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
     let booking_repo =
         Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
+    let booking_transaction_repo = Arc::new(PostgresBookingTransactionRepository::new(pool.clone()))
+        as Arc<dyn BookingTransactionRepository>;
     let guest_repo =
         Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone())) as Arc<dyn UserRepository>;
@@ -233,7 +236,8 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         audit_service.clone(),
         invoice_repo.clone(),
     ));
-    let booking_transaction_service = Arc::new(BookingTransactionService::new(pool.clone()));
+    let booking_transaction_service =
+        Arc::new(BookingTransactionService::new(booking_transaction_repo));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
