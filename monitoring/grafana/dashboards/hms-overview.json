@@ -46,6 +46,16 @@
       "targets": [{"expr": "sum by (status) (rate(http_requests_total{path!=\"/health\"}[5m]))", "refId": "A"}],
       "title": "RPS por Status",
       "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}, "unit": "reqps"}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 17},
+      "id": 5,
+      "options": {"legend": {"displayMode": "table", "placement": "bottom"}, "tooltip": {"mode": "multi"}},
+      "targets": [{"expr": "sum by (event) (rate(ui_telemetry_events_total[5m]))", "refId": "A"}],
+      "title": "UI Telemetry Events Rate",
+      "type": "timeseries"
     }
   ],
   "refresh": "15s",

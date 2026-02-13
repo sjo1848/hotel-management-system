@@ -29,7 +29,7 @@ use crate::infrastructure::web::handlers::{
     list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
     list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
     refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
-    update_booking_handler, update_room_status_handler,
+    track_ui_telemetry_handler, update_booking_handler, update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
     api_contract::api_contract_headers_middleware,
@@ -208,7 +208,8 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/reports/occupancy",
             get(get_occupancy_report_handler).layer(middleware::from_fn(reports_occupancy_read)),
-        );
+        )
+        .route("/api/v1/telemetry/ui", post(track_ui_telemetry_handler));
 
     let auth_layer = middleware::from_fn_with_state(state.clone(), auth_middleware);
 

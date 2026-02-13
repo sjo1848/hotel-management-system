@@ -9,6 +9,7 @@ use utoipa::OpenApi;
         create_room_handler,
         create_booking_handler,
         login_handler,
+        track_ui_telemetry_handler,
         get_dashboard_kpis_handler,
         list_dirty_rooms_handler,
         start_cleaning_handler,
@@ -21,6 +22,7 @@ use utoipa::OpenApi;
             Room, RoomStatus, Booking, BookingStatus, Guest, User, AuditEvent,
             DashboardKpis, BookingAlert, Invoice, InvoiceStatus,
             CreateBookingRequest, CreateGuestRequest, CreateRoomRequest, LoginRequest, LoginResponse,
+            UiTelemetryEventRequest,
             RevenueReport, OccupancyReport,
         )
     ),

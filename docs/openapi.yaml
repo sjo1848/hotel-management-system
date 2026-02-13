@@ -571,6 +571,27 @@ paths:
                 items:
                   type: object
                   additionalProperties: true
+  /api/v1/telemetry/ui:
+    post:
+      summary: Ingesta de eventos de telemetría UI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UiTelemetryEventRequest"
+      responses:
+        "200":
+          description: Evento aceptado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
 components:
   securitySchemes:
     cookieAuth:
@@ -753,3 +774,20 @@ components:
           type: integer
         category:
           type: string
+    UiTelemetryEventRequest:
+      type: object
+      required: [event]
+      properties:
+        event:
+          type: string
+          enum:
+            - dashboard_load_failed
+            - dashboard_retry_clicked
+            - close_cash_success
+            - close_cash_failure
+        payload:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time

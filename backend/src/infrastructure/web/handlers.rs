@@ -12,6 +12,7 @@ use axum::{
 };
 use base64::Engine;
 use chrono::NaiveDate;
+use metrics::counter;
 use rand::RngCore;
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -158,6 +159,13 @@ pub struct UpdateBookingRequest {
 pub struct DateRangeParams {
     pub start: Option<chrono::NaiveDate>,
     pub end: Option<chrono::NaiveDate>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UiTelemetryEventRequest {
+    pub event: String,
+    pub payload: Option<Value>,
+    pub timestamp: Option<String>,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -1032,6 +1040,51 @@ pub async fn readiness_check(
 
 pub async fn root_handler() -> Json<Value> {
     Json(json!({ "message": "HMS Elite Backend (Hexagonal) activo" }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/telemetry/ui",
+    request_body = UiTelemetryEventRequest,
+    responses(
+        (status = 200, description = "Evento de telemetría UI aceptado"),
+        (status = 400, description = "Evento inválido")
+    ),
+    tag = "Análisis"
+)]
+pub async fn track_ui_telemetry_handler(
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Json(payload): Json<UiTelemetryEventRequest>,
+) -> Result<Json<Value>, DomainError> {
+    const ALLOWED_EVENTS: &[&str] = &[
+        "dashboard_load_failed",
+        "dashboard_retry_clicked",
+        "close_cash_success",
+        "close_cash_failure",
+    ];
+
+    if !ALLOWED_EVENTS.contains(&payload.event.as_str()) {
+        return Err(DomainError::InvalidInput(format!(
+            "Evento de telemetría UI inválido: {}",
+            payload.event
+        )));
+    }
+
+    counter!(
+        "ui_telemetry_events_total",
+        "event" => payload.event.clone()
+    )
+    .increment(1);
+
+    tracing::info!(
+        event = %payload.event,
+        hotel_id = %claims.hotel_id,
+        has_payload = payload.payload.is_some(),
+        has_timestamp = payload.timestamp.is_some(),
+        "ui telemetry event ingested"
+    );
+
+    Ok(Json(json!({ "status": "ok" })))
 }
 
 #[utoipa::path(
