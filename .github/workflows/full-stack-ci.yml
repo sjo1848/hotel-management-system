@@ -55,6 +55,9 @@ jobs:
       - name: OpenAPI Route Alignment
         run: ./scripts/check-openapi-alignment.sh
 
+      - name: Legacy Schema Convergence
+        run: ./scripts/check-legacy-schema-convergence.sh
+
       - name: Run CI Script
         run: ./scripts/ci-backend.sh
 
