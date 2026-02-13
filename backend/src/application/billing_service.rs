@@ -33,7 +33,7 @@ impl BillingService {
             .booking_repo
             .find_by_id(hotel_id, booking_id)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_booking_repo_error)?
             .ok_or(DomainError::BookingNotFound)?;
 
         let charge = ExtraCharge {

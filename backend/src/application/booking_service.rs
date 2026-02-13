@@ -50,7 +50,7 @@ impl BookingService {
             .room_repo
             .find_by_id(hotel_id, room_id)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_room_repo_error)?
             .ok_or(DomainError::RoomNotFound)?;
 
         // Validación según mandato: La habitación debe estar disponible
@@ -63,7 +63,7 @@ impl BookingService {
                 .guest_repo
                 .find_by_id(hotel_id, gid)
                 .await
-                .map_err(DomainError::InfrastructureError)?
+                .map_err(map_guest_repo_error)?
                 .is_some();
             if !guest_exists {
                 return Err(DomainError::GuestNotFound);
@@ -74,7 +74,7 @@ impl BookingService {
             .booking_repo
             .check_availability(hotel_id, room_id, check_in, check_out)
             .await
-            .map_err(DomainError::InfrastructureError)?;
+            .map_err(map_repo_error)?;
 
         if !is_available {
             return Err(DomainError::RoomNotAvailable);
@@ -131,7 +131,7 @@ impl BookingService {
             .booking_repo
             .find_by_id(hotel_id, booking_id)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_repo_error)?
             .ok_or(DomainError::BookingNotFound)?;
 
         if let Some(gid) = guest_id {
@@ -139,7 +139,7 @@ impl BookingService {
                 .guest_repo
                 .find_by_id(hotel_id, gid)
                 .await
-                .map_err(DomainError::InfrastructureError)?
+                .map_err(map_guest_repo_error)?
                 .is_some();
             if !guest_exists {
                 return Err(DomainError::GuestNotFound);
@@ -177,7 +177,7 @@ impl BookingService {
                 booking.check_out,
             )
             .await
-            .map_err(DomainError::InfrastructureError)?;
+            .map_err(map_repo_error)?;
 
         if !is_available {
             return Err(DomainError::RoomNotAvailable);
@@ -187,7 +187,7 @@ impl BookingService {
             .room_repo
             .find_by_id(hotel_id, booking.room_id)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_room_repo_error)?
             .ok_or(DomainError::RoomNotFound)?;
 
         booking.calculate_total_price(room.price_cents);
@@ -257,7 +257,7 @@ impl BookingService {
         self.booking_repo
             .find_all(hotel_id)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_repo_error)
     }
 
     pub async fn list_bookings_in_range(
@@ -270,7 +270,7 @@ impl BookingService {
         self.booking_repo
             .find_by_range(hotel_id, start, end)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_repo_error)
     }
 }
 
@@ -299,6 +299,21 @@ fn map_invoice_repo_error(message: String) -> DomainError {
     match message.as_str() {
         "INVOICE_BOOKING_NOT_FOUND" => DomainError::BookingNotFound,
         "INVOICE_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+fn map_room_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "ROOM_NOT_FOUND" => DomainError::RoomNotFound,
+        "ROOM_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+fn map_guest_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "GUEST_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
         _ => DomainError::InfrastructureError(message),
     }
 }
@@ -343,6 +358,26 @@ mod tests {
         ));
         assert!(matches!(
             map_invoice_repo_error("INVOICE_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
+    }
+
+    #[test]
+    fn map_room_repo_error_maps_functional_markers() {
+        assert!(matches!(
+            map_room_repo_error("ROOM_NOT_FOUND".to_string()),
+            DomainError::RoomNotFound
+        ));
+        assert!(matches!(
+            map_room_repo_error("ROOM_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
+        ));
+    }
+
+    #[test]
+    fn map_guest_repo_error_maps_functional_markers() {
+        assert!(matches!(
+            map_guest_repo_error("GUEST_HOTEL_NOT_FOUND".to_string()),
             DomainError::HotelNotFound
         ));
     }
