@@ -1,6 +1,6 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{Booking, BookingStatus, Invoice, RoomStatus};
-use crate::domain::repositories::{BookingRepository, RoomRepository, InvoiceRepository};
+use crate::domain::repositories::{BookingRepository, GuestRepository, InvoiceRepository, RoomRepository};
 use crate::application::room_service::RoomService;
 use crate::application::audit_service::AuditService;
 use chrono::NaiveDate;
@@ -10,6 +10,7 @@ use uuid::Uuid;
 pub struct BookingService {
     booking_repo: Arc<dyn BookingRepository>,
     room_repo: Arc<dyn RoomRepository>,
+    guest_repo: Arc<dyn GuestRepository>,
     room_service: Arc<RoomService>,
     audit_service: Arc<AuditService>,
     invoice_repo: Arc<dyn InvoiceRepository>,
@@ -19,6 +20,7 @@ impl BookingService {
     pub fn new(
         booking_repo: Arc<dyn BookingRepository>,
         room_repo: Arc<dyn RoomRepository>,
+        guest_repo: Arc<dyn GuestRepository>,
         room_service: Arc<RoomService>,
         audit_service: Arc<AuditService>,
         invoice_repo: Arc<dyn InvoiceRepository>,
@@ -26,6 +28,7 @@ impl BookingService {
         Self {
             booking_repo,
             room_repo,
+            guest_repo,
             room_service,
             audit_service,
             invoice_repo,
@@ -51,6 +54,18 @@ impl BookingService {
         // Validación según mandato: La habitación debe estar disponible
         if room.status != RoomStatus::Available {
             return Err(DomainError::RoomNotAvailable);
+        }
+
+        if let Some(gid) = guest_id {
+            let guest_exists = self
+                .guest_repo
+                .find_by_id(hotel_id, gid)
+                .await
+                .map_err(DomainError::InfrastructureError)?
+                .is_some();
+            if !guest_exists {
+                return Err(DomainError::GuestNotFound);
+            }
         }
 
         let is_available = self
@@ -110,6 +125,15 @@ impl BookingService {
             .ok_or(DomainError::BookingNotFound)?;
 
         if let Some(gid) = guest_id {
+            let guest_exists = self
+                .guest_repo
+                .find_by_id(hotel_id, gid)
+                .await
+                .map_err(DomainError::InfrastructureError)?
+                .is_some();
+            if !guest_exists {
+                return Err(DomainError::GuestNotFound);
+            }
             booking.guest_id = Some(gid);
         }
 

@@ -226,6 +226,7 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     let booking_service = Arc::new(BookingService::new(
         booking_repo.clone(),
         room_repo.clone(),
+        guest_repo.clone(),
         room_service.clone(),
         audit_service.clone(),
         invoice_repo.clone(),

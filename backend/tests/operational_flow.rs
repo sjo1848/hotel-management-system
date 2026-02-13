@@ -2,12 +2,13 @@ use hms_backend::application::room_service::RoomService;
 use hms_backend::application::booking_service::BookingService;
 use hms_backend::application::housekeeping_service::HousekeepingService;
 use hms_backend::application::audit_service::AuditService;
-use hms_backend::domain::repositories::{RoomRepository, BookingRepository, AuditRepository, InvoiceRepository};
+use hms_backend::domain::repositories::{AuditRepository, BookingRepository, GuestRepository, InvoiceRepository, RoomRepository};
 use hms_backend::domain::models::{BookingStatus, RoomStatus};
 use hms_backend::infrastructure::repository::{
     postgres::PostgresRoomRepository, 
     postgres_booking::PostgresBookingRepository,
     postgres_audit::PostgresAuditRepository,
+    postgres_guest::PostgresGuestRepository,
     postgres_invoice::PostgresInvoiceRepository
 };
 use chrono::NaiveDate;
@@ -20,6 +21,7 @@ async fn full_operational_cycle(pool: sqlx::PgPool) {
     let room_repo = Arc::new(PostgresRoomRepository::new(pool.clone())) as Arc<dyn RoomRepository>;
     let booking_repo = Arc::new(PostgresBookingRepository::new(pool.clone())) as Arc<dyn BookingRepository>;
     let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let guest_repo = Arc::new(PostgresGuestRepository::new(pool.clone())) as Arc<dyn GuestRepository>;
     let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
 
     let audit_service = Arc::new(AuditService::new(audit_repo));
@@ -27,6 +29,7 @@ async fn full_operational_cycle(pool: sqlx::PgPool) {
     let booking_service = BookingService::new(
         booking_repo,
         room_repo.clone(),
+        guest_repo,
         room_service.clone(),
         audit_service.clone(),
         invoice_repo.clone(),

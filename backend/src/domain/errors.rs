@@ -6,6 +6,7 @@ pub enum DomainError {
     HotelNotFound,
     RoomNotAvailable,
     RoomAlreadyExists,
+    GuestNotFound,
     GuestAlreadyExists,
     UserAlreadyExists,
     InvalidRoomStatusTransition,

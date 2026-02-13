@@ -53,6 +53,7 @@ pub trait BookingRepository: Send + Sync {
 #[async_trait]
 pub trait GuestRepository: Send + Sync {
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Guest>, String>;
+    async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Guest>, String>;
     async fn create(&self, guest: Guest) -> Result<Guest, String>;
 }
 

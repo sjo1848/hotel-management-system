@@ -55,4 +55,26 @@ impl GuestRepository for PostgresGuestRepository {
 
         Ok(guest)
     }
+
+    async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Guest>, String> {
+        let record = sqlx::query(
+            "SELECT id, hotel_id, full_name, email, phone, created_at
+             FROM guests
+             WHERE hotel_id = $1 AND id = $2",
+        )
+        .bind(hotel_id)
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(record.map(|row| Guest {
+            id: row.try_get("id").unwrap(),
+            hotel_id: row.try_get("hotel_id").unwrap(),
+            full_name: row.try_get("full_name").unwrap(),
+            email: row.try_get("email").unwrap(),
+            phone: row.try_get("phone").ok(),
+            created_at: row.try_get("created_at").ok(),
+        }))
+    }
 }

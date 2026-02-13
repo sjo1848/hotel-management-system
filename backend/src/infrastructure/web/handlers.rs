@@ -44,6 +44,11 @@ impl IntoResponse for DomainError {
                 "GUEST_ALREADY_EXISTS",
                 "Ya existe un huésped con ese email en este hotel".to_string(),
             ),
+            DomainError::GuestNotFound => (
+                StatusCode::NOT_FOUND,
+                "GUEST_NOT_FOUND",
+                "El huésped solicitado no existe".to_string(),
+            ),
             DomainError::UserAlreadyExists => (
                 StatusCode::CONFLICT,
                 "USER_ALREADY_EXISTS",
