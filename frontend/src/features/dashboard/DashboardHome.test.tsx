@@ -4,7 +4,9 @@ import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardHome from "./DashboardHome";
+import { invalidateResource } from "@/lib/useResourceQuery";
 
+const mockTrackUiEvent = vi.fn();
 const mockToast = vi.fn();
 const mockCloseCash = vi.fn();
 const mockGetDashboardKpis = vi.fn();
@@ -14,6 +16,10 @@ const mockGetCashBalance = vi.fn();
 
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock("@/lib/telemetry", () => ({
+  trackUiEvent: (...args: unknown[]) => mockTrackUiEvent(...args),
 }));
 
 vi.mock("@/features/bookings/components/BookingList", () => ({
@@ -61,6 +67,7 @@ const renderDashboard = () =>
 describe("DashboardHome", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    invalidateResource("dashboard:home");
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -109,6 +116,9 @@ describe("DashboardHome", () => {
       expect(mockCloseCash).toHaveBeenCalledTimes(1);
       expect(mockGetDashboardKpis).toHaveBeenCalledTimes(2);
     });
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_success", {
+      total_amount_cents: 15000,
+    });
   });
 
   it("shows retry UI when initial dashboard load fails", async () => {
@@ -134,6 +144,29 @@ describe("DashboardHome", () => {
 
     await waitFor(() => {
       expect(mockGetDashboardKpis).toHaveBeenCalledTimes(2);
+    });
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("dashboard_load_failed", {
+      message: "boom",
+    });
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("dashboard_retry_clicked");
+  });
+
+  it("tracks close cash failure event", async () => {
+    mockCloseCash.mockRejectedValueOnce(new Error("cash close failed"));
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(mockGetDashboardKpis).toHaveBeenCalledTimes(1);
+    });
+
+    const closeButton = screen.getByRole("button", { name: /finalizar turno y cerrar caja/i });
+    await userEvent.click(closeButton);
+
+    await waitFor(() => {
+      expect(mockCloseCash).toHaveBeenCalledTimes(1);
+    });
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_failure", {
+      message: "cash close failed",
     });
   });
 });

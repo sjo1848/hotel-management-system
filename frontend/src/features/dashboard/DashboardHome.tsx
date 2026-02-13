@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,9 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
+import { useResourceQuery } from "@/lib/useResourceQuery";
+import { trackUiEvent } from "@/lib/telemetry";
+import { getErrorMessage } from "@/api/errors";
 
 type KPICardProps = {
   title: string;
@@ -90,18 +93,60 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
   </Card>
 );
 
+type DashboardData = {
+  kpis: DashboardKpis;
+  revenueData: RevenueReportItem[];
+  occupancyData: OccupancyReportItem[];
+  balance: CashBalance;
+};
+
+const DASHBOARD_QUERY_KEY = "dashboard:home";
+
 const DashboardHome = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [kpis, setKpis] = useState<DashboardKpis | null>(null);
-  const [revenueData, setRevenueData] = useState<RevenueReportItem[]>([]);
-  const [occupancyData, setOccupancyData] = useState<OccupancyReportItem[]>([]);
-  const [balance, setBalance] = useState<CashBalance | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [isClosing, setIsClosing] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const hasTrackedLoadFailureRef = useRef(false);
+  const {
+    data: dashboardData,
+    isLoading: loading,
+    error: dashboardError,
+    refetch: refetchDashboard,
+    invalidate: invalidateDashboard,
+  } = useResourceQuery<DashboardData>({
+    queryKey: DASHBOARD_QUERY_KEY,
+    queryFn: async () => {
+      const [kpis, revenueData, occupancyData, balance] = await Promise.all([
+        getDashboardKpis(),
+        getRevenueReport(),
+        getOccupancyReport(),
+        getCashBalance(),
+      ]);
+      return { kpis, revenueData, occupancyData, balance };
+    },
+    staleTimeMs: 10_000,
+  });
+  const kpis = dashboardData?.kpis ?? null;
+  const revenueData = dashboardData?.revenueData ?? [];
+  const occupancyData = dashboardData?.occupancyData ?? [];
+  const balance = dashboardData?.balance ?? null;
+  const loadError = dashboardError ? "No se pudo cargar el dashboard. Reintentá." : null;
+
+  useEffect(() => {
+    if (dashboardError && !hasTrackedLoadFailureRef.current) {
+      hasTrackedLoadFailureRef.current = true;
+      trackUiEvent("dashboard_load_failed", {
+        message: dashboardError,
+      });
+      return;
+    }
+
+    if (!dashboardError) {
+      hasTrackedLoadFailureRef.current = false;
+    }
+  }, [dashboardError]);
 
   const AlertItem = ({ alert, type }: { alert: any, type: 'arrival' | 'departure' }) => (
     <div 
@@ -129,61 +174,51 @@ const DashboardHome = () => {
     </div>
   );
 
-  const loadDashboardData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [kpiRes, revRes, occRes, balRes] = await Promise.all([
-        getDashboardKpis(),
-        getRevenueReport(),
-        getOccupancyReport(),
-        getCashBalance()
-      ]);
-      setKpis(kpiRes);
-      setRevenueData(revRes);
-      setOccupancyData(occRes);
-      setBalance(balRes);
-    } catch (error) {
-      console.error("Dashboard error:", error);
-      setLoadError("No se pudo cargar el dashboard. Reintentá.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadDashboardData();
-  }, [loadDashboardData]);
-
   const handleCloseCash = useCallback(async () => {
     if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) return;
     setIsClosing(true);
     try {
       await closeCash("Cierre manual desde dashboard");
+      trackUiEvent("close_cash_success", {
+        total_amount_cents: balance?.total_amount_cents ?? 0,
+      });
       toast({ title: "Caja cerrada", description: "El reporte ha sido generado correctamente", variant: "success" });
-      await loadDashboardData();
+      invalidateDashboard();
+      await refetchDashboard();
     } catch (e) {
+      trackUiEvent("close_cash_failure", {
+        message: getErrorMessage(e, "No se pudo cerrar la caja"),
+      });
       toast({ title: "Error", description: "No se pudo cerrar la caja", variant: "error" });
     } finally {
       setIsClosing(false);
     }
-  }, [loadDashboardData, toast]);
+  }, [balance?.total_amount_cents, invalidateDashboard, refetchDashboard, toast]);
 
   const handleDrawerSuccess = useCallback(async () => {
-    await loadDashboardData();
-  }, [loadDashboardData]);
+    invalidateDashboard();
+    await refetchDashboard();
+  }, [invalidateDashboard, refetchDashboard]);
 
-  const formattedRevenueData = revenueData.map(item => ({
-    ...item,
-    amount: item.amount_cents / 100,
-    dateLabel: format(new Date(item.date), "dd/MM")
-  }));
+  const formattedRevenueData = useMemo(
+    () =>
+      revenueData.map((item) => ({
+        ...item,
+        amount: item.amount_cents / 100,
+        dateLabel: format(new Date(item.date), "dd/MM"),
+      })),
+    [revenueData],
+  );
 
-  const formattedOccupancyData = occupancyData.map(item => ({
-    ...item,
-    rate: item.occupancy_rate,
-    dateLabel: format(new Date(item.date), "dd/MM")
-  }));
+  const formattedOccupancyData = useMemo(
+    () =>
+      occupancyData.map((item) => ({
+        ...item,
+        rate: item.occupancy_rate,
+        dateLabel: format(new Date(item.date), "dd/MM"),
+      })),
+    [occupancyData],
+  );
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -201,7 +236,8 @@ const DashboardHome = () => {
             size="sm"
             className="rounded-lg border-rose-200 bg-white text-rose-700 hover:bg-rose-100"
             onClick={() => {
-              void loadDashboardData();
+              trackUiEvent("dashboard_retry_clicked");
+              void refetchDashboard();
             }}
           >
             Reintentar
