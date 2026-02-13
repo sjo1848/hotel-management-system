@@ -151,14 +151,19 @@ impl RoomRepository for PostgresRoomRepository {
     async fn find_available(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
         let records = sqlx::query(
             r#"
-            SELECT id, hotel_id, room_number, room_type, status, price_cents
-            FROM rooms
-            WHERE hotel_id = $1
-            AND id NOT IN (
-                SELECT room_id FROM bookings
-                WHERE hotel_id = $1 AND check_in < $3 AND check_out > $2
-            )
-            AND status = 'AVAILABLE'
+            SELECT r.id, r.hotel_id, r.room_number, r.room_type, r.status, r.price_cents
+            FROM rooms r
+            WHERE r.hotel_id = $1
+              AND r.status = 'AVAILABLE'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM bookings b
+                  WHERE b.hotel_id = $1
+                    AND b.room_id = r.id
+                    AND b.check_in < $3
+                    AND b.check_out > $2
+                    AND b.status != 'CANCELLED'
+              )
             "#,
         )
         .bind(hotel_id)
