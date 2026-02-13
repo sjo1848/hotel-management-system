@@ -4,12 +4,12 @@ info:
   version: 1.0.0
   description: API v1 para HMS Elite (auth, rooms, bookings, guests, users).
 servers:
-  - url: http://localhost:3000/api/v1
+  - url: http://localhost:3001
     description: Local development
 security:
   - cookieAuth: []
 paths:
-  /auth/login:
+  /api/v1/auth/login:
     post:
       summary: Login
       requestBody:
@@ -33,7 +33,7 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /auth/refresh:
+  /api/v1/auth/refresh:
     post:
       summary: Refresh token
       requestBody:
@@ -57,7 +57,7 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /auth/logout:
+  /api/v1/auth/logout:
     post:
       summary: Logout
       responses:
@@ -78,7 +78,7 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /auth/me:
+  /api/v1/auth/me:
     get:
       summary: Datos del usuario autenticado
       responses:
@@ -90,7 +90,7 @@ paths:
                 $ref: "#/components/schemas/UserView"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /rooms:
+  /api/v1/rooms:
     get:
       summary: Listar habitaciones
       responses:
@@ -104,7 +104,7 @@ paths:
                   $ref: "#/components/schemas/Room"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /rooms/available:
+  /api/v1/rooms/available:
     get:
       summary: Buscar disponibilidad
       parameters:
@@ -131,7 +131,7 @@ paths:
                   $ref: "#/components/schemas/Room"
         "401":
           $ref: "#/components/responses/ErrorResponse"
-  /bookings:
+  /api/v1/bookings:
     get:
       summary: Listar reservas
       responses:
@@ -164,7 +164,7 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "409":
           $ref: "#/components/responses/ErrorResponse"
-  /bookings/{id}:
+  /api/v1/bookings/{id}:
     patch:
       summary: Actualizar reserva
       parameters:
@@ -191,7 +191,7 @@ paths:
           $ref: "#/components/responses/ErrorResponse"
         "404":
           $ref: "#/components/responses/ErrorResponse"
-  /guests:
+  /api/v1/guests:
     get:
       summary: Listar huéspedes
       responses:
@@ -222,7 +222,7 @@ paths:
                 $ref: "#/components/schemas/Guest"
         "400":
           $ref: "#/components/responses/ErrorResponse"
-  /users:
+  /api/v1/users:
     get:
       summary: Listar usuarios (admin)
       responses:
@@ -253,6 +253,324 @@ paths:
                 $ref: "#/components/schemas/UserView"
         "400":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/users/{id}:
+    delete:
+      summary: Eliminar usuario (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Usuario eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/hotels:
+    get:
+      summary: Listar hoteles (SaaS)
+      responses:
+        "200":
+          description: Lista de hoteles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    post:
+      summary: Crear hotel (SaaS)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHotelRequest"
+      responses:
+        "200":
+          description: Hotel creado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/{id}/status:
+    patch:
+      summary: Actualizar estado de habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/bookings/{id}/extra-charges:
+    get:
+      summary: Listar cargos extra por reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Cargos extra
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+    post:
+      summary: Agregar cargo extra a reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddExtraChargeRequest"
+      responses:
+        "200":
+          description: Cargo extra agregado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/analytics/kpis:
+    get:
+      summary: KPI de dashboard
+      responses:
+        "200":
+          description: KPIs
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/billing/balance:
+    get:
+      summary: Balance actual de caja
+      responses:
+        "200":
+          description: Balance actual
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_amount_cents:
+                    type: integer
+                  cash_amount_cents:
+                    type: integer
+                  card_amount_cents:
+                    type: integer
+  /api/v1/billing/close-cash:
+    post:
+      summary: Cierre de caja
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  nullable: true
+      responses:
+        "200":
+          description: Cierre registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+  /api/v1/invoices:
+    get:
+      summary: Listar facturas
+      responses:
+        "200":
+          description: Lista de facturas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+  /api/v1/bookings/{id}/invoice:
+    get:
+      summary: Obtener factura de una reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Factura de reserva
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/housekeeping/dirty:
+    get:
+      summary: Listar habitaciones sucias
+      responses:
+        "200":
+          description: Habitaciones pendientes de limpieza
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+  /api/v1/housekeeping/{id}/start:
+    post:
+      summary: Iniciar limpieza
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Limpieza iniciada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /api/v1/housekeeping/{id}/finish:
+    post:
+      summary: Finalizar limpieza
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Limpieza finalizada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /api/v1/reports/revenue:
+    get:
+      summary: Reporte de ingresos
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Reporte de ingresos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+  /api/v1/reports/occupancy:
+    get:
+      summary: Reporte de ocupación
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Reporte de ocupación
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
 components:
   securitySchemes:
     cookieAuth:
@@ -262,6 +580,15 @@ components:
   responses:
     ErrorResponse:
       description: Error estándar
+      headers:
+        x-api-version:
+          schema:
+            type: string
+          description: Versión de contrato de API.
+        x-api-deprecation-policy:
+          schema:
+            type: string
+          description: Política de compatibilidad/deprecación del contrato.
       content:
         application/json:
           schema:
@@ -406,4 +733,23 @@ components:
         password:
           type: string
         role:
+          type: string
+    CreateHotelRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+          nullable: true
+    AddExtraChargeRequest:
+      type: object
+      required: [description, amount_cents, category]
+      properties:
+        description:
+          type: string
+        amount_cents:
+          type: integer
+        category:
           type: string
