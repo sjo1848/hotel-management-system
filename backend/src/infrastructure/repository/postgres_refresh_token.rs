@@ -30,7 +30,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(token.revoked_at)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(token)
     }
@@ -82,4 +82,21 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
 
         Ok(())
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "fk_refresh_tokens_hotel_user" {
+                    return "REFRESH_TOKEN_SUBJECT_NOT_FOUND".to_string();
+                }
+                if constraint_name == "refresh_tokens_hotel_id_fkey" {
+                    return "REFRESH_TOKEN_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

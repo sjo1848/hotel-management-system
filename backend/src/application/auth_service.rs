@@ -89,7 +89,7 @@ impl AuthService {
             .refresh_repo
             .create(refresh)
             .await
-            .map_err(DomainError::InfrastructureError)?;
+            .map_err(map_refresh_repo_error)?;
 
         Ok((raw_token, saved))
     }
@@ -113,7 +113,7 @@ impl AuthService {
         self.refresh_repo
             .revoke(refresh.id)
             .await
-            .map_err(DomainError::InfrastructureError)?;
+            .map_err(map_refresh_repo_error)?;
 
         let (new_raw, new_refresh) = self
             .issue_refresh_token(refresh.hotel_id, refresh.user_id)
@@ -134,7 +134,7 @@ impl AuthService {
         self.refresh_repo
             .revoke(refresh.id)
             .await
-            .map_err(DomainError::InfrastructureError)?;
+            .map_err(map_refresh_repo_error)?;
 
         Ok((refresh.hotel_id, refresh.user_id))
     }
@@ -147,7 +147,7 @@ impl AuthService {
         self.refresh_repo
             .revoke_all_for_user(hotel_id, user_id)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_refresh_repo_error)
     }
 }
 
@@ -156,6 +156,16 @@ fn hash_token(raw: &str) -> String {
     hasher.update(raw.as_bytes());
     let digest = hasher.finalize();
     format!("{:x}", digest)
+}
+
+fn map_refresh_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        // En autenticación no exponemos detalle de existencia de sujeto/hotel
+        "REFRESH_TOKEN_SUBJECT_NOT_FOUND" | "REFRESH_TOKEN_HOTEL_NOT_FOUND" => {
+            DomainError::Unauthorized
+        }
+        _ => DomainError::InfrastructureError(message),
+    }
 }
 
 #[cfg(test)]
@@ -167,5 +177,17 @@ mod tests {
         let first = hash_token("token");
         let second = hash_token("token");
         assert_eq!(first, second);
+    }
+
+    #[test]
+    fn map_refresh_repo_error_masks_subject_fk_as_unauthorized() {
+        assert!(matches!(
+            map_refresh_repo_error("REFRESH_TOKEN_SUBJECT_NOT_FOUND".to_string()),
+            DomainError::Unauthorized
+        ));
+        assert!(matches!(
+            map_refresh_repo_error("REFRESH_TOKEN_HOTEL_NOT_FOUND".to_string()),
+            DomainError::Unauthorized
+        ));
     }
 }
