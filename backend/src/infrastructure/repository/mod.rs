@@ -5,3 +5,6 @@ pub mod postgres_refresh_token;
 pub mod postgres_user;
 pub mod postgres_audit;
 pub mod postgres_invoice;
+pub mod postgres_hotel;
+pub mod postgres_extra_charge;
+pub mod postgres_cash_closure;

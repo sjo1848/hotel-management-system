@@ -13,8 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateBooking, getBookings } from "../services/bookingService";
 import roomService from "@/features/rooms/services/roomService";
+import extraChargeService from "../services/extraChargeService";
 import { useToast } from "@/components/ui/toast";
-import { Booking, Room, BookingStatus } from "@/types/domain";
+import { Booking, Room, BookingStatus, ExtraCharge } from "@/types/domain";
+import { Plus, Coffee, Beer, WashingMachine, Utensils, Tag } from "lucide-react";
 
 type BookingEditDrawerProps = {
   booking: Booking | null;
@@ -37,6 +39,8 @@ const BookingEditDrawer = ({
   const [booking, setBooking] = useState<Booking | null>(initialBooking);
   const [showSuccess, setShowSuccess] = useState<'CheckedIn' | 'CheckedOut' | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [isAddingExtra, setIsAddingExtra] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -76,11 +80,31 @@ const BookingEditDrawer = ({
         });
         // Fetch room status
         roomService.getRoomById(currentBooking.room_id).then(setRoom).catch(console.error);
+        // Fetch extra charges
+        extraChargeService.getExtraCharges(currentBooking.id).then(setExtraCharges).catch(console.error);
       }
     };
 
     loadBooking();
   }, [initialBooking, bookingId, isOpen]);
+
+  const handleAddExtra = async (desc: string, amount: number, cat: string) => {
+    if (!booking) return;
+    try {
+      await extraChargeService.addExtraCharge(booking.id, { 
+        description: desc, 
+        amount_cents: amount, 
+        category: cat 
+      });
+      toast({ title: "Cargo añadido", variant: "success" });
+      const updated = await extraChargeService.getExtraCharges(booking.id);
+      setExtraCharges(updated);
+      setIsAddingExtra(false);
+      onSuccess(); // Refresh list to update total price
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo añadir el cargo", variant: "error" });
+    }
+  };
 
   if (!booking && !loading && isOpen && bookingId) {
       return (
@@ -255,6 +279,54 @@ const BookingEditDrawer = ({
                     >
                       <XCircle className="w-4 h-4 mr-2" /> Cancelar
                     </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Extra Charges Section */}
+              <div className="space-y-4 pt-6 border-t">
+                <div className="flex justify-between items-center">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Cargos Extras / Consumos</Label>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-7 text-indigo-600 font-bold text-[10px] uppercase"
+                    onClick={() => setIsAddingExtra(!isAddingExtra)}
+                  >
+                    <Plus className="w-3 h-3 mr-1" /> Añadir
+                  </Button>
+                </div>
+
+                {isAddingExtra && (
+                  <div className="grid grid-cols-2 gap-2 animate-in slide-in-from-top-2 duration-300">
+                    <Button variant="outline" className="h-16 flex-col text-[10px] gap-1" onClick={() => handleAddExtra("Minibar: Agua", 300, "MINIBAR")}>
+                      <Beer className="w-4 h-4" /> Agua ($3)
+                    </Button>
+                    <Button variant="outline" className="h-16 flex-col text-[10px] gap-1" onClick={() => handleAddExtra("Minibar: Refresco", 500, "MINIBAR")}>
+                      <Utensils className="w-4 h-4" /> Soda ($5)
+                    </Button>
+                    <Button variant="outline" className="h-16 flex-col text-[10px] gap-1" onClick={() => handleAddExtra("Desayuno Buffet", 1500, "RESTAURANTE")}>
+                      <Coffee className="w-4 h-4" /> Desayuno ($15)
+                    </Button>
+                    <Button variant="outline" className="h-16 flex-col text-[10px] gap-1" onClick={() => handleAddExtra("Servicio Lavandería", 2500, "LAVANDERIA")}>
+                      <WashingMachine className="w-4 h-4" /> Lavado ($25)
+                    </Button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {extraCharges.length === 0 ? (
+                    <p className="text-[10px] text-slate-400 italic text-center py-2">Sin consumos registrados</p>
+                  ) : (
+                    extraCharges.map(charge => (
+                      <div key={charge.id} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg text-xs">
+                        <div className="flex items-center gap-2">
+                          <Tag className="w-3 h-3 text-slate-400" />
+                          <span className="font-medium text-slate-700">{charge.description}</span>
+                        </div>
+                        <span className="font-mono font-bold">${charge.amount_cents / 100}</span>
+                      </div>
+                    ))
                   )}
                 </div>
               </div>

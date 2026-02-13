@@ -61,7 +61,7 @@ impl AuthService {
         Ok(user)
     }
 
-    pub async fn issue_refresh_token(&self, user_id: Uuid) -> Result<(String, RefreshToken), DomainError> {
+    pub async fn issue_refresh_token(&self, hotel_id: Uuid, user_id: Uuid) -> Result<(String, RefreshToken), DomainError> {
         let mut random_bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut random_bytes);
         let raw_token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(random_bytes);
@@ -71,6 +71,7 @@ impl AuthService {
 
         let refresh = RefreshToken {
             id: Uuid::new_v4(),
+            hotel_id,
             user_id,
             token_hash,
             expires_at,
@@ -89,7 +90,7 @@ impl AuthService {
     pub async fn rotate_refresh_token(
         &self,
         raw_token: &str,
-    ) -> Result<(Uuid, String, RefreshToken), DomainError> {
+    ) -> Result<(Uuid, Uuid, String, RefreshToken), DomainError> {
         let token_hash = hash_token(raw_token);
         let refresh = self
             .refresh_repo
@@ -107,12 +108,12 @@ impl AuthService {
             .await
             .map_err(DomainError::InfrastructureError)?;
 
-        let (new_raw, new_refresh) = self.issue_refresh_token(refresh.user_id).await?;
+        let (new_raw, new_refresh) = self.issue_refresh_token(refresh.hotel_id, refresh.user_id).await?;
 
-        Ok((refresh.user_id, new_raw, new_refresh))
+        Ok((refresh.hotel_id, refresh.user_id, new_raw, new_refresh))
     }
 
-    pub async fn revoke_refresh_token(&self, raw_token: &str) -> Result<Uuid, DomainError> {
+    pub async fn revoke_refresh_token(&self, raw_token: &str) -> Result<(Uuid, Uuid), DomainError> {
         let token_hash = hash_token(raw_token);
         let refresh = self
             .refresh_repo
@@ -126,12 +127,12 @@ impl AuthService {
             .await
             .map_err(DomainError::InfrastructureError)?;
 
-        Ok(refresh.user_id)
+        Ok((refresh.hotel_id, refresh.user_id))
     }
 
-    pub async fn revoke_user_tokens(&self, user_id: Uuid) -> Result<(), DomainError> {
+    pub async fn revoke_user_tokens(&self, hotel_id: Uuid, user_id: Uuid) -> Result<(), DomainError> {
         self.refresh_repo
-            .revoke_all_for_user(user_id)
+            .revoke_all_for_user(hotel_id, user_id)
             .await
             .map_err(DomainError::InfrastructureError)
     }

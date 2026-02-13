@@ -9,6 +9,7 @@ import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
 import ReportsPage from "./features/reports/ReportsPage";
+import HotelNetworkPage from "./features/dashboard/HotelNetworkPage";
 import { ReactNode } from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
@@ -82,6 +83,10 @@ const router = createBrowserRouter([
       {
         path: "/users",
         element: <UsersPage />,
+      },
+      {
+        path: "/network",
+        element: <HotelNetworkPage />,
       },
       {
         path: "/reports",

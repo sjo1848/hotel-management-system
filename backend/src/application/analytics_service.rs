@@ -1,6 +1,7 @@
 use crate::domain::models::DashboardKpis;
 use crate::domain::repositories::BookingRepository;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct AnalyticsService {
     booking_repo: Arc<dyn BookingRepository>,
@@ -11,7 +12,7 @@ impl AnalyticsService {
         Self { booking_repo }
     }
 
-    pub async fn get_dashboard_kpis(&self) -> Result<DashboardKpis, String> {
-        self.booking_repo.get_dashboard_stats().await
+    pub async fn get_dashboard_kpis(&self, hotel_id: Uuid) -> Result<DashboardKpis, String> {
+        self.booking_repo.get_dashboard_stats(hotel_id).await
     }
 }

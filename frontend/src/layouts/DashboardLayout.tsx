@@ -14,7 +14,8 @@ import {
   Menu,
   TrendingUp,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,7 +125,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   HMS <span className="text-secondary">ELITE</span>
                 </h1>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold">
-                  Management System
+                  {user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA"}
                 </p>
               </div>
             )}
@@ -175,6 +176,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </p>
               )}
               <div className="space-y-1">
+                {user?.hotel_id === "00000000-0000-0000-0000-000000000001" && (
+                  <SidebarItem icon={Globe} label="Red Global" path="/network" active={location.pathname.startsWith("/network")} collapsed={isCollapsed} />
+                )}
                 <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} collapsed={isCollapsed} />
                 <SidebarItem icon={TrendingUp} label="Tendencias" path="/reports" active={location.pathname.startsWith("/reports")} collapsed={isCollapsed} />
               </div>

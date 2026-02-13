@@ -14,12 +14,14 @@ impl AuditService {
 
     pub async fn record(
         &self,
+        hotel_id: Option<Uuid>,
         user_id: Option<Uuid>,
         action: &str,
         ip_address: Option<String>,
     ) {
         let event = AuditEvent {
             id: Uuid::new_v4(),
+            hotel_id,
             user_id,
             action: action.to_string(),
             ip_address,

@@ -25,6 +25,7 @@ import {
   type RevenueReportItem,
   type OccupancyReportItem
 } from "./services/analyticsService";
+import { getCashBalance, closeCash, type CashBalance } from "./services/billingService";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AreaChart,
@@ -92,7 +93,9 @@ const DashboardHome = () => {
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueReportItem[]>([]);
   const [occupancyData, setOccupancyData] = useState<OccupancyReportItem[]>([]);
+  const [balance, setBalance] = useState<CashBalance | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -126,14 +129,16 @@ const DashboardHome = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [kpiRes, revRes, occRes] = await Promise.all([
+        const [kpiRes, revRes, occRes, balRes] = await Promise.all([
           getDashboardKpis(),
           getRevenueReport(),
-          getOccupancyReport()
+          getOccupancyReport(),
+          getCashBalance()
         ]);
         setKpis(kpiRes);
         setRevenueData(revRes);
         setOccupancyData(occRes);
+        setBalance(balRes);
       } catch (error) {
         console.error("Dashboard error:", error);
       } finally {
@@ -142,6 +147,20 @@ const DashboardHome = () => {
     };
     loadData();
   }, []);
+
+  const handleCloseCash = async () => {
+    if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) return;
+    setIsClosing(true);
+    try {
+      await closeCash("Cierre manual desde dashboard");
+      toast({ title: "Caja cerrada", description: "El reporte ha sido generado correctamente", variant: "success" });
+      window.location.reload();
+    } catch (e) {
+      toast({ title: "Error", description: "No se pudo cerrar la caja", variant: "error" });
+    } finally {
+      setIsClosing(false);
+    }
+  };
 
   const formattedRevenueData = revenueData.map(item => ({
     ...item,
@@ -296,8 +315,46 @@ const DashboardHome = () => {
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
+        {/* CASH CLOSURE WIDGET */}
+        <div className="lg:col-span-1">
+          <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-slate-900 text-white h-full relative group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+              <DollarSign className="w-24 h-24" />
+            </div>
+            <CardHeader>
+              <CardTitle className="text-lg font-black tracking-tight">Cierre de Caja</CardTitle>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Balance del Turno Actual</p>
+            </CardHeader>
+            <CardContent className="space-y-6 relative z-10">
+              <div className="space-y-1">
+                <p className="text-4xl font-black text-white">${((balance?.total_amount_cents || 0) / 100).toLocaleString()}</p>
+                <p className="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">Ingresos totales acumulados</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Efectivo</p>
+                  <p className="text-lg font-bold text-white">${((balance?.cash_amount_cents || 0) / 100).toLocaleString()}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Tarjeta</p>
+                  <p className="text-lg font-bold text-white">${((balance?.card_amount_cents || 0) / 100).toLocaleString()}</p>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleCloseCash}
+                disabled={isClosing || (balance?.total_amount_cents || 0) === 0}
+                className="w-full h-12 bg-white text-slate-900 hover:bg-slate-100 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl"
+              >
+                {isClosing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Finalizar Turno y Cerrar Caja"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* ALERTS SECTION */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-2 space-y-6">
           <div>
             <h3 className="text-lg font-black text-slate-900 tracking-tight">Alertas de Hoy</h3>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Llegadas y Salidas</p>
@@ -329,7 +386,7 @@ const DashboardHome = () => {
         </div>
 
         {/* RECENT BOOKINGS */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-3">
           <Card className="border-none shadow-2xl shadow-slate-200/60 overflow-hidden rounded-3xl h-full">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-6 px-8">
               <div className="flex justify-between items-center">
@@ -347,7 +404,7 @@ const DashboardHome = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 text-slate-900 bg-white">
               <BookingList />
             </CardContent>
           </Card>

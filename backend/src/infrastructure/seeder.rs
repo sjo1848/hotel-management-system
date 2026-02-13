@@ -5,6 +5,8 @@ use crate::domain::models::{Room, RoomStatus, User};
 use crate::domain::repositories::{RoomRepository, UserRepository};
 use crate::infrastructure::web::passwords::hash_password;
 
+pub const DEFAULT_HOTEL_ID: &str = "00000000-0000-0000-0000-000000000001";
+
 pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRepository>) {
     // If admin already exists, skip
     if let Ok(Some(_)) = user_repo.find_by_username(&config.admin_user).await {
@@ -16,9 +18,12 @@ pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRep
         Err(_) => return,
     };
 
+    let hotel_id = Uuid::parse_str(DEFAULT_HOTEL_ID).unwrap();
+
     let _ = user_repo
         .create(User {
             id: Uuid::new_v4(),
+            hotel_id,
             username: config.admin_user.clone(),
             password_hash: hash,
             role: config.admin_role.clone(),
@@ -28,7 +33,8 @@ pub async fn bootstrap_admin_user(config: &AppConfig, user_repo: Arc<dyn UserRep
 }
 
 pub async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
-    if let Ok(rooms) = room_repo.find_all().await {
+    let hotel_id = Uuid::parse_str(DEFAULT_HOTEL_ID).unwrap();
+    if let Ok(rooms) = room_repo.find_all(hotel_id).await {
         if !rooms.is_empty() {
             tracing::info!("Habitaciones ya existen, saltando seed.");
             return;
@@ -49,6 +55,7 @@ pub async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
     for (num, rtype, price) in rooms {
         let room = Room {
             id: Uuid::new_v4(),
+            hotel_id,
             room_number: num.to_string(),
             room_type: rtype.to_string(),
             status: RoomStatus::Available,

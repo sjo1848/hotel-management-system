@@ -1,6 +1,7 @@
 use crate::domain::models::DashboardKpis;
 use crate::domain::repositories::BookingRepository;
 use std::sync::Arc;
+use uuid::Uuid;
 
 pub struct ReportingService {
     booking_repo: Arc<dyn BookingRepository>,
@@ -11,8 +12,8 @@ impl ReportingService {
         Self { booking_repo }
     }
 
-    pub async fn get_dashboard_summary(&self) -> Result<DashboardKpis, String> {
-        let mut kpis = self.booking_repo.get_dashboard_stats().await?;
+    pub async fn get_dashboard_summary(&self, hotel_id: Uuid) -> Result<DashboardKpis, String> {
+        let mut kpis = self.booking_repo.get_dashboard_stats(hotel_id).await?;
         
         // Calculate ADR (Average Daily Rate)
         // Revenue / Occupied Rooms (simplified for this demo as Month Revenue / Active Bookings)
@@ -29,11 +30,11 @@ impl ReportingService {
         Ok(kpis)
     }
 
-    pub async fn get_revenue_report(&self, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
-        self.booking_repo.get_revenue_report(start, end).await
+    pub async fn get_revenue_report(&self, hotel_id: Uuid, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+        self.booking_repo.get_revenue_report(hotel_id, start, end).await
     }
 
-    pub async fn get_occupancy_report(&self, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
-        self.booking_repo.get_occupancy_report(start, end).await
+    pub async fn get_occupancy_report(&self, hotel_id: Uuid, start: chrono::NaiveDate, end: chrono::NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+        self.booking_repo.get_occupancy_report(hotel_id, start, end).await
     }
 }

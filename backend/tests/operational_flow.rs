@@ -36,14 +36,17 @@ async fn full_operational_cycle(pool: sqlx::PgPool) {
         audit_service,
     );
 
+    let hotel_id = Uuid::new_v4();
+
     // 2. Create Room (Catalog)
-    let room = room_service.create_room("505".to_string(), "Penthouse".to_string(), 50000).await.unwrap();
+    let room = room_service.create_room(hotel_id, "505".to_string(), "Penthouse".to_string(), 50000).await.unwrap();
     assert_eq!(room.status, RoomStatus::Available);
 
     // 3. Create Booking
     let check_in = NaiveDate::from_ymd_opt(2026, 3, 1).unwrap();
     let check_out = NaiveDate::from_ymd_opt(2026, 3, 5).unwrap();
     let booking = booking_service.execute(
+        hotel_id,
         room.id,
         None,
         "John Doe".to_string(),
@@ -54,32 +57,32 @@ async fn full_operational_cycle(pool: sqlx::PgPool) {
 
     // 4. Check-in (Status: Available -> Occupied)
     let booking = booking_service.update_booking(
-        booking.id, None, None, None, None, Some(BookingStatus::CheckedIn)
+        hotel_id, booking.id, None, None, None, None, Some(BookingStatus::CheckedIn)
     ).await.unwrap();
     
-    let room_after_checkin = room_repo.find_by_id(room.id).await.unwrap().unwrap();
+    let room_after_checkin = room_repo.find_by_id(hotel_id, room.id).await.unwrap().unwrap();
     assert_eq!(room_after_checkin.status, RoomStatus::Occupied);
 
     // 5. Check-out (Status: Occupied -> Dirty)
     let _ = booking_service.update_booking(
-        booking.id, None, None, None, None, Some(BookingStatus::CheckedOut)
+        hotel_id, booking.id, None, None, None, None, Some(BookingStatus::CheckedOut)
     ).await.unwrap();
 
-    let room_after_checkout = room_repo.find_by_id(room.id).await.unwrap().unwrap();
+    let room_after_checkout = room_repo.find_by_id(hotel_id, room.id).await.unwrap().unwrap();
     assert_eq!(room_after_checkout.status, RoomStatus::Dirty);
 
     // 6. Verify Invoice exists
-    let invoice = invoice_repo.find_by_booking(booking.id).await.unwrap();
+    let invoice = invoice_repo.find_by_booking(hotel_id, booking.id).await.unwrap();
     assert!(invoice.is_some());
     assert_eq!(invoice.unwrap().amount_cents, 4 * 50000); // 4 nights
 
     // 7. Housekeeping: Start Cleaning (Dirty -> Cleaning)
-    housekeeping_service.start_cleaning(room.id).await.unwrap();
-    let room_cleaning = room_repo.find_by_id(room.id).await.unwrap().unwrap();
+    housekeeping_service.start_cleaning(hotel_id, room.id).await.unwrap();
+    let room_cleaning = room_repo.find_by_id(hotel_id, room.id).await.unwrap().unwrap();
     assert_eq!(room_cleaning.status, RoomStatus::Cleaning);
 
     // 8. Housekeeping: Finish Cleaning (Cleaning -> Available)
-    housekeeping_service.finish_cleaning(room.id).await.unwrap();
-    let room_available = room_repo.find_by_id(room.id).await.unwrap().unwrap();
+    housekeeping_service.finish_cleaning(hotel_id, room.id).await.unwrap();
+    let room_available = room_repo.find_by_id(hotel_id, room.id).await.unwrap().unwrap();
     assert_eq!(room_available.status, RoomStatus::Available);
 }

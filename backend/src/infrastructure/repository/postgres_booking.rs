@@ -26,10 +26,11 @@ impl BookingRepository for PostgresBookingRepository {
         };
 
         sqlx::query(
-            "INSERT INTO bookings (id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            "INSERT INTO bookings (id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
         )
         .bind(booking.id)
+        .bind(booking.hotel_id)
         .bind(booking.room_id)
         .bind(booking.guest_id)
         .bind(&booking.guest_name)
@@ -44,10 +45,11 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(booking)
     }
 
-    async fn find_all(&self) -> Result<Vec<Booking>, String> {
+    async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Booking>, String> {
         let records = sqlx::query(
-            "SELECT id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings ORDER BY created_at DESC",
+            "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
+        .bind(hotel_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -58,6 +60,7 @@ impl BookingRepository for PostgresBookingRepository {
                 let status: Option<String> = row.try_get("status").ok();
                 Booking {
                     id: row.try_get("id").unwrap(),
+                    hotel_id: row.try_get("hotel_id").unwrap(),
                     room_id: row.try_get("room_id").unwrap(),
                     guest_id: row.try_get("guest_id").ok(),
                     guest_name: row.try_get("guest_name").unwrap(),
@@ -77,12 +80,13 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(bookings)
     }
 
-    async fn find_by_range(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Booking>, String> {
+    async fn find_by_range(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Booking>, String> {
         let records = sqlx::query(
-            "SELECT id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings 
-             WHERE (check_in < $2 AND check_out > $1)
+            "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings 
+             WHERE hotel_id = $1 AND (check_in < $3 AND check_out > $2)
              ORDER BY check_in ASC",
         )
+        .bind(hotel_id)
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
@@ -95,6 +99,7 @@ impl BookingRepository for PostgresBookingRepository {
                 let status: Option<String> = row.try_get("status").ok();
                 Booking {
                     id: row.try_get("id").unwrap(),
+                    hotel_id: row.try_get("hotel_id").unwrap(),
                     room_id: row.try_get("room_id").unwrap(),
                     guest_id: row.try_get("guest_id").ok(),
                     guest_name: row.try_get("guest_name").unwrap(),
@@ -114,10 +119,11 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(bookings)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Booking>, String> {
+    async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Booking>, String> {
         let record = sqlx::query(
-            "SELECT id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE id = $1",
+            "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 AND id = $2",
         )
+        .bind(hotel_id)
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -127,6 +133,7 @@ impl BookingRepository for PostgresBookingRepository {
             let status: Option<String> = row.try_get("status").ok();
             Booking {
                 id: row.try_get("id").unwrap(),
+                hotel_id: row.try_get("hotel_id").unwrap(),
                 room_id: row.try_get("room_id").unwrap(),
                 guest_id: row.try_get("guest_id").ok(),
                 guest_name: row.try_get("guest_name").unwrap(),
@@ -154,7 +161,7 @@ impl BookingRepository for PostgresBookingRepository {
         sqlx::query(
             "UPDATE bookings
              SET guest_id = $1, guest_name = $2, check_in = $3, check_out = $4, total_price_cents = $5, status = $6
-             WHERE id = $7",
+             WHERE hotel_id = $7 AND id = $8",
         )
         .bind(booking.guest_id)
         .bind(&booking.guest_name)
@@ -162,6 +169,7 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(booking.check_out)
         .bind(booking.total_price_cents)
         .bind(status)
+        .bind(booking.hotel_id)
         .bind(booking.id)
         .execute(&self.pool)
         .await
@@ -170,10 +178,11 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(booking)
     }
 
-    async fn find_by_room(&self, room_id: Uuid) -> Result<Vec<Booking>, String> {
+    async fn find_by_room(&self, hotel_id: Uuid, room_id: Uuid) -> Result<Vec<Booking>, String> {
         let records = sqlx::query(
-            "SELECT id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE room_id = $1",
+            "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 AND room_id = $2",
         )
+        .bind(hotel_id)
         .bind(room_id)
         .fetch_all(&self.pool)
         .await
@@ -185,6 +194,7 @@ impl BookingRepository for PostgresBookingRepository {
                 let status: Option<String> = row.try_get("status").ok();
                 Booking {
                     id: row.try_get("id").unwrap(),
+                    hotel_id: row.try_get("hotel_id").unwrap(),
                     room_id: row.try_get("room_id").unwrap(),
                     guest_id: row.try_get("guest_id").ok(),
                     guest_name: row.try_get("guest_name").unwrap(),
@@ -206,6 +216,7 @@ impl BookingRepository for PostgresBookingRepository {
 
     async fn check_availability(
         &self,
+        hotel_id: Uuid,
         room_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
@@ -214,13 +225,14 @@ impl BookingRepository for PostgresBookingRepository {
             r#"
             SELECT EXISTS (
                 SELECT 1 FROM bookings
-                WHERE room_id = $1
+                WHERE hotel_id = $1 AND room_id = $2
                 AND status != 'CANCELLED'
-                AND check_in < $3
-                AND check_out > $2
+                AND check_in < $4
+                AND check_out > $3
             ) as has_overlap
             "#,
         )
+        .bind(hotel_id)
         .bind(room_id)
         .bind(start)
         .bind(end)
@@ -234,6 +246,7 @@ impl BookingRepository for PostgresBookingRepository {
 
     async fn check_availability_excluding(
         &self,
+        hotel_id: Uuid,
         booking_id: Uuid,
         room_id: Uuid,
         start: NaiveDate,
@@ -243,14 +256,15 @@ impl BookingRepository for PostgresBookingRepository {
             r#"
             SELECT EXISTS (
                 SELECT 1 FROM bookings
-                WHERE room_id = $1
-                AND id != $2
+                WHERE hotel_id = $1 AND room_id = $2
+                AND id != $3
                 AND status != 'CANCELLED'
-                AND check_in < $4
-                AND check_out > $3
+                AND check_in < $5
+                AND check_out > $4
             ) as has_overlap
             "#,
         )
+        .bind(hotel_id)
         .bind(room_id)
         .bind(booking_id)
         .bind(start)
@@ -263,15 +277,16 @@ impl BookingRepository for PostgresBookingRepository {
         Ok(!has_overlap.unwrap_or(false))
     }
 
-    async fn get_dashboard_stats(&self) -> Result<crate::domain::models::DashboardKpis, String> {
+    async fn get_dashboard_stats(&self, hotel_id: Uuid) -> Result<crate::domain::models::DashboardKpis, String> {
         let now = chrono::Utc::now().naive_utc().date();
         let start_of_month = NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
         
         // 1. Revenue this month
         let revenue: (i64,) = sqlx::query_as(
             "SELECT COALESCE(SUM(total_price_cents), 0)::BIGINT FROM bookings 
-             WHERE status != 'CANCELLED' AND check_in >= $1"
+             WHERE hotel_id = $1 AND status != 'CANCELLED' AND check_in >= $2"
         )
+        .bind(hotel_id)
         .bind(start_of_month)
         .fetch_one(&self.pool)
         .await
@@ -279,8 +294,9 @@ impl BookingRepository for PostgresBookingRepository {
 
         // 2. Today's check-ins
         let check_ins: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM bookings WHERE status = 'CONFIRMED' AND check_in = $1"
+            "SELECT COUNT(*) FROM bookings WHERE hotel_id = $1 AND status = 'CONFIRMED' AND check_in = $2"
         )
+        .bind(hotel_id)
         .bind(now)
         .fetch_one(&self.pool)
         .await
@@ -288,23 +304,26 @@ impl BookingRepository for PostgresBookingRepository {
 
         // 3. Active bookings
         let active: (i64,) = sqlx::query_as(
-            "SELECT COUNT(*) FROM bookings WHERE status IN ('CONFIRMED', 'CHECKED_IN')"
+            "SELECT COUNT(*) FROM bookings WHERE hotel_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN')"
         )
+        .bind(hotel_id)
         .fetch_one(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
 
         // 4. Occupancy Rate
-        let total_rooms: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM rooms")
+        let total_rooms: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM rooms WHERE hotel_id = $1")
+            .bind(hotel_id)
             .fetch_one(&self.pool)
             .await
             .map_err(|e| e.to_string())?;
 
         let occupied_today: (i64,) = sqlx::query_as(
             "SELECT COUNT(DISTINCT room_id) FROM bookings 
-             WHERE status IN ('CONFIRMED', 'CHECKED_IN') 
-             AND check_in <= $1 AND check_out > $1"
+             WHERE hotel_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN') 
+             AND check_in <= $2 AND check_out > $2"
         )
+        .bind(hotel_id)
         .bind(now)
         .fetch_one(&self.pool)
         .await
@@ -321,8 +340,9 @@ impl BookingRepository for PostgresBookingRepository {
             "SELECT b.id, b.guest_name, r.room_number, b.status 
              FROM bookings b 
              JOIN rooms r ON b.room_id = r.id 
-             WHERE b.check_in = $1 AND b.status = 'CONFIRMED'"
+             WHERE b.hotel_id = $1 AND b.check_in = $2 AND b.status = 'CONFIRMED'"
         )
+        .bind(hotel_id)
         .bind(now)
         .fetch_all(&self.pool)
         .await
@@ -348,8 +368,9 @@ impl BookingRepository for PostgresBookingRepository {
             "SELECT b.id, b.guest_name, r.room_number, b.status 
              FROM bookings b 
              JOIN rooms r ON b.room_id = r.id 
-             WHERE b.check_out = $1 AND b.status = 'CHECKED_IN'"
+             WHERE b.hotel_id = $1 AND b.check_out = $2 AND b.status = 'CHECKED_IN'"
         )
+        .bind(hotel_id)
         .bind(now)
         .fetch_all(&self.pool)
         .await
@@ -382,14 +403,15 @@ impl BookingRepository for PostgresBookingRepository {
         })
     }
 
-    async fn get_revenue_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+    async fn get_revenue_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
         let records = sqlx::query(
             "SELECT check_in as date, SUM(total_price_cents)::BIGINT as revenue_cents 
              FROM bookings 
-             WHERE status != 'CANCELLED' AND check_in >= $1 AND check_in <= $2 
+             WHERE hotel_id = $1 AND status != 'CANCELLED' AND check_in >= $2 AND check_in <= $3 
              GROUP BY check_in 
              ORDER BY check_in ASC"
         )
+        .bind(hotel_id)
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
@@ -404,25 +426,26 @@ impl BookingRepository for PostgresBookingRepository {
         }).collect())
     }
 
-    async fn get_occupancy_report(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+    async fn get_occupancy_report(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
         let records = sqlx::query(
             r#"
             WITH dates AS (
-                SELECT generate_series($1::date, $2::date, '1 day'::interval)::date as day
+                SELECT generate_series($2::date, $3::date, '1 day'::interval)::date as day
             ),
             room_counts AS (
-                SELECT count(*) as total FROM rooms
+                SELECT count(*) as total FROM rooms WHERE hotel_id = $1
             )
             SELECT 
                 d.day as date,
                 (SELECT count(DISTINCT room_id) FROM bookings 
-                 WHERE status IN ('CONFIRMED', 'CHECKED_IN') 
+                 WHERE hotel_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN') 
                  AND check_in <= d.day AND check_out > d.day) as occupied_rooms,
                 rc.total as total_rooms
             FROM dates d, room_counts rc
             ORDER BY d.day ASC
             "#
         )
+        .bind(hotel_id)
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)

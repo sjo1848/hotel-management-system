@@ -26,7 +26,8 @@ use crate::infrastructure::web::handlers::{
     get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler, list_guests_handler,
     list_invoices_handler, list_users_handler, delete_user_handler, login_handler, logout_handler, me_handler, readiness_check,
     refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler, update_booking_handler,
-    update_room_status_handler,
+    update_room_status_handler, list_hotels_handler, create_hotel_handler, add_extra_charge_handler, list_extra_charges_handler,
+    get_current_balance_handler, close_cash_handler,
 };
 use crate::infrastructure::web::middleware::{
     auth::auth_middleware, rbac::admin_only, request_id::request_id_middleware, metrics::track_metrics,
@@ -94,16 +95,20 @@ pub fn create_router(state: Arc<AppState>) -> Router {
 
     let api_v1 = Router::new()
         .merge(auth_router_v1)
+        .route("/api/v1/hotels", get(list_hotels_handler).post(create_hotel_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/rooms", get(get_rooms_handler).merge(post(create_room_handler).layer(middleware::from_fn(admin_only))))
         .route("/api/v1/rooms/available", get(search_rooms_handler))
         .route("/api/v1/rooms/:id/status", patch(update_room_status_handler))
         .route("/api/v1/bookings", get(list_bookings_handler).post(create_booking_handler))
         .route("/api/v1/bookings/:id", patch(update_booking_handler))
+        .route("/api/v1/bookings/:id/extra-charges", get(list_extra_charges_handler).post(add_extra_charge_handler))
         .route("/api/v1/guests", get(list_guests_handler).post(create_guest_handler))
         .route("/api/v1/auth/me", get(me_handler))
         .route("/api/v1/users", get(list_users_handler).post(create_user_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/users/:id", delete(delete_user_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/analytics/kpis", get(get_dashboard_kpis_handler).layer(middleware::from_fn(admin_only)))
+        .route("/api/v1/billing/balance", get(get_current_balance_handler))
+        .route("/api/v1/billing/close-cash", post(close_cash_handler))
         .route("/api/v1/invoices", get(list_invoices_handler).layer(middleware::from_fn(admin_only)))
         .route("/api/v1/bookings/:id/invoice", get(get_invoice_by_booking_handler))
         .route("/api/v1/housekeeping/dirty", get(list_dirty_rooms_handler))

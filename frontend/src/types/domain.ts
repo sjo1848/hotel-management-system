@@ -7,6 +7,7 @@ export type UserRole = "admin" | "receptionist" | "housekeeping";
 
 export type User = {
   id: string;
+  hotel_id: string;
   username: string;
   role: UserRole;
 };
@@ -15,6 +16,7 @@ export type RoomStatus = "Available" | "Occupied" | "Dirty" | "Cleaning" | "Main
 
 export type Room = {
   id: string;
+  hotel_id: string;
   room_number: string;
   room_type: string;
   status: RoomStatus;
@@ -25,6 +27,7 @@ export type BookingStatus = "Confirmed" | "Cancelled" | "CheckedIn" | "CheckedOu
 
 export type Booking = {
   id: string;
+  hotel_id: string;
   room_id: string;
   guest_id: string | null;
   guest_name: string;
@@ -37,6 +40,7 @@ export type Booking = {
 
 export type Guest = {
   id: string;
+  hotel_id: string;
   full_name: string;
   email: string;
   phone?: string;
@@ -47,6 +51,7 @@ export type InvoiceStatus = "Pending" | "Paid" | "Cancelled";
 
 export type Invoice = {
   id: string;
+  hotel_id: string;
   booking_id: string;
   amount_cents: number;
   status: InvoiceStatus;

@@ -34,6 +34,7 @@ impl BookingService {
 
     pub async fn execute(
         &self,
+        hotel_id: Uuid,
         room_id: Uuid,
         guest_id: Option<Uuid>,
         guest_name: String,
@@ -42,7 +43,7 @@ impl BookingService {
     ) -> Result<Booking, DomainError> {
         let room = self
             .room_repo
-            .find_by_id(room_id)
+            .find_by_id(hotel_id, room_id)
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::RoomNotFound)?;
@@ -54,7 +55,7 @@ impl BookingService {
 
         let is_available = self
             .booking_repo
-            .check_availability(room_id, check_in, check_out)
+            .check_availability(hotel_id, room_id, check_in, check_out)
             .await
             .map_err(DomainError::InfrastructureError)?;
 
@@ -64,6 +65,7 @@ impl BookingService {
 
         let mut new_booking = Booking {
             id: Uuid::new_v4(),
+            hotel_id,
             room_id,
             guest_id,
             guest_name,
@@ -84,13 +86,14 @@ impl BookingService {
             .await
             .map_err(map_repo_error)?;
 
-        self.audit_service.record(guest_id, &format!("New Booking created: {}", saved_booking.id), None).await;
+        self.audit_service.record(Some(hotel_id), guest_id, &format!("New Booking created: {}", saved_booking.id), None).await;
         
         Ok(saved_booking)
     }
 
     pub async fn update_booking(
         &self,
+        hotel_id: Uuid,
         booking_id: Uuid,
         guest_id: Option<Uuid>,
         guest_name: Option<String>,
@@ -100,7 +103,7 @@ impl BookingService {
     ) -> Result<Booking, DomainError> {
         let mut booking = self
             .booking_repo
-            .find_by_id(booking_id)
+            .find_by_id(hotel_id, booking_id)
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::BookingNotFound)?;
@@ -132,6 +135,7 @@ impl BookingService {
         let is_available = self
             .booking_repo
             .check_availability_excluding(
+                hotel_id,
                 booking.id,
                 booking.room_id,
                 booking.check_in,
@@ -146,7 +150,7 @@ impl BookingService {
 
         let room = self
             .room_repo
-            .find_by_id(booking.room_id)
+            .find_by_id(hotel_id, booking.room_id)
             .await
             .map_err(DomainError::InfrastructureError)?
             .ok_or(DomainError::RoomNotFound)?;
@@ -161,19 +165,19 @@ impl BookingService {
         // Side effect: Update room status based on booking status using RoomService
         match updated_booking.status {
             BookingStatus::CheckedIn => {
-                let _ = self.room_service.update_room_status(updated_booking.room_id, RoomStatus::Occupied).await;
-                self.audit_service.record(None, &format!("Check-in: Booking {}", updated_booking.id), None).await;
+                let _ = self.room_service.update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Occupied).await;
+                self.audit_service.record(Some(hotel_id), None, &format!("Check-in: Booking {}", updated_booking.id), None).await;
             },
             BookingStatus::CheckedOut => {
-                let _ = self.room_service.update_room_status(updated_booking.room_id, RoomStatus::Dirty).await;
-                self.audit_service.record(None, &format!("Check-out: Booking {}", updated_booking.id), None).await;
+                let _ = self.room_service.update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Dirty).await;
+                self.audit_service.record(Some(hotel_id), None, &format!("Check-out: Booking {}", updated_booking.id), None).await;
                 
                 // Automate Invoice generation
-                let invoice = Invoice::new(updated_booking.id, updated_booking.total_price_cents);
+                let invoice = Invoice::new(hotel_id, updated_booking.id, updated_booking.total_price_cents);
                 let _ = self.invoice_repo.save(invoice).await;
             },
             BookingStatus::Cancelled => {
-                self.audit_service.record(None, &format!("Cancellation: Booking {}", updated_booking.id), None).await;
+                self.audit_service.record(Some(hotel_id), None, &format!("Cancellation: Booking {}", updated_booking.id), None).await;
             },
             _ => {}
         }
@@ -181,16 +185,17 @@ impl BookingService {
         Ok(updated_booking)
     }
 
-    pub async fn list_bookings(&self) -> Result<Vec<Booking>, String> {
-        self.booking_repo.find_all().await
+    pub async fn list_bookings(&self, hotel_id: Uuid) -> Result<Vec<Booking>, String> {
+        self.booking_repo.find_all(hotel_id).await
     }
 
     pub async fn list_bookings_in_range(
         &self,
+        hotel_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Booking>, String> {
-        self.booking_repo.find_by_range(start, end).await
+        self.booking_repo.find_by_range(hotel_id, start, end).await
     }
 }
 

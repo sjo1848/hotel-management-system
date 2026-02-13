@@ -19,9 +19,10 @@ impl PostgresRoomRepository {
 impl RoomRepository for PostgresRoomRepository {
     async fn create(&self, room: Room) -> Result<Room, String> {
         sqlx::query(
-            "INSERT INTO rooms (id, room_number, room_type, status, price_cents) VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO rooms (id, hotel_id, room_number, room_type, status, price_cents) VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(room.id)
+        .bind(room.hotel_id)
         .bind(&room.room_number)
         .bind(&room.room_type)
         .bind(match room.status {
@@ -39,10 +40,11 @@ impl RoomRepository for PostgresRoomRepository {
         Ok(room)
     }
 
-    async fn find_all(&self) -> Result<Vec<Room>, String> {
+    async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Room>, String> {
         let records = sqlx::query(
-            "SELECT id, room_number, room_type, status, price_cents FROM rooms",
+            "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1",
         )
+        .bind(hotel_id)
         .fetch_all(&self.pool)
         .await
         .map_err(|e| e.to_string())?;
@@ -53,6 +55,7 @@ impl RoomRepository for PostgresRoomRepository {
                 let status: Option<String> = rec.try_get("status").ok();
                 Room {
                     id: rec.try_get("id").unwrap(),
+                    hotel_id: rec.try_get("hotel_id").unwrap(),
                     room_number: rec.try_get("room_number").unwrap(),
                     room_type: rec.try_get("room_type").unwrap(),
                     status: match status.as_deref() {
@@ -67,10 +70,11 @@ impl RoomRepository for PostgresRoomRepository {
             .collect())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Room>, String> {
+    async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Room>, String> {
         let record = sqlx::query(
-            "SELECT id, room_number, room_type, status, price_cents FROM rooms WHERE id = $1",
+            "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1 AND id = $2",
         )
+        .bind(hotel_id)
         .bind(id)
         .fetch_optional(&self.pool)
         .await
@@ -80,6 +84,7 @@ impl RoomRepository for PostgresRoomRepository {
             let status: Option<String> = rec.try_get("status").ok();
             Room {
                 id: rec.try_get("id").unwrap(),
+                hotel_id: rec.try_get("hotel_id").unwrap(),
                 room_number: rec.try_get("room_number").unwrap(),
                 room_type: rec.try_get("room_type").unwrap(),
                 status: match status.as_deref() {
@@ -94,10 +99,11 @@ impl RoomRepository for PostgresRoomRepository {
         }))
     }
 
-    async fn find_by_room_number(&self, room_number: &str) -> Result<Option<Room>, String> {
+    async fn find_by_room_number(&self, hotel_id: Uuid, room_number: &str) -> Result<Option<Room>, String> {
         let record = sqlx::query(
-            "SELECT id, room_number, room_type, status, price_cents FROM rooms WHERE room_number = $1",
+            "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1 AND room_number = $2",
         )
+        .bind(hotel_id)
         .bind(room_number)
         .fetch_optional(&self.pool)
         .await
@@ -107,6 +113,7 @@ impl RoomRepository for PostgresRoomRepository {
             let status: Option<String> = rec.try_get("status").ok();
             Room {
                 id: rec.try_get("id").unwrap(),
+                hotel_id: rec.try_get("hotel_id").unwrap(),
                 room_number: rec.try_get("room_number").unwrap(),
                 room_type: rec.try_get("room_type").unwrap(),
                 status: match status.as_deref() {
@@ -121,7 +128,7 @@ impl RoomRepository for PostgresRoomRepository {
         }))
     }
 
-    async fn update_status(&self, id: Uuid, status: RoomStatus) -> Result<(), String> {
+    async fn update_status(&self, hotel_id: Uuid, id: Uuid, status: RoomStatus) -> Result<(), String> {
         let status_str = match status {
             RoomStatus::Available => "AVAILABLE",
             RoomStatus::Occupied => "OCCUPIED",
@@ -130,8 +137,9 @@ impl RoomRepository for PostgresRoomRepository {
             RoomStatus::Maintenance => "MAINTENANCE",
         };
 
-        sqlx::query("UPDATE rooms SET status = $1 WHERE id = $2")
+        sqlx::query("UPDATE rooms SET status = $1 WHERE hotel_id = $2 AND id = $3")
             .bind(status_str)
+            .bind(hotel_id)
             .bind(id)
             .execute(&self.pool)
             .await
@@ -140,18 +148,20 @@ impl RoomRepository for PostgresRoomRepository {
         Ok(())
     }
 
-    async fn find_available(&self, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
+    async fn find_available(&self, hotel_id: Uuid, start: NaiveDate, end: NaiveDate) -> Result<Vec<Room>, String> {
         let records = sqlx::query(
             r#"
-            SELECT id, room_number, room_type, status, price_cents
+            SELECT id, hotel_id, room_number, room_type, status, price_cents
             FROM rooms
-            WHERE id NOT IN (
+            WHERE hotel_id = $1
+            AND id NOT IN (
                 SELECT room_id FROM bookings
-                WHERE check_in < $2 AND check_out > $1
+                WHERE hotel_id = $1 AND check_in < $3 AND check_out > $2
             )
             AND status = 'AVAILABLE'
             "#,
         )
+        .bind(hotel_id)
         .bind(start)
         .bind(end)
         .fetch_all(&self.pool)
@@ -164,6 +174,7 @@ impl RoomRepository for PostgresRoomRepository {
                 let status: Option<String> = rec.try_get("status").ok();
                 Room {
                     id: rec.try_get("id").unwrap(),
+                    hotel_id: rec.try_get("hotel_id").unwrap(),
                     room_number: rec.try_get("room_number").unwrap(),
                     room_type: rec.try_get("room_type").unwrap(),
                     status: match status.as_deref() {

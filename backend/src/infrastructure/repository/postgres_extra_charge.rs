@@ -1,0 +1,73 @@
+use crate::domain::models::ExtraCharge;
+use crate::domain::repositories::ExtraChargeRepository;
+use async_trait::async_trait;
+use sqlx::{PgPool, Row};
+use uuid::Uuid;
+
+pub struct PostgresExtraChargeRepository {
+    pool: PgPool,
+}
+
+impl PostgresExtraChargeRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}
+
+#[async_trait]
+impl ExtraChargeRepository for PostgresExtraChargeRepository {
+    async fn add(&self, charge: ExtraCharge) -> Result<ExtraCharge, String> {
+        sqlx::query(
+            "INSERT INTO extra_charges (id, hotel_id, booking_id, description, amount_cents, category)
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(charge.id)
+        .bind(charge.hotel_id)
+        .bind(charge.booking_id)
+        .bind(&charge.description)
+        .bind(charge.amount_cents)
+        .bind(&charge.category)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(charge)
+    }
+
+    async fn find_by_booking(&self, hotel_id: Uuid, booking_id: Uuid) -> Result<Vec<ExtraCharge>, String> {
+        let records = sqlx::query(
+            "SELECT id, hotel_id, booking_id, description, amount_cents, category, created_at 
+             FROM extra_charges 
+             WHERE hotel_id = $1 AND booking_id = $2 
+             ORDER BY created_at ASC",
+        )
+        .bind(hotel_id)
+        .bind(booking_id)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        Ok(records
+            .into_iter()
+            .map(|row| ExtraCharge {
+                id: row.try_get("id").unwrap(),
+                hotel_id: row.try_get("hotel_id").unwrap(),
+                booking_id: row.try_get("booking_id").unwrap(),
+                description: row.try_get("description").unwrap(),
+                amount_cents: row.try_get("amount_cents").unwrap(),
+                category: row.try_get("category").unwrap_or_else(|_| "GENERAL".to_string()),
+                created_at: row.try_get("created_at").unwrap(),
+            })
+            .collect())
+    }
+
+    async fn delete(&self, hotel_id: Uuid, id: Uuid) -> Result<(), String> {
+        sqlx::query("DELETE FROM extra_charges WHERE hotel_id = $1 AND id = $2")
+            .bind(hotel_id)
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+}

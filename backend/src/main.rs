@@ -6,11 +6,12 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, auth_service::AuthService, booking_service::BookingService,
     room_service::RoomService, reporting_service::ReportingService,
     guest_service::GuestService, housekeeping_service::HousekeepingService,
-    audit_service::AuditService,
+    audit_service::AuditService, hotel_service::HotelService, billing_service::BillingService,
+    cash_closure_service::CashClosureService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
-    AuditRepository, BookingRepository, GuestRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository,
+    AuditRepository, BookingRepository, CashClosureRepository, ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository, RefreshTokenRepository, RoomRepository,
     UserRepository,
 };
 use hms_backend::infrastructure::{
@@ -19,6 +20,8 @@ use hms_backend::infrastructure::{
         postgres_booking::PostgresBookingRepository, postgres_guest::PostgresGuestRepository,
         postgres_invoice::PostgresInvoiceRepository,
         postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
+        postgres_hotel::PostgresHotelRepository, postgres_extra_charge::PostgresExtraChargeRepository,
+        postgres_cash_closure::PostgresCashClosureRepository,
     },
     seeder,
     web::routes::create_router,
@@ -56,10 +59,16 @@ async fn main() {
     let user_repo = Arc::new(PostgresUserRepository::new(pool.clone())) as Arc<dyn UserRepository>;
     let refresh_repo = Arc::new(PostgresRefreshTokenRepository::new(pool.clone())) as Arc<dyn RefreshTokenRepository>;
     let audit_repo = Arc::new(PostgresAuditRepository::new(pool.clone())) as Arc<dyn AuditRepository>;
+    let extra_charge_repo = Arc::new(PostgresExtraChargeRepository::new(pool.clone())) as Arc<dyn ExtraChargeRepository>;
+    let cash_closure_repo = Arc::new(PostgresCashClosureRepository::new(pool.clone())) as Arc<dyn CashClosureRepository>;
     let invoice_repo = Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let hotel_repo = Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
 
     // 6. Initialize Services
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
+    let hotel_service = Arc::new(HotelService::new(hotel_repo.clone()));
+    let billing_service = Arc::new(BillingService::new(extra_charge_repo.clone(), booking_repo.clone()));
+    let cash_closure_service = Arc::new(CashClosureService::new(cash_closure_repo.clone(), invoice_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
     let booking_service = Arc::new(BookingService::new(
         booking_repo.clone(),
@@ -86,17 +95,23 @@ async fn main() {
     // 8. Create Shared State
     let shared_state = Arc::new(AppState {
         room_repo: room_repo.clone(),
+        hotel_repo: hotel_repo.clone(),
         booking_service,
         analytics_service,
         reporting_service,
         guest_service,
         room_service,
+        hotel_service,
+        billing_service,
+        cash_closure_service,
         housekeeping_service,
         audit_service,
         guest_repo,
         user_repo: user_repo.clone(),
         refresh_repo,
         audit_repo,
+        extra_charge_repo,
+        cash_closure_repo,
         auth_service,
         invoice_repo,
         config: config.clone(),

@@ -17,10 +17,11 @@ impl PostgresAuditRepository {
 impl AuditRepository for PostgresAuditRepository {
     async fn record(&self, event: AuditEvent) -> Result<(), String> {
         sqlx::query(
-            "INSERT INTO audit_events (id, user_id, action, ip_address, created_at)
-             VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO audit_events (id, hotel_id, user_id, action, ip_address, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind(event.id)
+        .bind(event.hotel_id)
         .bind(event.user_id)
         .bind(event.action)
         .bind(event.ip_address)

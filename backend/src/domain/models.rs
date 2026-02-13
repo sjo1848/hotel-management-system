@@ -33,6 +33,7 @@ impl RoomStatus {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Room {
     pub id: Uuid,
+    pub hotel_id: Uuid,
     pub room_number: String,
     pub room_type: String,
     pub status: RoomStatus,
@@ -50,6 +51,7 @@ pub enum BookingStatus {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Booking {
     pub id: Uuid,
+    pub hotel_id: Uuid,
     pub room_id: Uuid,
     pub guest_id: Option<Uuid>,
     pub guest_name: String,
@@ -142,6 +144,7 @@ mod tests {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Guest {
     pub id: Uuid,
+    pub hotel_id: Uuid,
     pub full_name: String,
     pub email: String,
     pub phone: Option<String>,
@@ -151,6 +154,7 @@ pub struct Guest {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct User {
     pub id: Uuid,
+    pub hotel_id: Uuid,
     pub username: String,
     pub password_hash: String,
     pub role: String,
@@ -159,6 +163,7 @@ pub struct User {
 #[derive(Debug, Clone, Serialize)]
 pub struct RefreshToken {
     pub id: Uuid,
+    pub hotel_id: Uuid,
     pub user_id: Uuid,
     pub token_hash: String,
     pub expires_at: chrono::NaiveDateTime,
@@ -168,6 +173,7 @@ pub struct RefreshToken {
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AuditEvent {
     pub id: Uuid,
+    pub hotel_id: Option<Uuid>,
     pub user_id: Option<Uuid>,
     pub action: String,
     pub ip_address: Option<String>,
@@ -219,21 +225,66 @@ pub enum InvoiceStatus {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-pub struct Invoice {
+pub struct Hotel {
     pub id: Uuid,
+    pub name: String,
+    pub address: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct ExtraCharge {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
     pub booking_id: Uuid,
+    pub description: String,
     pub amount_cents: i64,
-    pub status: InvoiceStatus,
+    pub category: String,
     pub created_at: chrono::NaiveDateTime,
 }
 
+#[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
+pub enum PaymentMethod {
+    #[serde(rename = "CASH")]
+    Cash,
+    #[serde(rename = "CARD")]
+    Card,
+    #[serde(rename = "TRANSFER")]
+    Transfer,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct Invoice {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
+    pub booking_id: Uuid,
+    pub amount_cents: i64,
+    pub status: InvoiceStatus,
+    pub payment_method: PaymentMethod,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CashClosure {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
+    pub user_id: Uuid,
+    pub total_amount_cents: i64,
+    pub cash_amount_cents: i64,
+    pub card_amount_cents: i64,
+    pub opening_time: chrono::NaiveDateTime,
+    pub closing_time: chrono::NaiveDateTime,
+    pub notes: Option<String>,
+}
+
 impl Invoice {
-    pub fn new(booking_id: Uuid, amount_cents: i64) -> Self {
+    pub fn new(hotel_id: Uuid, booking_id: Uuid, amount_cents: i64) -> Self {
         Self {
             id: Uuid::new_v4(),
+            hotel_id,
             booking_id,
             amount_cents,
             status: InvoiceStatus::Pending,
+            payment_method: PaymentMethod::Cash,
             created_at: chrono::Utc::now().naive_utc(),
         }
     }

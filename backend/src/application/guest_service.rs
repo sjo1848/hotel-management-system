@@ -13,15 +13,16 @@ impl GuestService {
         Self { guest_repo }
     }
 
-    pub async fn list_guests(&self) -> Result<Vec<Guest>, DomainError> {
+    pub async fn list_guests(&self, hotel_id: Uuid) -> Result<Vec<Guest>, DomainError> {
         self.guest_repo
-            .find_all()
+            .find_all(hotel_id)
             .await
             .map_err(DomainError::InfrastructureError)
     }
 
     pub async fn create_guest(
         &self,
+        hotel_id: Uuid,
         full_name: String,
         email: String,
         phone: Option<String>,
@@ -36,6 +37,7 @@ impl GuestService {
 
         let new_guest = Guest {
             id: Uuid::new_v4(),
+            hotel_id,
             full_name,
             email,
             phone,

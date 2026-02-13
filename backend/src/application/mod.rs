@@ -6,3 +6,6 @@ pub mod reporting_service;
 pub mod guest_service;
 pub mod housekeeping_service;
 pub mod audit_service;
+pub mod hotel_service;
+pub mod billing_service;
+pub mod cash_closure_service;
