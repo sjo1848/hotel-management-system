@@ -43,7 +43,7 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         .bind(invoice.created_at)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(invoice)
     }
@@ -162,4 +162,21 @@ impl InvoiceRepository for PostgresInvoiceRepository {
             result.try_get("card").map_err(|e| e.to_string())?,
         ))
     }
+}
+
+fn map_db_error(error: sqlx::Error) -> String {
+    if let sqlx::Error::Database(db_error) = &error {
+        if let Some(code) = db_error.code() {
+            if code == "23503" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "fk_invoices_hotel_booking" {
+                    return "INVOICE_BOOKING_NOT_FOUND".to_string();
+                }
+                if constraint_name == "invoices_hotel_id_fkey" {
+                    return "INVOICE_HOTEL_NOT_FOUND".to_string();
+                }
+            }
+        }
+    }
+    error.to_string()
 }

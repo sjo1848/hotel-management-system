@@ -198,13 +198,12 @@ impl BookingService {
             .await
             .map_err(map_repo_error)?;
 
-        // Side effect: Update room status based on booking status using RoomService
+        // Side effect crítico: ya no se ignoran errores para evitar fallos silenciosos.
         match updated_booking.status {
             BookingStatus::CheckedIn => {
-                let _ = self
-                    .room_service
+                self.room_service
                     .update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Occupied)
-                    .await;
+                    .await?;
                 self.audit_service
                     .record(
                         Some(hotel_id),
@@ -215,10 +214,9 @@ impl BookingService {
                     .await;
             }
             BookingStatus::CheckedOut => {
-                let _ = self
-                    .room_service
+                self.room_service
                     .update_room_status(hotel_id, updated_booking.room_id, RoomStatus::Dirty)
-                    .await;
+                    .await?;
                 self.audit_service
                     .record(
                         Some(hotel_id),
@@ -234,7 +232,10 @@ impl BookingService {
                     updated_booking.id,
                     updated_booking.total_price_cents,
                 );
-                let _ = self.invoice_repo.save(invoice).await;
+                self.invoice_repo
+                    .save(invoice)
+                    .await
+                    .map_err(map_invoice_repo_error)?;
             }
             BookingStatus::Cancelled => {
                 self.audit_service
@@ -278,6 +279,14 @@ fn map_repo_error(message: String) -> DomainError {
     }
 }
 
+fn map_invoice_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "INVOICE_BOOKING_NOT_FOUND" => DomainError::BookingNotFound,
+        "INVOICE_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -307,6 +316,18 @@ mod tests {
         assert!(matches!(
             map_repo_error("BOOKING_INVALID_DATES".to_string()),
             DomainError::InvalidBookingDates
+        ));
+    }
+
+    #[test]
+    fn map_invoice_repo_error_maps_functional_invoice_errors() {
+        assert!(matches!(
+            map_invoice_repo_error("INVOICE_BOOKING_NOT_FOUND".to_string()),
+            DomainError::BookingNotFound
+        ));
+        assert!(matches!(
+            map_invoice_repo_error("INVOICE_HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
         ));
     }
 }
