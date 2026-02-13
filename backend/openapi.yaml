@@ -60,6 +60,12 @@ paths:
   /api/v1/auth/logout:
     post:
       summary: Logout
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
       responses:
         "200":
           description: Logout exitoso
@@ -651,17 +657,25 @@ components:
           type: object
     LoginRequest:
       type: object
-      required: [username, password]
+      required: [hotel_id, username, password]
       properties:
+        hotel_id:
+          type: string
         username:
           type: string
         password:
           type: string
+        device_id:
+          type: string
+          description: Identificador estable del dispositivo/sesión cliente.
     RefreshRequest:
       type: object
       properties:
         refresh_token:
           type: string
+        all_devices:
+          type: boolean
+          description: Si es true en logout, revoca sesiones de todos los dispositivos.
     LoginResponse:
       type: object
       properties:

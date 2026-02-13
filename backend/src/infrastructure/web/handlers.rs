@@ -180,11 +180,13 @@ pub struct LoginRequest {
     pub hotel_id: String,
     pub username: String,
     pub password: String,
+    pub device_id: Option<String>,
 }
 
 #[derive(Deserialize)]
 pub struct RefreshRequest {
     pub refresh_token: Option<String>,
+    pub all_devices: Option<bool>,
 }
 
 #[derive(serde::Serialize, ToSchema)]
@@ -472,6 +474,7 @@ pub async fn create_guest_handler(
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Response, DomainError> {
     let auth_ctx = state.auth_context();
@@ -511,6 +514,12 @@ pub async fn login_handler(
         }
     };
 
+    let device_id = resolve_device_id(payload.device_id.as_deref(), &headers);
+    auth_ctx
+        .auth_service
+        .revoke_user_device_tokens(user.hotel_id, user.id, &device_id)
+        .await?;
+
     let exp = auth_ctx.auth_service.access_exp();
 
     let claims = crate::infrastructure::web::jwt::Claims {
@@ -529,7 +538,7 @@ pub async fn login_handler(
 
     let (refresh_token, _): (String, crate::domain::models::RefreshToken) = auth_ctx
         .auth_service
-        .issue_refresh_token(user.hotel_id, user.id)
+        .issue_refresh_token(user.hotel_id, user.id, device_id, None)
         .await?;
     let refresh_cookie = build_refresh_cookie(&refresh_token, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);
@@ -567,7 +576,8 @@ pub async fn refresh_handler(
     // CSRF check is now performed by auth_middleware for this endpoint
 
     let refresh_token = payload
-        .and_then(|value| value.0.refresh_token)
+        .as_ref()
+        .and_then(|value| value.0.refresh_token.as_ref().cloned())
         .or_else(|| extract_refresh_cookie(&headers))
         .unwrap_or_default();
 
@@ -638,7 +648,8 @@ pub async fn logout_handler(
     // CSRF check is now performed by auth_middleware for this endpoint
 
     let refresh_token = payload
-        .and_then(|value| value.0.refresh_token)
+        .as_ref()
+        .and_then(|value| value.0.refresh_token.as_ref().cloned())
         .or_else(|| extract_refresh_cookie(&headers))
         .unwrap_or_default();
 
@@ -659,20 +670,31 @@ pub async fn logout_handler(
             .into_response());
     }
 
-    let (hotel_id, user_id) = auth_ctx
+    let logout_all_devices = payload
+        .as_ref()
+        .and_then(|value| value.0.all_devices)
+        .unwrap_or(false);
+    let revoked = auth_ctx
         .auth_service
-        .revoke_refresh_token(&refresh_token)
+        .revoke_refresh_token_with_context(&refresh_token)
         .await?;
-    auth_ctx
-        .auth_service
-        .revoke_user_tokens(hotel_id, user_id)
-        .await?;
+    if logout_all_devices {
+        auth_ctx
+            .auth_service
+            .revoke_user_tokens(revoked.hotel_id, revoked.user_id)
+            .await?;
+    } else {
+        auth_ctx
+            .auth_service
+            .revoke_session_tokens(revoked.hotel_id, revoked.user_id, revoked.session_id)
+            .await?;
+    }
     let expired_cookie = clear_refresh_cookie(&state.config);
     let expired_access = clear_access_cookie(&state.config);
     let expired_csrf = clear_csrf_cookie(&state.config);
     state
         .audit_service
-        .record(Some(hotel_id), Some(user_id), "auth.logout", Some(ip))
+        .record(Some(revoked.hotel_id), Some(revoked.user_id), "auth.logout", Some(ip))
         .await;
     Ok((
         StatusCode::OK,
@@ -805,6 +827,20 @@ fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {
     })
 }
 
+fn resolve_device_id(payload_device_id: Option<&str>, headers: &HeaderMap) -> String {
+    let explicit = payload_device_id.unwrap_or_default().trim();
+    if !explicit.is_empty() {
+        return explicit.to_string();
+    }
+    headers
+        .get("x-device-id")
+        .and_then(|value| value.to_str().ok())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| "web-browser".to_string())
+}
+
 pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
     let mut cookie_parts = vec![
         format!("refresh_token={}", token),
@@ -816,6 +852,9 @@ pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> S
 
     if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
+    }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie_parts.push(format!("Domain={domain}"));
     }
 
     cookie_parts.join("; ")
@@ -832,6 +871,9 @@ pub fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
     if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie_parts.push(format!("Domain={domain}"));
+    }
     cookie_parts.join("; ")
 }
 
@@ -847,6 +889,9 @@ pub fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> St
     if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
     }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie_parts.push(format!("Domain={domain}"));
+    }
 
     cookie_parts.join("; ")
 }
@@ -861,6 +906,9 @@ pub fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
     ];
     if config.cookie_secure {
         cookie_parts.push(String::from("Secure"));
+    }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie_parts.push(format!("Domain={domain}"));
     }
     cookie_parts.join("; ")
 }
@@ -881,6 +929,9 @@ fn build_csrf_cookie(token: &str, config: &crate::config::AppConfig) -> String {
     if config.cookie_secure {
         cookie.push_str("; Secure");
     }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie.push_str(&format!("; Domain={domain}"));
+    }
     cookie
 }
 
@@ -891,6 +942,9 @@ fn clear_csrf_cookie(config: &crate::config::AppConfig) -> String {
     );
     if config.cookie_secure {
         cookie.push_str("; Secure");
+    }
+    if let Some(domain) = config.cookie_domain.as_deref() {
+        cookie.push_str(&format!("; Domain={domain}"));
     }
     cookie
 }

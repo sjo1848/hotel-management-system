@@ -127,6 +127,18 @@ pub trait RefreshTokenRepository: Send + Sync {
     async fn create(&self, token: RefreshToken) -> Result<RefreshToken, String>;
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String>;
     async fn revoke(&self, token_id: Uuid) -> Result<(), String>;
+    async fn revoke_all_for_device(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        device_id: &str,
+    ) -> Result<(), String>;
+    async fn revoke_all_for_session(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        session_id: Uuid,
+    ) -> Result<(), String>;
     async fn revoke_all_for_user(&self, hotel_id: Uuid, user_id: Uuid) -> Result<(), String>;
 }
 

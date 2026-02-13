@@ -168,6 +168,8 @@ pub struct RefreshToken {
     pub id: Uuid,
     pub hotel_id: Uuid,
     pub user_id: Uuid,
+    pub session_id: Uuid,
+    pub device_id: String,
     pub token_hash: String,
     pub expires_at: chrono::NaiveDateTime,
     pub revoked_at: Option<chrono::NaiveDateTime>,

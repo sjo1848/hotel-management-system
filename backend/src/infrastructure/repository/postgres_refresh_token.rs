@@ -19,12 +19,15 @@ impl PostgresRefreshTokenRepository {
 impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn create(&self, token: RefreshToken) -> Result<RefreshToken, String> {
         sqlx::query(
-            "INSERT INTO refresh_tokens (id, hotel_id, user_id, token_hash, expires_at, revoked_at)
-             VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO refresh_tokens
+                (id, hotel_id, user_id, session_id, device_id, token_hash, expires_at, revoked_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
         )
         .bind(token.id)
         .bind(token.hotel_id)
         .bind(token.user_id)
+        .bind(token.session_id)
+        .bind(&token.device_id)
         .bind(&token.token_hash)
         .bind(token.expires_at)
         .bind(token.revoked_at)
@@ -37,7 +40,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
 
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String> {
         let record = sqlx::query(
-            "SELECT id, hotel_id, user_id, token_hash, expires_at, revoked_at
+            "SELECT id, hotel_id, user_id, session_id, device_id, token_hash, expires_at, revoked_at
              FROM refresh_tokens
              WHERE token_hash = $1 AND revoked_at IS NULL",
         )
@@ -50,6 +53,8 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
             id: row.try_get("id").unwrap(),
             hotel_id: row.try_get("hotel_id").unwrap(),
             user_id: row.try_get("user_id").unwrap(),
+            session_id: row.try_get("session_id").unwrap(),
+            device_id: row.try_get("device_id").unwrap(),
             token_hash: row.try_get("token_hash").unwrap(),
             expires_at: row.try_get("expires_at").unwrap(),
             revoked_at: row.try_get("revoked_at").ok(),
@@ -80,6 +85,58 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(now)
         .bind(hotel_id)
         .bind(user_id)
+        .execute(&self.pool)
+        .await
+        .map_err(map_db_error)?;
+
+        Ok(())
+    }
+
+    async fn revoke_all_for_device(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        device_id: &str,
+    ) -> Result<(), String> {
+        let now: NaiveDateTime = chrono::Utc::now().naive_utc();
+        sqlx::query(
+            "UPDATE refresh_tokens
+             SET revoked_at = $1
+             WHERE hotel_id = $2
+               AND user_id = $3
+               AND device_id = $4
+               AND revoked_at IS NULL",
+        )
+        .bind(now)
+        .bind(hotel_id)
+        .bind(user_id)
+        .bind(device_id)
+        .execute(&self.pool)
+        .await
+        .map_err(map_db_error)?;
+
+        Ok(())
+    }
+
+    async fn revoke_all_for_session(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        session_id: Uuid,
+    ) -> Result<(), String> {
+        let now: NaiveDateTime = chrono::Utc::now().naive_utc();
+        sqlx::query(
+            "UPDATE refresh_tokens
+             SET revoked_at = $1
+             WHERE hotel_id = $2
+               AND user_id = $3
+               AND session_id = $4
+               AND revoked_at IS NULL",
+        )
+        .bind(now)
+        .bind(hotel_id)
+        .bind(user_id)
+        .bind(session_id)
         .execute(&self.pool)
         .await
         .map_err(map_db_error)?;

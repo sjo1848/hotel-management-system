@@ -68,6 +68,8 @@ impl AuthService {
         &self,
         hotel_id: Uuid,
         user_id: Uuid,
+        device_id: String,
+        session_id: Option<Uuid>,
     ) -> Result<(String, RefreshToken), DomainError> {
         let mut random_bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut random_bytes);
@@ -75,11 +77,14 @@ impl AuthService {
 
         let token_hash = hash_token(&raw_token);
         let expires_at = (Utc::now() + Duration::days(self.refresh_ttl_days)).naive_utc();
+        let normalized_device_id = normalize_device_id(&device_id);
 
         let refresh = RefreshToken {
             id: Uuid::new_v4(),
             hotel_id,
             user_id,
+            session_id: session_id.unwrap_or_else(Uuid::new_v4),
+            device_id: normalized_device_id,
             token_hash,
             expires_at,
             revoked_at: None,
@@ -116,7 +121,12 @@ impl AuthService {
             .map_err(map_refresh_repo_error)?;
 
         let (new_raw, new_refresh) = self
-            .issue_refresh_token(refresh.hotel_id, refresh.user_id)
+            .issue_refresh_token(
+                refresh.hotel_id,
+                refresh.user_id,
+                refresh.device_id.clone(),
+                Some(refresh.session_id),
+            )
             .await?;
 
         Ok((refresh.hotel_id, refresh.user_id, new_raw, new_refresh))
@@ -137,6 +147,50 @@ impl AuthService {
             .map_err(map_refresh_repo_error)?;
 
         Ok((refresh.hotel_id, refresh.user_id))
+    }
+
+    pub async fn revoke_user_device_tokens(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        device_id: &str,
+    ) -> Result<(), DomainError> {
+        self.refresh_repo
+            .revoke_all_for_device(hotel_id, user_id, &normalize_device_id(device_id))
+            .await
+            .map_err(map_refresh_repo_error)
+    }
+
+    pub async fn revoke_session_tokens(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+        session_id: Uuid,
+    ) -> Result<(), DomainError> {
+        self.refresh_repo
+            .revoke_all_for_session(hotel_id, user_id, session_id)
+            .await
+            .map_err(map_refresh_repo_error)
+    }
+
+    pub async fn revoke_refresh_token_with_context(
+        &self,
+        raw_token: &str,
+    ) -> Result<RefreshToken, DomainError> {
+        let token_hash = hash_token(raw_token);
+        let refresh = self
+            .refresh_repo
+            .find_valid(&token_hash)
+            .await
+            .map_err(map_refresh_repo_error)?
+            .ok_or(DomainError::Unauthorized)?;
+
+        self.refresh_repo
+            .revoke(refresh.id)
+            .await
+            .map_err(map_refresh_repo_error)?;
+
+        Ok(refresh)
     }
 
     pub async fn revoke_user_tokens(
@@ -168,6 +222,29 @@ fn hash_token(raw: &str) -> String {
     hasher.update(raw.as_bytes());
     let digest = hasher.finalize();
     format!("{:x}", digest)
+}
+
+fn normalize_device_id(raw: &str) -> String {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return "unknown".to_string();
+    }
+    let mut normalized = String::with_capacity(trimmed.len().min(128));
+    for ch in trimmed.chars() {
+        if normalized.len() >= 128 {
+            break;
+        }
+        if ch.is_ascii_alphanumeric() || matches!(ch, '-' | '_' | '.' | ':') {
+            normalized.push(ch.to_ascii_lowercase());
+        } else {
+            normalized.push('_');
+        }
+    }
+    if normalized.is_empty() {
+        "unknown".to_string()
+    } else {
+        normalized
+    }
 }
 
 fn map_refresh_repo_error(message: String) -> DomainError {
@@ -224,5 +301,14 @@ mod tests {
             map_user_repo_error("USER_HOTEL_NOT_FOUND".to_string()),
             DomainError::Unauthorized
         ));
+    }
+
+    #[test]
+    fn normalize_device_id_sanitizes_and_bounds() {
+        assert_eq!(normalize_device_id(""), "unknown");
+        assert_eq!(normalize_device_id("  "), "unknown");
+        assert_eq!(normalize_device_id("Desk-01"), "desk-01");
+        assert_eq!(normalize_device_id("Mobile Safari/17"), "mobile_safari_17");
+        assert_eq!(normalize_device_id(&"A".repeat(200)).len(), 128);
     }
 }

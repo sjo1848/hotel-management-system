@@ -18,6 +18,7 @@ pub struct AppConfig {
     pub login_limit_per_minute: u32,
     pub cookie_secure: bool,
     pub cookie_samesite: String,
+    pub cookie_domain: Option<String>,
     pub db_max_connections: u32,
     pub port: u16,
     pub otel_enabled: bool,
@@ -69,6 +70,7 @@ impl AppConfig {
         let cookie_samesite = normalize_cookie_samesite(
             &env::var("COOKIE_SAMESITE").unwrap_or_else(|_| "Lax".to_string()),
         );
+        let cookie_domain = normalize_cookie_domain(env::var("COOKIE_DOMAIN").ok());
         let db_max_connections = env::var("DB_MAX_CONNECTIONS")
             .ok()
             .and_then(|value| value.parse::<u32>().ok())
@@ -93,6 +95,7 @@ impl AppConfig {
             admin_password: &admin_password,
             cookie_secure,
             cookie_samesite: &cookie_samesite,
+            cookie_domain: cookie_domain.as_deref(),
             cors_origin: &cors_origin,
             access_ttl_minutes,
             refresh_ttl_days,
@@ -115,6 +118,7 @@ impl AppConfig {
             login_limit_per_minute,
             cookie_secure,
             cookie_samesite,
+            cookie_domain,
             db_max_connections,
             port,
             otel_enabled,
@@ -138,6 +142,17 @@ fn normalize_cookie_samesite(value: &str) -> String {
     }
 }
 
+fn normalize_cookie_domain(value: Option<String>) -> Option<String> {
+    value.and_then(|raw| {
+        let normalized = raw.trim().trim_start_matches('.').to_lowercase();
+        if normalized.is_empty() {
+            None
+        } else {
+            Some(normalized)
+        }
+    })
+}
+
 struct SecurityGuardInputs<'a> {
     is_prod: bool,
     jwt_secret: &'a str,
@@ -145,6 +160,7 @@ struct SecurityGuardInputs<'a> {
     admin_password: &'a str,
     cookie_secure: bool,
     cookie_samesite: &'a str,
+    cookie_domain: Option<&'a str>,
     cors_origin: &'a str,
     access_ttl_minutes: i64,
     refresh_ttl_days: i64,
@@ -181,6 +197,20 @@ fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
     }
     if inputs.cors_origin == "*" {
         panic!("CORS_ORIGIN cannot be '*' in production.");
+    }
+    let cookie_domain = inputs
+        .cookie_domain
+        .unwrap_or("")
+        .trim()
+        .to_lowercase();
+    if cookie_domain.is_empty() {
+        panic!("COOKIE_DOMAIN must be set in production.");
+    }
+    if cookie_domain == "localhost" {
+        panic!("COOKIE_DOMAIN cannot be localhost in production.");
+    }
+    if !cookie_domain.contains('.') {
+        panic!("COOKIE_DOMAIN must be a valid registrable domain in production.");
     }
 }
 
@@ -219,6 +249,7 @@ mod tests {
             admin_password: "admin123",
             cookie_secure: false,
             cookie_samesite: "Lax",
+            cookie_domain: None,
             cors_origin: "*",
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
@@ -235,6 +266,7 @@ mod tests {
             admin_password: "admin123",
             cookie_secure: false,
             cookie_samesite: "Lax",
+            cookie_domain: None,
             cors_origin: "http://localhost:5173",
             access_ttl_minutes: 0,
             refresh_ttl_days: 7,
@@ -251,6 +283,24 @@ mod tests {
             admin_password: "strong-admin-password",
             cookie_secure: false,
             cookie_samesite: "Lax",
+            cookie_domain: Some("hms.example.com"),
+            cors_origin: "https://hms.example.com",
+            access_ttl_minutes: 15,
+            refresh_ttl_days: 7,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "COOKIE_DOMAIN must be set in production.")]
+    fn validate_security_guards_rejects_missing_cookie_domain_in_prod() {
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: true,
+            jwt_secret: "12345678901234567890123456789012",
+            jwt_kid: "v1",
+            admin_password: "strong-admin-password",
+            cookie_secure: true,
+            cookie_samesite: "Lax",
+            cookie_domain: None,
             cors_origin: "https://hms.example.com",
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
