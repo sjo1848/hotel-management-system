@@ -54,26 +54,10 @@ impl GuestService {
 }
 
 fn map_guest_repo_error(message: String) -> DomainError {
-    if message == "GUEST_ALREADY_EXISTS" {
-        return DomainError::GuestAlreadyExists;
-    }
-    if message == "GUEST_HOTEL_NOT_FOUND" {
-        return DomainError::HotelNotFound;
-    }
-
-    let normalized = message.to_lowercase();
-    if normalized.contains("duplicate key value")
-        || normalized.contains("ux_guests_hotel_email")
-        || normalized.contains("guests_email_key")
-    {
-        DomainError::GuestAlreadyExists
-    } else if normalized.contains("23503")
-        && (normalized.contains("guests_hotel_id_fkey")
-            || normalized.contains("foreign key constraint"))
-    {
-        DomainError::HotelNotFound
-    } else {
-        DomainError::InfrastructureError(message)
+    match message.as_str() {
+        "GUEST_ALREADY_EXISTS" => DomainError::GuestAlreadyExists,
+        "GUEST_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
     }
 }
 

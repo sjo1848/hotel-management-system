@@ -110,28 +110,11 @@ impl RoomService {
 }
 
 fn map_room_repo_error(message: String) -> DomainError {
-    if message == "ROOM_ALREADY_EXISTS" {
-        return DomainError::RoomAlreadyExists;
-    }
-    if message == "ROOM_HOTEL_NOT_FOUND" {
-        return DomainError::HotelNotFound;
-    }
-
-    let normalized = message.to_lowercase();
-    if normalized.contains("duplicate key value")
-        || normalized.contains("ux_rooms_hotel_room_number")
-        || normalized.contains("rooms_room_number_key")
-    {
-        DomainError::RoomAlreadyExists
-    } else if message == "ROOM_NOT_FOUND" {
-        DomainError::RoomNotFound
-    } else if normalized.contains("23503")
-        && (normalized.contains("rooms_hotel_id_fkey")
-            || normalized.contains("foreign key constraint"))
-    {
-        DomainError::HotelNotFound
-    } else {
-        DomainError::InfrastructureError(message)
+    match message.as_str() {
+        "ROOM_ALREADY_EXISTS" => DomainError::RoomAlreadyExists,
+        "ROOM_NOT_FOUND" => DomainError::RoomNotFound,
+        "ROOM_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
     }
 }
 

@@ -53,28 +53,11 @@ impl UserService {
 }
 
 fn map_user_repo_error(message: String) -> DomainError {
-    if message == "USER_ALREADY_EXISTS" {
-        return DomainError::UserAlreadyExists;
-    }
-    if message == "USER_HOTEL_NOT_FOUND" {
-        return DomainError::HotelNotFound;
-    }
-
-    let normalized = message.to_lowercase();
-    if normalized.contains("duplicate key value")
-        || normalized.contains("ux_users_hotel_username")
-        || normalized.contains("users_username_key")
-    {
-        DomainError::UserAlreadyExists
-    } else if message == "USER_NOT_FOUND" {
-        DomainError::UserNotFound
-    } else if normalized.contains("23503")
-        && (normalized.contains("users_hotel_id_fkey")
-            || normalized.contains("foreign key constraint"))
-    {
-        DomainError::HotelNotFound
-    } else {
-        DomainError::InfrastructureError(message)
+    match message.as_str() {
+        "USER_ALREADY_EXISTS" => DomainError::UserAlreadyExists,
+        "USER_NOT_FOUND" => DomainError::UserNotFound,
+        "USER_HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        _ => DomainError::InfrastructureError(message),
     }
 }
 

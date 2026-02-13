@@ -50,18 +50,9 @@ impl HotelService {
 }
 
 fn map_hotel_repo_error(message: String) -> DomainError {
-    if message == "HOTEL_ALREADY_EXISTS" {
-        return DomainError::HotelAlreadyExists;
-    }
-
-    let normalized = message.to_lowercase();
-    if normalized.contains("duplicate key value")
-        || normalized.contains("hotels_name_key")
-        || normalized.contains("ux_hotels_name_ci")
-    {
-        DomainError::HotelAlreadyExists
-    } else {
-        DomainError::InfrastructureError(message)
+    match message.as_str() {
+        "HOTEL_ALREADY_EXISTS" => DomainError::HotelAlreadyExists,
+        _ => DomainError::InfrastructureError(message),
     }
 }
 
