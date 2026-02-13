@@ -25,13 +25,8 @@ pub async fn security_headers_middleware(
     );
 
     // HSTS: Solo si cookie_secure está activo (Producción/HTTPS)
-    if state.config.cookie_secure {
-        headers.insert(
-            header::STRICT_TRANSPORT_SECURITY,
-            "max-age=31536000; includeSubDomains; preload"
-                .parse()
-                .unwrap(),
-        );
+    if let Some(hsts) = strict_transport_security_value(state.config.cookie_secure) {
+        headers.insert(header::STRICT_TRANSPORT_SECURITY, hsts.parse().unwrap());
     }
 
     // CSP: Un poco más permisiva para Swagger, estricta para el resto
@@ -51,6 +46,14 @@ fn content_security_policy_for_path(path: &str) -> &'static str {
         "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none';"
     } else {
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'none';"
+    }
+}
+
+fn strict_transport_security_value(cookie_secure: bool) -> Option<&'static str> {
+    if cookie_secure {
+        Some("max-age=31536000; includeSubDomains; preload")
+    } else {
+        None
     }
 }
 
@@ -79,5 +82,14 @@ mod tests {
         assert!(csp.contains("script-src 'self'"));
         assert!(!csp.contains("script-src 'self' 'unsafe-inline'"));
         assert!(csp.contains("frame-ancestors 'none'"));
+    }
+
+    #[test]
+    fn hsts_value_present_only_when_cookie_secure() {
+        assert_eq!(
+            strict_transport_security_value(true),
+            Some("max-age=31536000; includeSubDomains; preload")
+        );
+        assert_eq!(strict_transport_security_value(false), None);
     }
 }

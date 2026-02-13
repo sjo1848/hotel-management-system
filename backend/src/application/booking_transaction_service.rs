@@ -327,33 +327,30 @@ async fn insert_invoice_if_missing_tx(
 fn map_sql_error(error: sqlx::Error) -> DomainError {
     if let sqlx::Error::Database(db_error) = &error {
         if let Some(code) = db_error.code() {
-            if code == "23P01" {
-                return DomainError::RoomNotAvailable;
-            }
-            if code == "23514" {
-                let constraint_name = db_error.constraint().unwrap_or_default();
-                if constraint_name == "valid_dates" {
-                    return DomainError::InvalidBookingDates;
-                }
-            }
-            if code == "23503" {
-                let constraint_name = db_error.constraint().unwrap_or_default();
-                if constraint_name == "fk_bookings_hotel_room" {
-                    return DomainError::RoomNotFound;
-                }
-                if constraint_name == "fk_bookings_hotel_guest" {
-                    return DomainError::GuestNotFound;
-                }
-                if constraint_name == "bookings_hotel_id_fkey" {
-                    return DomainError::HotelNotFound;
-                }
-                if constraint_name == "fk_invoices_hotel_booking" {
-                    return DomainError::BookingNotFound;
-                }
+            let constraint_name = db_error.constraint().unwrap_or_default();
+            if let Some(mapped) = map_db_constraint_error(code.as_ref(), constraint_name) {
+                return mapped;
             }
         }
     }
     DomainError::InfrastructureError(error.to_string())
+}
+
+fn map_db_constraint_error(code: &str, constraint_name: &str) -> Option<DomainError> {
+    match code {
+        "23P01" => Some(DomainError::RoomNotAvailable),
+        "23514" if constraint_name == "valid_dates" => Some(DomainError::InvalidBookingDates),
+        "23503" if constraint_name == "fk_bookings_hotel_room" => Some(DomainError::RoomNotFound),
+        "23503" if constraint_name == "fk_bookings_hotel_guest" => {
+            Some(DomainError::GuestNotFound)
+        }
+        "23503" if constraint_name == "bookings_hotel_id_fkey" => Some(DomainError::HotelNotFound),
+        "23503" if constraint_name == "fk_invoices_hotel_booking" => {
+            Some(DomainError::BookingNotFound)
+        }
+        "23503" if constraint_name == "fk_audit_events_hotel_user" => Some(DomainError::UserNotFound),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -378,5 +375,13 @@ mod tests {
             booking_status_to_db(&BookingStatus::CheckedOut),
             "CHECKED_OUT"
         );
+    }
+
+    #[test]
+    fn map_db_constraint_error_maps_audit_fk_to_user_not_found() {
+        assert!(matches!(
+            map_db_constraint_error("23503", "fk_audit_events_hotel_user"),
+            Some(DomainError::UserNotFound)
+        ));
     }
 }
