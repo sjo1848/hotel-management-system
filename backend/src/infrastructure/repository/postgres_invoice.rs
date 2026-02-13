@@ -125,22 +125,15 @@ impl InvoiceRepository for PostgresInvoiceRepository {
     }
 
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String> {
-        // Use UNIX epoch when there is no prior closure to avoid out-of-range timestamp binds.
-        let last_closure_time = sqlx::query(
+        // Use UNIX epoch when there is no prior closure, but do not hide DB failures.
+        let start_time = sqlx::query_scalar::<_, Option<chrono::DateTime<Utc>>>(
             "SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1",
         )
         .bind(hotel_id)
         .fetch_one(&self.pool)
-        .await;
-
-        let start_time = match last_closure_time {
-            Ok(row) => row
-                .try_get::<Option<chrono::DateTime<Utc>>, _>("last_time")
-                .ok()
-                .flatten()
-                .unwrap_or_else(|| chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap()),
-            Err(_) => chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap(),
-        };
+        .await
+        .map_err(|e| e.to_string())?
+        .unwrap_or_else(|| chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap());
 
         let result = sqlx::query(
             "SELECT 
