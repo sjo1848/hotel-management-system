@@ -11,7 +11,14 @@ export const getGuests = async () => {
   }
 };
 
-export const createGuest = async (data: Omit<Guest, "id">) => {
+export type CreateGuestPayload = {
+  full_name: string;
+  email: string;
+  phone?: string;
+  created_at?: string;
+};
+
+export const createGuest = async (data: CreateGuestPayload) => {
   try {
     const response = await client.post("/guests", data);
     return response.data as Guest;

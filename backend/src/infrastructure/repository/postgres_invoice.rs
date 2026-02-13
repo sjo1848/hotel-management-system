@@ -1,6 +1,7 @@
 use crate::domain::models::{Invoice, InvoiceStatus, PaymentMethod};
 use crate::domain::repositories::InvoiceRepository;
 use async_trait::async_trait;
+use chrono::Utc;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
 
@@ -116,22 +117,26 @@ impl InvoiceRepository for PostgresInvoiceRepository {
     }
 
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String> {
-        // Obtenemos facturas pagadas después del último cierre de caja
+        // Use UNIX epoch when there is no prior closure to avoid out-of-range timestamp binds.
         let last_closure_time = sqlx::query("SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1")
             .bind(hotel_id)
             .fetch_one(&self.pool)
             .await;
-        
+
         let start_time = match last_closure_time {
-            Ok(row) => row.try_get("last_time").unwrap_or(chrono::NaiveDateTime::MIN),
-            Err(_) => chrono::NaiveDateTime::MIN,
+            Ok(row) => row
+                .try_get::<Option<chrono::DateTime<Utc>>, _>("last_time")
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap()),
+            Err(_) => chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap(),
         };
 
         let result = sqlx::query(
             "SELECT 
-                COALESCE(SUM(amount_cents), 0) as total,
-                COALESCE(SUM(CASE WHEN payment_method = 'CASH' THEN amount_cents ELSE 0 END), 0) as cash,
-                COALESCE(SUM(CASE WHEN payment_method = 'CARD' THEN amount_cents ELSE 0 END), 0) as card
+                COALESCE(SUM(amount_cents), 0)::BIGINT as total,
+                COALESCE(SUM(CASE WHEN payment_method = 'CASH' THEN amount_cents ELSE 0 END), 0)::BIGINT as cash,
+                COALESCE(SUM(CASE WHEN payment_method = 'CARD' THEN amount_cents ELSE 0 END), 0)::BIGINT as card
              FROM invoices 
              WHERE hotel_id = $1 AND status = 'PAID' AND created_at > $2"
         )
@@ -142,9 +147,9 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         .map_err(|e| e.to_string())?;
 
         Ok((
-            result.try_get("total").unwrap_or(0),
-            result.try_get("cash").unwrap_or(0),
-            result.try_get("card").unwrap_or(0)
+            result.try_get("total").map_err(|e| e.to_string())?,
+            result.try_get("cash").map_err(|e| e.to_string())?,
+            result.try_get("card").map_err(|e| e.to_string())?,
         ))
     }
 }

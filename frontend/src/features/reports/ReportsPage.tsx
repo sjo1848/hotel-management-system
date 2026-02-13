@@ -51,7 +51,7 @@ const ReportsPage = () => {
 
     const handleExport = () => {
         if (revenueData.length === 0 && occupancyData.length === 0) {
-            toast({ title: "Sin datos", description: "No hay información para exportar", variant: "info" });
+            toast({ title: "Sin datos", description: "No hay información para exportar", variant: "default" });
             return;
         }
         

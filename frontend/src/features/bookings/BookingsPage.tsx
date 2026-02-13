@@ -56,7 +56,7 @@ const BookingsPage = () => {
 
   const handleExport = () => {
     if (bookings.length === 0) {
-      toast({ title: "Sin datos", description: "No hay reservas para exportar", variant: "info" });
+      toast({ title: "Sin datos", description: "No hay reservas para exportar", variant: "default" });
       return;
     }
     downloadCSV(bookings, `reservas_${new Date().toISOString().split('T')[0]}.csv`);

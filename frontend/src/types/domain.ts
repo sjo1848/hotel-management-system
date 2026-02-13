@@ -3,7 +3,7 @@
  * This file acts as the single source of truth for frontend entities.
  */
 
-export type UserRole = "admin" | "receptionist" | "housekeeping";
+export type UserRole = "admin" | "ops" | "receptionist" | "housekeeping";
 
 export type User = {
   id: string;
@@ -56,4 +56,20 @@ export type Invoice = {
   amount_cents: number;
   status: InvoiceStatus;
   created_at: string;
+};
+
+export type ExtraCharge = {
+  id: string;
+  hotel_id: string;
+  booking_id: string;
+  description: string;
+  amount_cents: number;
+  category: string;
+  created_at?: string;
+};
+
+export type Hotel = {
+  id: string;
+  name: string;
+  address?: string;
 };

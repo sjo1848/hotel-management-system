@@ -1,6 +1,5 @@
 import React from "react";
 import {
-    User,
     Mail,
     Phone,
     Calendar,
@@ -19,7 +18,6 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Guest } from "@/types/domain";
-import { cn } from "@/lib/utils";
 
 interface GuestDetailsSheetProps {
     guest: Guest | null;

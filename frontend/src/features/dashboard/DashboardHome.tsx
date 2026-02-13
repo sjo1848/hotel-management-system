@@ -9,6 +9,7 @@ import {
   DoorOpen,
   DollarSign,
   CalendarCheck,
+  Loader2,
   LogIn,
   LogOut as LogOutIcon,
   MoreVertical,
@@ -40,6 +41,7 @@ import {
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/toast";
 
 type KPICardProps = {
   title: string;
@@ -90,6 +92,7 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
 
 const DashboardHome = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [kpis, setKpis] = useState<DashboardKpis | null>(null);
   const [revenueData, setRevenueData] = useState<RevenueReportItem[]>([]);
   const [occupancyData, setOccupancyData] = useState<OccupancyReportItem[]>([]);
