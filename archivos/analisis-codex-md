@@ -30,6 +30,7 @@
 - `archivos/CAMBIO_2026-02-13_FRONTEND_LOGIN_HOTEL_ID_REQUIRED.md`
 - `archivos/CAMBIO_2026-02-13_RBAC_AUTHORIZATION_TESTS.md`
 - `archivos/CAMBIO_2026-02-13_CSRF_AUTHN_SECURITY_TESTS.md`
+- `archivos/CAMBIO_2026-02-13_CI_SECURITY_GATES.md`
 
 ## A) Diagnóstico ejecutivo (CTO)
 
@@ -226,8 +227,8 @@ Domain (models + errors + repository traits) <- application <- handlers
 - [x] Tenant isolation garantizado en DB + repos + API.
 - [ ] Contrato de errores estable y versionado (parcial: casos críticos migrados; falta cobertura total y política de versionado).
 - [x] RBAC granular por recurso/acción.
-- [ ] Pruebas de seguridad (CSRF/authz/authn) en CI (parcial: authz y csrf/authn ya testeados en backend; falta gate obligatorio en pipeline CI).
-- [ ] Cobertura mínima acordada en módulos críticos (parcial: backend suite completa + regresión RBAC; falta umbral formal y expansión frontend/security).
+- [ ] Pruebas de seguridad (CSRF/authz/authn) en CI (parcial-alto: workflow CI ya ejecuta gates explícitos de `rbac_authorization` + `csrf_authn_security`; falta evidencia de corrida en PR y policy de required checks).
+- [ ] Cobertura mínima acordada en módulos críticos (parcial-alto: backend y frontend con gates explícitos en CI; falta umbral formal de cobertura y criterios cuantitativos).
 - [ ] Pool DB y performance tuning basado en métricas reales (parcial: `DB_MAX_CONNECTIONS` configurable; falta tuning guiado por SLO/observabilidad).
 - [ ] Backups + DR probados con evidencia.
 - [ ] Pipeline CI/CD con rollback automatizado.
