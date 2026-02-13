@@ -1,6 +1,9 @@
 use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::{trace as sdktrace, Resource};
 use hms_backend::app_state::AppState;
 use hms_backend::application::{
     analytics_service::AnalyticsService, auth_service::AuthService, booking_service::BookingService,
@@ -26,18 +29,68 @@ use hms_backend::infrastructure::{
     seeder,
     web::routes::create_router,
 };
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+fn init_tracing(config: &AppConfig) {
+    let env_filter = tracing_subscriber::EnvFilter::from_default_env();
+    let fmt_layer = tracing_subscriber::fmt::layer().json();
+
+    if !config.otel_enabled {
+        tracing_subscriber::registry()
+            .with(env_filter)
+            .with(fmt_layer)
+            .init();
+        return;
+    }
+
+    let trace_config = sdktrace::Config::default().with_resource(Resource::new(vec![
+        KeyValue::new("service.name", config.otel_service_name.clone()),
+        KeyValue::new("deployment.environment", config.app_env.clone()),
+    ]));
+
+    let otlp_exporter = opentelemetry_otlp::new_exporter()
+        .tonic()
+        .with_endpoint(config.otel_exporter_endpoint.clone());
+
+    let otel_result = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_trace_config(trace_config)
+        .with_exporter(otlp_exporter)
+        .install_batch(opentelemetry_sdk::runtime::Tokio);
+
+    match otel_result {
+        Ok(tracer) => {
+            let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+            tracing_subscriber::registry()
+                .with(env_filter)
+                .with(fmt_layer)
+                .with(otel_layer)
+                .init();
+            tracing::info!(
+                endpoint = %config.otel_exporter_endpoint,
+                service = %config.otel_service_name,
+                "OpenTelemetry tracing enabled"
+            );
+        }
+        Err(error) => {
+            eprintln!(
+                "⚠️ OpenTelemetry disabled due to init error: {}. Falling back to JSON logging only.",
+                error
+            );
+            tracing_subscriber::registry()
+                .with(env_filter)
+                .with(fmt_layer)
+                .init();
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
-    // 1. Initialize Logging
-    let subscriber = tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .json()
-        .finish();
-    tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
-
-    // 2. Load Config from Env
+    // 1. Load Config from Env
     let config = AppConfig::from_env();
+    // 2. Initialize Logging/Tracing
+    init_tracing(&config);
 
     // 3. Connect to Database
     let pool = PgPoolOptions::new()

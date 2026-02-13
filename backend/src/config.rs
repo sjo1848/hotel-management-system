@@ -2,6 +2,7 @@ use std::env;
 
 #[derive(Clone)]
 pub struct AppConfig {
+    pub app_env: String,
     pub database_url: String,
     pub jwt_secret: String,
     pub auth_required: bool,
@@ -17,6 +18,9 @@ pub struct AppConfig {
     pub cookie_samesite: String,
     pub db_max_connections: u32,
     pub port: u16,
+    pub otel_enabled: bool,
+    pub otel_exporter_endpoint: String,
+    pub otel_service_name: String,
 }
 
 impl AppConfig {
@@ -65,6 +69,14 @@ impl AppConfig {
             .ok()
             .and_then(|value| value.parse::<u16>().ok())
             .unwrap_or(3001);
+        let otel_enabled = env::var("OTEL_ENABLED")
+            .unwrap_or_else(|_| "false".to_string())
+            .to_lowercase()
+            == "true";
+        let otel_exporter_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+            .unwrap_or_else(|_| "http://otel-collector:4317".to_string());
+        let otel_service_name = env::var("OTEL_SERVICE_NAME")
+            .unwrap_or_else(|_| "hms-backend".to_string());
 
         if is_prod {
             if jwt_secret == "dev-secret-change-me" {
@@ -85,6 +97,7 @@ impl AppConfig {
         }
 
         Self {
+            app_env,
             database_url,
             jwt_secret,
             auth_required,
@@ -100,6 +113,9 @@ impl AppConfig {
             cookie_samesite,
             db_max_connections,
             port,
+            otel_enabled,
+            otel_exporter_endpoint,
+            otel_service_name,
         }
     }
 }

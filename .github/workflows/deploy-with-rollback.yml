@@ -1,0 +1,42 @@
+name: deploy-with-rollback
+
+concurrency:
+  group: deploy-with-rollback
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Git ref a desplegar (ej: origin/main, origin/release/x)
+        required: false
+        default: origin/main
+      skip_tests:
+        description: Omitir smoke tests post-deploy
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    name: Deploy with Auto Rollback
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure scripts are executable
+        run: chmod +x scripts/*.sh
+
+      - name: Deploy with rollback
+        env:
+          TARGET_REF: ${{ github.event.inputs.target_ref }}
+          SKIP_TESTS: ${{ github.event.inputs.skip_tests }}
+        run: |
+          if [ "${SKIP_TESTS}" = "true" ]; then
+            ./scripts/deploy-with-rollback.sh --target-ref "${TARGET_REF}" --skip-tests
+          else
+            ./scripts/deploy-with-rollback.sh --target-ref "${TARGET_REF}"
+          fi

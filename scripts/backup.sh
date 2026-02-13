@@ -13,7 +13,7 @@ mkdir -p "$BACKUP_DIR"
 
 echo "🚀 Iniciando backup de la base de datos ${DB_NAME}..."
 
-docker compose exec -T db pg_dump -U "$DB_USER" "$DB_NAME" | gzip > "$OUTPUT_PATH"
+docker compose exec -T db pg_dump --clean --if-exists -U "$DB_USER" "$DB_NAME" | gzip > "$OUTPUT_PATH"
 
 echo "✅ Backup completado con éxito: $OUTPUT_PATH"
 echo "Tamaño del archivo: $(du -h "$OUTPUT_PATH" | cut -f1)"

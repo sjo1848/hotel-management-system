@@ -44,8 +44,12 @@ services:
       LOGIN_LIMIT_PER_MINUTE: "10"
       COOKIE_SECURE: "false"
       COOKIE_SAMESITE: "Lax"
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "hms-backend"
     depends_on:
       - db
+      - otel-collector
     networks:
       - hms-net
 
@@ -66,6 +70,88 @@ services:
     networks:
       - hms-net
 
+  prometheus:
+    image: prom/prometheus:v2.53.5
+    container_name: hms-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - backend
+      - alertmanager
+    networks:
+      - hms-net
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: hms-alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    ports:
+      - "9093:9093"
+    networks:
+      - hms-net
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: hms-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin123}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+      - tempo
+    networks:
+      - hms-net
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: hms-tempo
+    restart: unless-stopped
+    user: "0:0"
+    command: ["-config.file=/etc/tempo/tempo.yml"]
+    volumes:
+      - ./monitoring/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - hms-net
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.106.1
+    container_name: hms-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector/config.yml"]
+    volumes:
+      - ./monitoring/otel-collector/config.yml:/etc/otel-collector/config.yml:ro
+    ports:
+      - "4317:4317"
+    depends_on:
+      - tempo
+    networks:
+      - hms-net
+
 networks:
   hms-net:
     driver: bridge
@@ -74,3 +160,7 @@ volumes:
   hms_pgdata:
   cargo_registry:
   cargo_target:
+  prometheus_data:
+  alertmanager_data:
+  grafana_data:
+  tempo_data:

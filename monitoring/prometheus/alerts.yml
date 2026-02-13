@@ -1,0 +1,38 @@
+groups:
+  - name: hms-backend-alerts
+    rules:
+      - alert: HMSBackendDown
+        expr: up{job="hms-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HMS backend está caído"
+          description: "Prometheus no puede scrapear backend:3001 por más de 2 minutos."
+
+      - alert: HMSHigh5xxRate
+        expr: |
+          (
+            sum(rate(http_requests_total{path!="/health",status=~"5.."}[5m]))
+            /
+            clamp_min(sum(rate(http_requests_total{path!="/health"}[5m])), 1)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Alta tasa de errores 5xx"
+          description: "La tasa de 5xx supera el 5% en los últimos 5 minutos."
+
+      - alert: HMSP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le, path) (rate(http_request_duration_seconds_bucket{path!="/health"}[5m]))
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Latencia P95 elevada"
+          description: "P95 > 1s sostenido por 10 minutos en endpoints de negocio."
