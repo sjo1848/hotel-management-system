@@ -1130,8 +1130,7 @@ pub async fn get_dashboard_kpis_handler(
     let kpis = state
         .reporting_service
         .get_dashboard_summary(hotel_id)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+        .await?;
     Ok(Json(json!(kpis)))
 }
 
@@ -1267,8 +1266,7 @@ pub async fn get_revenue_report_handler(
     let report = state
         .reporting_service
         .get_revenue_report(hotel_id, start, end)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+        .await?;
 
     Ok(Json(json!(report)))
 }
@@ -1302,8 +1300,7 @@ pub async fn get_occupancy_report_handler(
     let report = state
         .reporting_service
         .get_occupancy_report(hotel_id, start, end)
-        .await
-        .map_err(DomainError::InfrastructureError)?;
+        .await?;
 
     Ok(Json(json!(report)))
 }
