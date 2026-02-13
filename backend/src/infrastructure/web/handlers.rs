@@ -39,6 +39,16 @@ impl IntoResponse for DomainError {
                 "ROOM_ALREADY_EXISTS",
                 "Ya existe una habitación con ese número".to_string(),
             ),
+            DomainError::GuestAlreadyExists => (
+                StatusCode::CONFLICT,
+                "GUEST_ALREADY_EXISTS",
+                "Ya existe un huésped con ese email en este hotel".to_string(),
+            ),
+            DomainError::UserAlreadyExists => (
+                StatusCode::CONFLICT,
+                "USER_ALREADY_EXISTS",
+                "Ya existe un usuario con ese nombre en este hotel".to_string(),
+            ),
             DomainError::InvalidRoomStatusTransition => (
                 StatusCode::BAD_REQUEST,
                 "INVALID_ROOM_STATUS_TRANSITION",
@@ -756,7 +766,7 @@ pub async fn create_user_handler(
         .user_repo
         .create(user)
         .await
-        .map_err(DomainError::InfrastructureError)?;
+        .map_err(map_user_repo_error)?;
 
     state
         .audit_service
@@ -766,6 +776,18 @@ pub async fn create_user_handler(
     Ok(Json(
         json!({ "id": created.id, "username": created.username, "role": created.role }),
     ))
+}
+
+fn map_user_repo_error(message: String) -> DomainError {
+    let normalized = message.to_lowercase();
+    if normalized.contains("duplicate key value")
+        || normalized.contains("ux_users_hotel_username")
+        || normalized.contains("users_username_key")
+    {
+        DomainError::UserAlreadyExists
+    } else {
+        DomainError::InfrastructureError(message)
+    }
 }
 
 fn extract_refresh_cookie(headers: &HeaderMap) -> Option<String> {

@@ -31,6 +31,7 @@
 - `archivos/CAMBIO_2026-02-13_RBAC_AUTHORIZATION_TESTS.md`
 - `archivos/CAMBIO_2026-02-13_CSRF_AUTHN_SECURITY_TESTS.md`
 - `archivos/CAMBIO_2026-02-13_CI_SECURITY_GATES.md`
+- `archivos/CAMBIO_2026-02-13_ERROR_CONTRACT_V1_DUPLICATES.md`
 
 ## A) Diagnóstico ejecutivo (CTO)
 
@@ -225,7 +226,7 @@ Domain (models + errors + repository traits) <- application <- handlers
 ## J) Checklist Production-Ready
 
 - [x] Tenant isolation garantizado en DB + repos + API.
-- [ ] Contrato de errores estable y versionado (parcial: casos críticos migrados; falta cobertura total y política de versionado).
+- [ ] Contrato de errores estable y versionado (parcial-alto: casos críticos + duplicados funcionales migrados; falta cobertura total y política formal de versionado/deprecación).
 - [x] RBAC granular por recurso/acción.
 - [ ] Pruebas de seguridad (CSRF/authz/authn) en CI (parcial-alto: workflow CI ya ejecuta gates explícitos de `rbac_authorization` + `csrf_authn_security`; falta evidencia de corrida en PR y policy de required checks).
 - [ ] Cobertura mínima acordada en módulos críticos (parcial-alto: backend y frontend con gates explícitos en CI; falta umbral formal de cobertura y criterios cuantitativos).

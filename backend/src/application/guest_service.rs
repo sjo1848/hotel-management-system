@@ -47,6 +47,18 @@ impl GuestService {
         self.guest_repo
             .create(new_guest)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_guest_repo_error)
+    }
+}
+
+fn map_guest_repo_error(message: String) -> DomainError {
+    let normalized = message.to_lowercase();
+    if normalized.contains("duplicate key value")
+        || normalized.contains("ux_guests_hotel_email")
+        || normalized.contains("guests_email_key")
+    {
+        DomainError::GuestAlreadyExists
+    } else {
+        DomainError::InfrastructureError(message)
     }
 }

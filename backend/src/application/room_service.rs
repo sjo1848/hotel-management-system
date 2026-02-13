@@ -43,7 +43,7 @@ impl RoomService {
         self.room_repo
             .create(room)
             .await
-            .map_err(DomainError::InfrastructureError)
+            .map_err(map_room_repo_error)
     }
 
     pub async fn update_room_status(&self, hotel_id: Uuid, id: Uuid, status: RoomStatus) -> Result<(), DomainError> {
@@ -78,5 +78,17 @@ impl RoomService {
 
     pub async fn mark_as_maintenance(&self, hotel_id: Uuid, id: Uuid) -> Result<(), DomainError> {
         self.update_room_status(hotel_id, id, RoomStatus::Maintenance).await
+    }
+}
+
+fn map_room_repo_error(message: String) -> DomainError {
+    let normalized = message.to_lowercase();
+    if normalized.contains("duplicate key value")
+        || normalized.contains("ux_rooms_hotel_room_number")
+        || normalized.contains("rooms_room_number_key")
+    {
+        DomainError::RoomAlreadyExists
+    } else {
+        DomainError::InfrastructureError(message)
     }
 }
