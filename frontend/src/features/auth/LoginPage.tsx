@@ -16,13 +16,32 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { login } = useAuth();
   const [errorV, setErrorV] = useState("");
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value.trim(),
+    );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const normalizedHotelId = hotelId.trim();
+    const normalizedUsername = username.trim();
+    if (!isUuid(normalizedHotelId)) {
+      setErrorV("Hotel ID inválido. Debe ser UUID.");
+      toast({
+        title: "Hotel ID inválido",
+        description: "Usá un UUID válido (ej: 00000000-0000-0000-0000-000000000001).",
+        variant: "error",
+      });
+      return;
+    }
+    if (!normalizedUsername) {
+      setErrorV("Usuario obligatorio.");
+      return;
+    }
     setLoading(true);
     setErrorV("");
     try {
-      await login(username, password, hotelId);
+      await login(normalizedUsername, password, normalizedHotelId);
       // Toast handled by auth context usually, but we can do it here too
       navigate("/", { replace: true });
     } catch (error) {
