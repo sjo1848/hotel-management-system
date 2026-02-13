@@ -128,27 +128,28 @@ const DashboardHome = () => {
     </div>
   );
 
+  const loadDashboardData = async () => {
+    setLoading(true);
+    try {
+      const [kpiRes, revRes, occRes, balRes] = await Promise.all([
+        getDashboardKpis(),
+        getRevenueReport(),
+        getOccupancyReport(),
+        getCashBalance()
+      ]);
+      setKpis(kpiRes);
+      setRevenueData(revRes);
+      setOccupancyData(occRes);
+      setBalance(balRes);
+    } catch (error) {
+      console.error("Dashboard error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const [kpiRes, revRes, occRes, balRes] = await Promise.all([
-          getDashboardKpis(),
-          getRevenueReport(),
-          getOccupancyReport(),
-          getCashBalance()
-        ]);
-        setKpis(kpiRes);
-        setRevenueData(revRes);
-        setOccupancyData(occRes);
-        setBalance(balRes);
-      } catch (error) {
-        console.error("Dashboard error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+    void loadDashboardData();
   }, []);
 
   const handleCloseCash = async () => {
@@ -157,7 +158,7 @@ const DashboardHome = () => {
     try {
       await closeCash("Cierre manual desde dashboard");
       toast({ title: "Caja cerrada", description: "El reporte ha sido generado correctamente", variant: "success" });
-      window.location.reload();
+      await loadDashboardData();
     } catch (e) {
       toast({ title: "Error", description: "No se pudo cerrar la caja", variant: "error" });
     } finally {
@@ -419,8 +420,8 @@ const DashboardHome = () => {
         bookingId={selectedBookingId}
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
-        onSuccess={() => {
-          window.location.reload();
+        onSuccess={async () => {
+          await loadDashboardData();
         }}
       />
     </div>
