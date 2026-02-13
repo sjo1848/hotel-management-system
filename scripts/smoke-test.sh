@@ -14,7 +14,7 @@ if [ "$STATUS" == "operational" ]; then echo "✅"; else echo "❌"; exit 1; fi
 
 # 2. Login
 echo -n "[2/5] Intentando Login (admin)... "
-LOGIN_RES=$(curl -s -c $COOKIE_FILE -X POST "$BASE_URL/auth/login" -H "Content-Type: application/json" -d '{"username": "admin", "password": "admin123"}')
+LOGIN_RES=$(curl -s -c $COOKIE_FILE -X POST "$BASE_URL/auth/login" -H "Content-Type: application/json" -d '{"hotel_id":"Hotel Sede Central","username": "admin", "password": "admin123"}')
 
 if echo "$LOGIN_RES" | grep -q "access_token"; then 
     echo "✅"

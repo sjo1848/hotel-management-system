@@ -32,6 +32,7 @@
 - `archivos/CAMBIO_2026-02-13_CSRF_AUTHN_SECURITY_TESTS.md`
 - `archivos/CAMBIO_2026-02-13_CI_SECURITY_GATES.md`
 - `archivos/CAMBIO_2026-02-13_ERROR_CONTRACT_V1_DUPLICATES.md`
+- `archivos/CAMBIO_2026-02-13_BACKUP_RESTORE_DRILL.md`
 
 ## A) Diagnóstico ejecutivo (CTO)
 
@@ -231,7 +232,7 @@ Domain (models + errors + repository traits) <- application <- handlers
 - [ ] Pruebas de seguridad (CSRF/authz/authn) en CI (parcial-alto: workflow CI ya ejecuta gates explícitos de `rbac_authorization` + `csrf_authn_security`; falta evidencia de corrida en PR y policy de required checks).
 - [ ] Cobertura mínima acordada en módulos críticos (parcial-alto: backend y frontend con gates explícitos en CI; falta umbral formal de cobertura y criterios cuantitativos).
 - [ ] Pool DB y performance tuning basado en métricas reales (parcial: `DB_MAX_CONNECTIONS` configurable; falta tuning guiado por SLO/observabilidad).
-- [ ] Backups + DR probados con evidencia.
+- [ ] Backups + DR probados con evidencia (parcial-alto: drill real backup+restore ejecutado y validado por conteos; falta automatización periódica y política formal de retención/restauración).
 - [ ] Pipeline CI/CD con rollback automatizado.
 - [ ] Dashboards + alertas + trazas E2E.
 - [ ] Política de deprecación/versionado API documentada.

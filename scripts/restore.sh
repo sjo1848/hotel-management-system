@@ -1,28 +1,74 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # HMS Elite - Database Restore Script
-set -e
+set -euo pipefail
 
-if [ -z "$1" ]; then
-    echo "❌ Error: Debes proporcionar el path al archivo de backup (.sql.gz)"
-    echo "Uso: ./scripts/restore.sh ./scripts/backups/archivo.sql.gz"
+usage() {
+    cat <<EOF
+Uso:
+  ./scripts/restore.sh <backup.sql.gz> [--db <db_name>] [--create-db] [--yes]
+
+Opciones:
+  --db <db_name>   Base destino (default: hms_core)
+  --create-db      Crea la base destino si no existe
+  --yes            Omite confirmación interactiva
+EOF
+}
+
+if [ $# -lt 1 ]; then
+    usage
     exit 1
 fi
 
-BACKUP_FILE=$1
-CONTAINER_NAME="hms-db"
-DB_NAME="hms_core"
-DB_USER="admin"
+BACKUP_FILE="$1"
+shift
 
-echo "⚠️  ADVERTENCIA: Esto sobrescribirá la base de datos actual $DB_NAME."
-read -p "¿Estás seguro? (s/n): " confirm
-if [[ $confirm != "s" && $confirm != "S" ]]; then
-    echo "Operación cancelada."
-    exit 0
+DB_NAME="hms_core"
+DB_USER="${DB_USER:-admin}"
+CREATE_DB=false
+ASSUME_YES=false
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --db)
+            DB_NAME="$2"
+            shift 2
+            ;;
+        --create-db)
+            CREATE_DB=true
+            shift
+            ;;
+        --yes)
+            ASSUME_YES=true
+            shift
+            ;;
+        *)
+            echo "❌ Opción no reconocida: $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
+if [ ! -f "$BACKUP_FILE" ]; then
+    echo "❌ Backup no encontrado: $BACKUP_FILE"
+    exit 1
 fi
 
-echo "🔄 Restaurando base de datos desde $BACKUP_FILE..."
+if [ "$CREATE_DB" = true ]; then
+    echo "🛠️  Creando base destino (si no existe): $DB_NAME"
+    docker compose exec -T db bash -lc "psql -U '$DB_USER' -d postgres -tAc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\" | grep -q 1 || createdb -U '$DB_USER' '$DB_NAME'"
+fi
 
-# Descomprimir y ejecutar en psql
-gunzip -c "$BACKUP_FILE" | docker exec -i $CONTAINER_NAME psql -U $DB_USER $DB_NAME
+if [ "$ASSUME_YES" != true ]; then
+    echo "⚠️  ADVERTENCIA: restaurarás sobre la base destino '$DB_NAME'."
+    read -r -p "¿Continuar? (s/n): " confirm
+    if [[ "$confirm" != "s" && "$confirm" != "S" ]]; then
+        echo "Operación cancelada."
+        exit 0
+    fi
+fi
+
+echo "🔄 Restaurando base de datos '$DB_NAME' desde '$BACKUP_FILE'..."
+gunzip -c "$BACKUP_FILE" | docker compose exec -T db psql -U "$DB_USER" "$DB_NAME"
 
 echo "✅ Restauración completada con éxito."
