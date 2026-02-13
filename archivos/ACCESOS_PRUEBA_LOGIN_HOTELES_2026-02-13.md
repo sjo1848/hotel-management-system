@@ -30,3 +30,16 @@ En la pantalla de login completar:
 ## Notas
 1. Estos accesos son de QA/desarrollo y deben rotarse o eliminarse antes de producción.
 2. Si querés, en el siguiente paso dejo también un documento de "matriz esperada de permisos por rol" para validar qué debería poder hacer cada usuario tras login.
+
+## Verificación técnica (2026-02-13)
+Prueba ejecutada contra `POST /api/v1/auth/login` en backend levantado por Docker:
+
+1. `admin` + hotel central -> `200`
+2. `ops` + hotel central -> `200`
+3. `receptionist` + hotel central -> `200`
+4. `housekeeping` + hotel central -> `200`
+5. `admin_viena` + hotel Viena -> `200`
+
+Chequeo de aislamiento tenant:
+
+1. `admin_viena` intentando login con `hotel_id` de sede central -> `401 UNAUTHORIZED` (comportamiento esperado).
