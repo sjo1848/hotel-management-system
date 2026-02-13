@@ -341,14 +341,14 @@ fn map_db_constraint_error(code: &str, constraint_name: &str) -> Option<DomainEr
         "23P01" => Some(DomainError::RoomNotAvailable),
         "23514" if constraint_name == "valid_dates" => Some(DomainError::InvalidBookingDates),
         "23503" if constraint_name == "fk_bookings_hotel_room" => Some(DomainError::RoomNotFound),
-        "23503" if constraint_name == "fk_bookings_hotel_guest" => {
-            Some(DomainError::GuestNotFound)
-        }
+        "23503" if constraint_name == "fk_bookings_hotel_guest" => Some(DomainError::GuestNotFound),
         "23503" if constraint_name == "bookings_hotel_id_fkey" => Some(DomainError::HotelNotFound),
         "23503" if constraint_name == "fk_invoices_hotel_booking" => {
             Some(DomainError::BookingNotFound)
         }
-        "23503" if constraint_name == "fk_audit_events_hotel_user" => Some(DomainError::UserNotFound),
+        "23503" if constraint_name == "fk_audit_events_hotel_user" => {
+            Some(DomainError::UserNotFound)
+        }
         _ => None,
     }
 }

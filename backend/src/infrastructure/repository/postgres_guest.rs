@@ -84,7 +84,9 @@ fn map_db_error(error: sqlx::Error) -> String {
         if let Some(code) = db_error.code() {
             if code == "23505" {
                 let constraint_name = db_error.constraint().unwrap_or_default();
-                if constraint_name == "ux_guests_hotel_email" || constraint_name == "guests_email_key" {
+                if constraint_name == "ux_guests_hotel_email"
+                    || constraint_name == "guests_email_key"
+                {
                     return "GUEST_ALREADY_EXISTS".to_string();
                 }
             }

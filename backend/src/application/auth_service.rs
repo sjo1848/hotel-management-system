@@ -175,9 +175,7 @@ fn map_refresh_repo_error(message: String) -> DomainError {
         // En autenticación no exponemos detalle de existencia de sujeto/hotel
         "REFRESH_TOKEN_SUBJECT_NOT_FOUND"
         | "REFRESH_TOKEN_HOTEL_NOT_FOUND"
-        | "REFRESH_TOKEN_NOT_FOUND" => {
-            DomainError::Unauthorized
-        }
+        | "REFRESH_TOKEN_NOT_FOUND" => DomainError::Unauthorized,
         _ => DomainError::InfrastructureError(message),
     }
 }

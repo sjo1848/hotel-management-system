@@ -13,7 +13,10 @@ impl ReportingService {
         Self { booking_repo }
     }
 
-    pub async fn get_dashboard_summary(&self, hotel_id: Uuid) -> Result<DashboardKpis, DomainError> {
+    pub async fn get_dashboard_summary(
+        &self,
+        hotel_id: Uuid,
+    ) -> Result<DashboardKpis, DomainError> {
         let mut kpis = self
             .booking_repo
             .get_dashboard_stats(hotel_id)

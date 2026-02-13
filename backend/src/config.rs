@@ -86,17 +86,17 @@ impl AppConfig {
         let otel_service_name =
             env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "hms-backend".to_string());
 
-        validate_security_guards(
+        validate_security_guards(SecurityGuardInputs {
             is_prod,
-            &jwt_secret,
-            &jwt_kid,
-            &admin_password,
+            jwt_secret: &jwt_secret,
+            jwt_kid: &jwt_kid,
+            admin_password: &admin_password,
             cookie_secure,
-            &cookie_samesite,
-            &cors_origin,
+            cookie_samesite: &cookie_samesite,
+            cors_origin: &cors_origin,
             access_ttl_minutes,
             refresh_ttl_days,
-        );
+        });
 
         Self {
             app_env,
@@ -138,46 +138,48 @@ fn normalize_cookie_samesite(value: &str) -> String {
     }
 }
 
-fn validate_security_guards(
+struct SecurityGuardInputs<'a> {
     is_prod: bool,
-    jwt_secret: &str,
-    jwt_kid: &str,
-    admin_password: &str,
+    jwt_secret: &'a str,
+    jwt_kid: &'a str,
+    admin_password: &'a str,
     cookie_secure: bool,
-    cookie_samesite: &str,
-    cors_origin: &str,
+    cookie_samesite: &'a str,
+    cors_origin: &'a str,
     access_ttl_minutes: i64,
     refresh_ttl_days: i64,
-) {
-    if access_ttl_minutes <= 0 {
+}
+
+fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
+    if inputs.access_ttl_minutes <= 0 {
         panic!("ACCESS_TTL_MINUTES must be > 0.");
     }
-    if refresh_ttl_days <= 0 {
+    if inputs.refresh_ttl_days <= 0 {
         panic!("REFRESH_TTL_DAYS must be > 0.");
     }
-    if !is_prod {
+    if !inputs.is_prod {
         return;
     }
 
-    if jwt_secret == "dev-secret-change-me" {
+    if inputs.jwt_secret == "dev-secret-change-me" {
         panic!("JWT_SECRET must be set to a strong value in production.");
     }
-    if jwt_secret.len() < 32 {
+    if inputs.jwt_secret.len() < 32 {
         panic!("JWT_SECRET must be at least 32 characters long in production.");
     }
-    if jwt_kid.trim().is_empty() {
+    if inputs.jwt_kid.trim().is_empty() {
         panic!("JWT_KID must be configured in production.");
     }
-    if admin_password == "admin123" {
+    if inputs.admin_password == "admin123" {
         panic!("ADMIN_PASSWORD must be set to a strong value in production.");
     }
-    if !cookie_secure {
+    if !inputs.cookie_secure {
         panic!("COOKIE_SECURE must be true in production.");
     }
-    if cookie_samesite == "None" && !cookie_secure {
+    if inputs.cookie_samesite == "None" && !inputs.cookie_secure {
         panic!("COOKIE_SAMESITE=None requires COOKIE_SECURE=true in production.");
     }
-    if cors_origin == "*" {
+    if inputs.cors_origin == "*" {
         panic!("CORS_ORIGIN cannot be '*' in production.");
     }
 }
@@ -210,48 +212,48 @@ mod tests {
 
     #[test]
     fn validate_security_guards_accepts_non_prod_with_valid_ttls() {
-        validate_security_guards(
-            false,
-            "dev-secret-change-me",
-            "v1",
-            "admin123",
-            false,
-            "Lax",
-            "*",
-            15,
-            7,
-        );
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: false,
+            jwt_secret: "dev-secret-change-me",
+            jwt_kid: "v1",
+            admin_password: "admin123",
+            cookie_secure: false,
+            cookie_samesite: "Lax",
+            cors_origin: "*",
+            access_ttl_minutes: 15,
+            refresh_ttl_days: 7,
+        });
     }
 
     #[test]
     #[should_panic(expected = "ACCESS_TTL_MINUTES must be > 0.")]
     fn validate_security_guards_rejects_non_positive_access_ttl() {
-        validate_security_guards(
-            false,
-            "dev-secret-change-me",
-            "v1",
-            "admin123",
-            false,
-            "Lax",
-            "http://localhost:5173",
-            0,
-            7,
-        );
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: false,
+            jwt_secret: "dev-secret-change-me",
+            jwt_kid: "v1",
+            admin_password: "admin123",
+            cookie_secure: false,
+            cookie_samesite: "Lax",
+            cors_origin: "http://localhost:5173",
+            access_ttl_minutes: 0,
+            refresh_ttl_days: 7,
+        });
     }
 
     #[test]
     #[should_panic(expected = "COOKIE_SECURE must be true in production.")]
     fn validate_security_guards_rejects_insecure_prod_cookie() {
-        validate_security_guards(
-            true,
-            "12345678901234567890123456789012",
-            "v1",
-            "strong-admin-password",
-            false,
-            "Lax",
-            "https://hms.example.com",
-            15,
-            7,
-        );
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: true,
+            jwt_secret: "12345678901234567890123456789012",
+            jwt_kid: "v1",
+            admin_password: "strong-admin-password",
+            cookie_secure: false,
+            cookie_samesite: "Lax",
+            cors_origin: "https://hms.example.com",
+            access_ttl_minutes: 15,
+            refresh_ttl_days: 7,
+        });
     }
 }
