@@ -50,7 +50,7 @@ impl AuthService {
             .user_repo
             .find_by_username(hotel_id, username)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_user_repo_error)?
             .ok_or(DomainError::Unauthorized)?;
 
         let valid =
@@ -158,7 +158,7 @@ impl AuthService {
         self.user_repo
             .find_by_id(hotel_id, user_id)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_user_repo_error)?
             .ok_or(DomainError::Unauthorized)
     }
 }
@@ -173,9 +173,18 @@ fn hash_token(raw: &str) -> String {
 fn map_refresh_repo_error(message: String) -> DomainError {
     match message.as_str() {
         // En autenticación no exponemos detalle de existencia de sujeto/hotel
-        "REFRESH_TOKEN_SUBJECT_NOT_FOUND" | "REFRESH_TOKEN_HOTEL_NOT_FOUND" => {
+        "REFRESH_TOKEN_SUBJECT_NOT_FOUND"
+        | "REFRESH_TOKEN_HOTEL_NOT_FOUND"
+        | "REFRESH_TOKEN_NOT_FOUND" => {
             DomainError::Unauthorized
         }
+        _ => DomainError::InfrastructureError(message),
+    }
+}
+
+fn map_user_repo_error(message: String) -> DomainError {
+    match message.as_str() {
+        "USER_NOT_FOUND" | "USER_HOTEL_NOT_FOUND" => DomainError::Unauthorized,
         _ => DomainError::InfrastructureError(message),
     }
 }
@@ -199,6 +208,22 @@ mod tests {
         ));
         assert!(matches!(
             map_refresh_repo_error("REFRESH_TOKEN_HOTEL_NOT_FOUND".to_string()),
+            DomainError::Unauthorized
+        ));
+        assert!(matches!(
+            map_refresh_repo_error("REFRESH_TOKEN_NOT_FOUND".to_string()),
+            DomainError::Unauthorized
+        ));
+    }
+
+    #[test]
+    fn map_user_repo_error_masks_user_markers_as_unauthorized() {
+        assert!(matches!(
+            map_user_repo_error("USER_NOT_FOUND".to_string()),
+            DomainError::Unauthorized
+        ));
+        assert!(matches!(
+            map_user_repo_error("USER_HOTEL_NOT_FOUND".to_string()),
             DomainError::Unauthorized
         ));
     }

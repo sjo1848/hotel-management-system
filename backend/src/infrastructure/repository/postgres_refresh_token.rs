@@ -44,7 +44,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(token_hash)
         .fetch_optional(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(record.map(|row| RefreshToken {
             id: row.try_get("id").unwrap(),
@@ -58,12 +58,16 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
 
     async fn revoke(&self, token_id: Uuid) -> Result<(), String> {
         let now: NaiveDateTime = chrono::Utc::now().naive_utc();
-        sqlx::query("UPDATE refresh_tokens SET revoked_at = $1 WHERE id = $2")
+        let result = sqlx::query("UPDATE refresh_tokens SET revoked_at = $1 WHERE id = $2")
             .bind(now)
             .bind(token_id)
             .execute(&self.pool)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(map_db_error)?;
+
+        if result.rows_affected() == 0 {
+            return Err("REFRESH_TOKEN_NOT_FOUND".to_string());
+        }
 
         Ok(())
     }
@@ -78,7 +82,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(user_id)
         .execute(&self.pool)
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(map_db_error)?;
 
         Ok(())
     }
