@@ -8,6 +8,7 @@ pub trait HotelRepository: Send + Sync {
     async fn create(&self, hotel: Hotel) -> Result<Hotel, String>;
     async fn find_all(&self) -> Result<Vec<Hotel>, String>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Hotel>, String>;
+    async fn find_by_name_ci(&self, name: &str) -> Result<Option<Hotel>, String>;
     async fn update(&self, hotel: Hotel) -> Result<Hotel, String>;
 }
 

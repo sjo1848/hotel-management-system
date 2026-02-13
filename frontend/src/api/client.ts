@@ -85,7 +85,7 @@ api.interceptors.response.use(
     const errorData = error.response?.data as { error?: string; message?: string; error_code?: string } | undefined;
     const isLogin422 = error.response?.status === 422 && requestUrl.includes("/auth/login");
     const message = isLogin422
-      ? "Payload inválido. Verificá Hotel ID (UUID), usuario y contraseña."
+      ? "Payload inválido. Verificá hotel (nombre o ID), usuario y contraseña."
       : errorData?.message || errorData?.error || "Error inesperado en el servidor";
 
     if (globalErrorHandler && error.response?.status !== 401) {

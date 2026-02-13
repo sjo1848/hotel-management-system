@@ -54,6 +54,20 @@ impl HotelRepository for PostgresHotelRepository {
         }))
     }
 
+    async fn find_by_name_ci(&self, name: &str) -> Result<Option<Hotel>, String> {
+        let record = sqlx::query("SELECT id, name, address FROM hotels WHERE LOWER(name) = LOWER($1) LIMIT 1")
+            .bind(name)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        Ok(record.map(|row| Hotel {
+            id: row.try_get("id").unwrap(),
+            name: row.try_get("name").unwrap(),
+            address: row.try_get("address").ok(),
+        }))
+    }
+
     async fn update(&self, hotel: Hotel) -> Result<Hotel, String> {
         sqlx::query("UPDATE hotels SET name = $1, address = $2 WHERE id = $3")
             .bind(&hotel.name)

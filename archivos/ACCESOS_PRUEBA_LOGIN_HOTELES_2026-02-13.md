@@ -3,11 +3,12 @@
 ## Resumen rápido
 Usá esta combinación en el login:
 
-1. `Hotel ID` correcto del usuario.
+1. `Hotel` correcto del usuario (nombre o ID).
 2. `Usuario` exacto.
 3. `Clave`: `admin123`.
 
-Si `Hotel ID` no coincide con el usuario, el backend responde `401 UNAUTHORIZED`.
+Si el hotel no coincide con el usuario, el backend responde `401 UNAUTHORIZED`.
+El nombre de hotel se evalúa case-insensitive (ej: `Hotel Viena`, `hotel viena`, `HOTEL VIENA`).
 
 ## Hoteles y usuarios listos para probar
 
@@ -22,7 +23,9 @@ Si `Hotel ID` no coincide con el usuario, el backend responde `401 UNAUTHORIZED`
 ## Cómo probar en UI (frontend)
 En `http://localhost:5173/login` completar:
 
-1. `Hotel ID`: copiar de la tabla.
+1. `Hotel (nombre o ID)`: podés usar:
+   - ID de la tabla (UUID), o
+   - nombre del hotel (`Hotel Sede Central`, `Hotel Viena`).
 2. `Usuario`: copiar de la tabla.
 3. `Clave`: `admin123`.
 4. Click en **Acceder al Sistema**.
@@ -52,6 +55,11 @@ Pruebas realizadas el `2026-02-13` sobre backend en Docker:
 4. `housekeeping` + hotel central -> `200`
 5. `admin_viena` + hotel Viena -> `200`
 6. `admin_viena` + hotel central -> `401` (esperado)
+
+Prueba adicional de nombre case-insensitive:
+
+1. `hotel_id: "Hotel Viena"` + `admin_viena` -> `200`
+2. `hotel_id: "hotel viena"` + `admin_viena` -> `200`
 
 ## Errores comunes
 

@@ -140,7 +140,7 @@ pub struct CreateGuestRequest {
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginRequest {
-    pub hotel_id: Uuid,
+    pub hotel_id: String,
     pub username: String,
     pub password: String,
 }
@@ -435,16 +435,31 @@ pub async fn login_handler(
     Json(payload): Json<LoginRequest>,
 ) -> Result<Response, DomainError> {
     let ip = addr.ip().to_string();
+    let hotel_id_input = payload.hotel_id.trim();
 
-    if payload.username.trim().is_empty() || payload.password.trim().is_empty() {
+    if hotel_id_input.is_empty() || payload.username.trim().is_empty() || payload.password.trim().is_empty() {
         return Err(DomainError::InvalidInput(
-            "Usuario y contraseña son obligatorios".to_string(),
+            "Hotel, usuario y contraseña son obligatorios".to_string(),
         ));
     }
 
+    let hotel_id = if let Ok(uuid) = Uuid::parse_str(hotel_id_input) {
+        uuid
+    } else {
+        state
+            .hotel_repo
+            .find_by_name_ci(hotel_id_input)
+            .await
+            .map_err(DomainError::InfrastructureError)?
+            .map(|hotel| hotel.id)
+            .ok_or_else(|| {
+                DomainError::InvalidInput("Hotel inválido. Usá ID o nombre existente.".to_string())
+            })?
+    };
+
     let user = match state
         .auth_service
-        .verify_user(payload.hotel_id, &payload.username, &payload.password)
+        .verify_user(hotel_id, &payload.username, &payload.password)
         .await
     {
         Ok(u) => u,

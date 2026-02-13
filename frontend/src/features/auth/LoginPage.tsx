@@ -16,20 +16,16 @@ const LoginPage = () => {
   const { toast } = useToast();
   const { login } = useAuth();
   const [errorV, setErrorV] = useState("");
-  const isUuid = (value: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      value.trim(),
-    );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedHotelId = hotelId.trim();
     const normalizedUsername = username.trim();
-    if (!isUuid(normalizedHotelId)) {
-      setErrorV("Hotel ID inválido. Debe ser UUID.");
+    if (!normalizedHotelId) {
+      setErrorV("Hotel obligatorio.");
       toast({
-        title: "Hotel ID inválido",
-        description: "Usá un UUID válido (ej: 00000000-0000-0000-0000-000000000001).",
+        title: "Hotel obligatorio",
+        description: "Ingresá nombre o ID del hotel.",
         variant: "error",
       });
       return;
@@ -86,7 +82,7 @@ const LoginPage = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2 group">
-            <Label htmlFor="hotel-id" className="text-slate-300 group-focus-within:text-white transition-colors">Hotel ID</Label>
+            <Label htmlFor="hotel-id" className="text-slate-300 group-focus-within:text-white transition-colors">Hotel (nombre o ID)</Label>
             <div className="relative transition-all duration-300 group-focus-within:scale-[1.02]">
               <Building2 className="absolute left-3 top-3 h-5 w-5 text-slate-500 group-focus-within:text-secondary transition-colors" />
               <Input
@@ -94,7 +90,7 @@ const LoginPage = () => {
                 value={hotelId}
                 onChange={(e) => setHotelId(e.target.value)}
                 className="pl-10 bg-white/5 border-slate-700/50 text-white placeholder:text-slate-600 focus:border-secondary/50 focus:ring-secondary/20 h-12 rounded-xl backdrop-blur-sm"
-                placeholder="UUID del hotel"
+                placeholder="Ej: Hotel Viena o ad11ca4b-..."
                 required
               />
             </div>
