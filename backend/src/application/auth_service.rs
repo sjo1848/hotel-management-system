@@ -55,7 +55,7 @@ impl AuthService {
 
         let valid =
             crate::infrastructure::web::passwords::verify_password(password, &user.password_hash)
-                .map_err(DomainError::InfrastructureError)?;
+                .map_err(|_| DomainError::Unauthorized)?;
 
         if !valid {
             return Err(DomainError::Unauthorized);
