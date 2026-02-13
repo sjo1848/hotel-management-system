@@ -103,7 +103,7 @@ impl AuthService {
             .refresh_repo
             .find_valid(&token_hash)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_refresh_repo_error)?
             .ok_or(DomainError::Unauthorized)?;
 
         if refresh.expires_at < Utc::now().naive_utc() {
@@ -128,7 +128,7 @@ impl AuthService {
             .refresh_repo
             .find_valid(&token_hash)
             .await
-            .map_err(DomainError::InfrastructureError)?
+            .map_err(map_refresh_repo_error)?
             .ok_or(DomainError::Unauthorized)?;
 
         self.refresh_repo

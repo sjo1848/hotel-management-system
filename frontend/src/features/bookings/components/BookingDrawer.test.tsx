@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import BookingDrawer from './BookingDrawer';
 import * as bookingService from '../services/bookingService';
+import * as guestService from '@/features/guests/services/guestService';
 
 // Mock de servicios
 vi.mock('../services/bookingService', () => ({
@@ -109,13 +110,20 @@ describe('BookingDrawer Integration', () => {
 
   it('should allow going back between steps', async () => {
     render(<BookingDrawer {...defaultProps} />);
+    await waitFor(() => {
+      expect(guestService.getGuests).toHaveBeenCalled();
+    });
 
     // Paso 1 -> 2
     fireEvent.click(screen.getByRole('button', { name: /Siguiente/i }));
-    expect(screen.queryByText(/Resumen de Estancia/i)).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByText(/Resumen de Estancia/i)).toBeNull();
+    });
 
     // Paso 2 -> 1 (Atrás)
     fireEvent.click(screen.getByRole('button', { name: /Atrás/i }));
-    expect(screen.getByText(/Resumen de Estancia/i)).toBeDefined();
+    await waitFor(() => {
+      expect(screen.getByText(/Resumen de Estancia/i)).toBeDefined();
+    });
   });
 });
