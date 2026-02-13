@@ -2,7 +2,7 @@
 
 Sistema de gestión hotelera de alta performance bajo estándares de **Arquitectura Hexagonal** y **Domain-Driven Design (DDD)**.
 
-> 📘 **Documentación**: Consulta el [Historial de Cambios](docs/CHANGELOG.md) para ver las últimas mejoras.
+> 📘 **Documentación**: Consulta el [Historial de Cambios](docs/CHANGELOG.md) para ver las últimas mejoras y la [Política de Versionado API](docs/API_VERSIONING_POLICY.md).
 
 ## Arquitectura del Sistema
 El proyecto está estructurado siguiendo el patrón de **Puertos y Adaptadores** para garantizar el desacoplamiento total de la lógica de negocio frente a la infraestructura.

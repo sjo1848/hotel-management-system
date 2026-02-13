@@ -33,6 +33,7 @@
 - `archivos/CAMBIO_2026-02-13_CI_SECURITY_GATES.md`
 - `archivos/CAMBIO_2026-02-13_ERROR_CONTRACT_V1_DUPLICATES.md`
 - `archivos/CAMBIO_2026-02-13_BACKUP_RESTORE_DRILL.md`
+- `archivos/CAMBIO_2026-02-13_API_VERSIONING_POLICY.md`
 
 ## A) Diagnóstico ejecutivo (CTO)
 
@@ -235,7 +236,7 @@ Domain (models + errors + repository traits) <- application <- handlers
 - [ ] Backups + DR probados con evidencia (parcial-alto: drill real backup+restore ejecutado y validado por conteos; falta automatización periódica y política formal de retención/restauración).
 - [ ] Pipeline CI/CD con rollback automatizado.
 - [ ] Dashboards + alertas + trazas E2E.
-- [ ] Política de deprecación/versionado API documentada.
+- [x] Política de deprecación/versionado API documentada.
 
 ---
 
