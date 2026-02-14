@@ -54,5 +54,6 @@ fail() {
 [[ "${COOKIE_DOMAIN:-}" == *.* ]] || fail "COOKIE_DOMAIN must be a registrable domain"
 [[ -n "${CORS_ORIGIN:-}" ]] || fail "CORS_ORIGIN is required"
 [[ "${CORS_ORIGIN:-}" != "*" ]] || fail "CORS_ORIGIN cannot be *"
+[[ "${METRICS_PUBLIC:-false}" == "false" ]] || fail "METRICS_PUBLIC must be false in production"
 
 echo "[OK] Production env validation passed for $ENV_FILE"

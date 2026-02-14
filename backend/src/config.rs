@@ -16,6 +16,8 @@ pub struct AppConfig {
     pub refresh_ttl_days: i64,
     pub rate_limit_per_minute: u32,
     pub login_limit_per_minute: u32,
+    pub metrics_public: bool,
+    pub metrics_auth_token: Option<String>,
     pub cookie_secure: bool,
     pub cookie_samesite: String,
     pub cookie_domain: Option<String>,
@@ -63,6 +65,17 @@ impl AppConfig {
             .ok()
             .and_then(|value| value.parse::<u32>().ok())
             .unwrap_or(10);
+        let metrics_public = env::var("METRICS_PUBLIC")
+            .ok()
+            .and_then(|value| match value.trim().to_lowercase().as_str() {
+                "true" => Some(true),
+                "false" => Some(false),
+                _ => None,
+            })
+            .unwrap_or(!is_prod);
+        let metrics_auth_token = env::var("METRICS_AUTH_TOKEN")
+            .ok()
+            .filter(|value| !value.trim().is_empty());
         let cookie_secure = env::var("COOKIE_SECURE")
             .unwrap_or_else(|_| "false".to_string())
             .to_lowercase()
@@ -99,6 +112,7 @@ impl AppConfig {
             cors_origin: &cors_origin,
             access_ttl_minutes,
             refresh_ttl_days,
+            metrics_public,
         });
 
         Self {
@@ -116,6 +130,8 @@ impl AppConfig {
             refresh_ttl_days,
             rate_limit_per_minute,
             login_limit_per_minute,
+            metrics_public,
+            metrics_auth_token,
             cookie_secure,
             cookie_samesite,
             cookie_domain,
@@ -164,6 +180,7 @@ struct SecurityGuardInputs<'a> {
     cors_origin: &'a str,
     access_ttl_minutes: i64,
     refresh_ttl_days: i64,
+    metrics_public: bool,
 }
 
 fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
@@ -175,6 +192,10 @@ fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
     }
     if !inputs.is_prod {
         return;
+    }
+
+    if inputs.metrics_public {
+        panic!("METRICS_PUBLIC must be false in production.");
     }
 
     if inputs.jwt_secret == "dev-secret-change-me" {
@@ -249,6 +270,7 @@ mod tests {
             cors_origin: "*",
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
+            metrics_public: true,
         });
     }
 
@@ -266,6 +288,7 @@ mod tests {
             cors_origin: "http://localhost:5173",
             access_ttl_minutes: 0,
             refresh_ttl_days: 7,
+            metrics_public: true,
         });
     }
 
@@ -283,6 +306,7 @@ mod tests {
             cors_origin: "https://hms.example.com",
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
+            metrics_public: false,
         });
     }
 
@@ -300,6 +324,25 @@ mod tests {
             cors_origin: "https://hms.example.com",
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
+            metrics_public: false,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "METRICS_PUBLIC must be false in production.")]
+    fn validate_security_guards_rejects_public_metrics_in_prod() {
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: true,
+            jwt_secret: "12345678901234567890123456789012",
+            jwt_kid: "v1",
+            admin_password: "strong-admin-password",
+            cookie_secure: true,
+            cookie_samesite: "Lax",
+            cookie_domain: Some("hms.example.com"),
+            cors_origin: "https://hms.example.com",
+            access_ttl_minutes: 15,
+            refresh_ttl_days: 7,
+            metrics_public: true,
         });
     }
 }

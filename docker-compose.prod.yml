@@ -7,6 +7,8 @@ services:
       JWT_KID: ${JWT_KID:?JWT_KID is required in production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in production}
       CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production}
+      METRICS_PUBLIC: ${METRICS_PUBLIC:-false}
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:?COOKIE_DOMAIN is required in production}

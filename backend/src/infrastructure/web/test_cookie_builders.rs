@@ -23,6 +23,8 @@ fn test_config(
         refresh_ttl_days: 0,
         rate_limit_per_minute: 0,
         login_limit_per_minute: 0,
+        metrics_public: true,
+        metrics_auth_token: None,
         cookie_secure,
         cookie_samesite: String::from(samesite),
         cookie_domain: cookie_domain.map(String::from),
