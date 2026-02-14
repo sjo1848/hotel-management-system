@@ -7,10 +7,10 @@
 - Owner técnico: Principal Engineer
 - Owner seguridad: Security Engineer
 - Owner calidad: QA Lead
-- Estado: **Aprobado para ejecución por fases**
+- Estado: **Fase 1 completada / Fase 2 planificada**
 
 ## Seguimiento de ejecución local
-- Última actualización: `2026-02-14 19:29:13 -0300`
+- Última actualización: `2026-02-14 19:41:30 -0300`
 - Sprint 1 (`HMS-SEC-EP01`) estado: **IMPLEMENTADO**
   - `HMS-SEC-T01` ADR tenant context: **IMPLEMENTADO** (ADR operativo y validado en este bloque).
   - `HMS-SEC-T02` migración RLS phase 1: **IMPLEMENTADO** (`0015_rls_phase1_tenant_policies.sql` + convergencia legacy).
@@ -28,6 +28,12 @@
 - Sprint 5 (`HMS-FE-EP05`) estado: **IMPLEMENTADO**
   - `HMS-FE-T01` budgets definidos: **IMPLEMENTADO** (`docs/perf/frontend-performance-budget.md`).
   - `HMS-FE-T02` medición baseline + gate: **IMPLEMENTADO** (`scripts/frontend-perf-budget.sh` + gate local/CI).
+- Sprint 6 (`HMS-SRE-EP06`) estado: **PENDIENTE**
+  - Scope: perfiles por entorno + rollback SLO + DR drill.
+- Sprint 7 (`HMS-OBS-EP07`) estado: **PENDIENTE**
+  - Scope: logs/metrics/traces tenant-aware + alertas de seguridad operativa.
+- Sprint 8 (`HMS-QA-EP08`) estado: **PENDIENTE**
+  - Scope: coverage thresholds + drift check permisos FE/BE + quality hardening.
 - Nota de entorno local:
   - `./scripts/ci-backend-integration.sh` y `./scripts/gate-ci.sh` pueden fallar en host por `DATABASE_URL=localhost:5432` sin puerto `db` publicado en `docker-compose.yml`.
   - Validación equivalente ejecutada con entorno local aislado y documentada con PASS (`./scripts/gate-ci.sh` completo + fallback perf smoke en `scripts/gate-ci.sh`).
@@ -140,15 +146,18 @@ HMS Elite es un PMS SaaS multi-hotel (Rust/Axum + React/TypeScript + PostgreSQL)
 
 ### Roadmap: MVP → V1 → V2
 - **MVP (0–6 semanas):** ADR-0001, RLS fase 1, anti-escape tests, auth boundary, validation policy.
-- **V1 (6–12 semanas):** API lifecycle enforcement, FE modularization crítica, SLO base.
-- **V2 (12+ semanas):** capacidades dinámicas por tenant/plan, analytics enterprise.
+- **V1 (6–12 semanas):** API lifecycle enforcement, FE performance budgets, baseline SLO y gates unificados.
+- **V2 (12+ semanas):** hardening SRE/observabilidad/QA avanzada + capacidades dinámicas por tenant/plan + analytics enterprise.
 
 ### Sprints y dependencias
 - Sprint 1 (bloqueante): ADR-0001 + migración RLS phase1 + tests + perf mínima.
 - Sprint 2: desacople auth + catálogo errores v1 + policy validación.
 - Sprint 3: ADR-0002 + gates CI de contrato + changelog contractual.
 - Sprint 4: FE performance con budgets objetivos.
-- Sprint 5: SLO/rollback automático + DR drill.
+- Sprint 5: cierre de Fase 1 con gate-ci completo PASS y estabilización de perf smoke en entorno local.
+- Sprint 6: SRE operativo (perfiles por entorno + rollback SLO + DR drill).
+- Sprint 7: observabilidad tenant-aware con alertas accionables.
+- Sprint 8: QA avanzada (coverage thresholds + drift check FE/BE).
 
 ---
 
@@ -390,7 +399,7 @@ HMS Elite es un PMS SaaS multi-hotel (Rust/Axum + React/TypeScript + PostgreSQL)
 ---
 
 ## Siguiente paso recomendado
-Aprobar **ADR-0001** hoy y crear los tickets `HMS-SEC-EP01` (T01–T04) para arrancar Sprint 1 sin ambigüedad técnica.
+Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfiles por entorno, rollback por SLO y evidencia de DR drill.
 
 **Contexto del sistema:** HMS Elite PMS SaaS multi-hotel (Rust/Axum + React/TypeScript + PostgreSQL, arquitectura clean/hexagonal).
 
@@ -424,10 +433,10 @@ Aprobar **ADR-0001** hoy y crear los tickets `HMS-SEC-EP01` (T01–T04) para arr
 - [x] `./scripts/ci-backend.sh` PASS.
 - [x] `./scripts/ci-backend-integration.sh` PASS (con preflight `psql` resuelto en entorno local).
 - [x] `./scripts/backend-security-regression.sh` PASS.
-- [x] `./scripts/gate-ci.sh` FAIL en etapa perf smoke por entorno local legacy:
+- [x] `./scripts/gate-ci.sh` presentó incidente inicial en perf smoke por entorno local legacy:
   - backend no healthy en `http://localhost:3001/health`.
   - causa en logs: `VersionMismatch(15)` por checksum de migración sobre volumen histórico.
-- [x] `./scripts/gate-ci.sh --skip-perf` PASS completo (backend/integration/security/qa/frontend/budgets).
+- [x] mitigación aplicada y validada luego (`fix(ci) 4ecbbd7`): fallback aislado en perf smoke + PASS completo de `./scripts/gate-ci.sh`.
 
 ### Riesgo operativo detectado
 - Perf smoke en entorno local con volumen persistente puede falsear resultado por drift de migraciones históricas.
@@ -463,3 +472,120 @@ Aprobar **ADR-0001** hoy y crear los tickets `HMS-SEC-EP01` (T01–T04) para arr
 - [x] EPIC HMS-API-EP03 cumplido.
 - [x] EPIC HMS-VAL-EP04 cumplido.
 - [x] EPIC HMS-FE-EP05 cumplido.
+- [ ] EPIC HMS-SRE-EP06 pendiente.
+- [ ] EPIC HMS-OBS-EP07 pendiente.
+- [ ] EPIC HMS-QA-EP08 pendiente.
+
+---
+
+## [EPIC] HMS-SRE-EP06 — Reliability Operativa y DR
+
+### [STORY] HMS-SRE-ST01 — Entornos y rollback por SLO
+
+#### [TASK] HMS-SRE-T01 — Perfiles `dev/staging/prod` explícitos
+- Objetivo: eliminar ambigüedad de configuración por ambiente.
+- Descripción: separar variables/políticas por entorno y bloquear defaults inseguros fuera de local.
+- Archivos: `docker-compose*.yml`, scripts de deploy/readiness, `.env.example`.
+- Criterios:
+  - [ ] perfiles definidos y documentados.
+  - [ ] preflight de seguridad por entorno en CI.
+- Tests: `./scripts/prod-deploy-readiness.sh`.
+- Estimación: M
+- Riesgos: drift de variables entre ambientes.
+
+#### [TASK] HMS-SRE-T02 — Rollback automático por breach de SLO
+- Objetivo: reducir MTTR ante regresiones.
+- Descripción: definir gatillos de rollback (p95/error_rate/auth failures) y runbook ejecutable.
+- Archivos: scripts de deploy/rollback + docs de operación.
+- Criterios:
+  - [ ] rollback reproducible con trigger verificable.
+  - [ ] evidencia de simulación de incidente.
+- Tests: smoke + perf + simulación controlada.
+- Estimación: M
+- Riesgos: rollback incompleto.
+
+### [STORY] HMS-SRE-ST02 — DR y resiliencia
+
+#### [TASK] HMS-SRE-T03 — DR drill con evidencia RPO/RTO
+- Objetivo: validar continuidad operativa real.
+- Descripción: ejecutar restore drill de backups y documentar tiempos observados.
+- Archivos: runbooks + reporte DR.
+- Criterios:
+  - [ ] RPO/RTO medidos y aceptados.
+  - [ ] checklist de recuperación completado.
+- Tests: restore end-to-end en entorno controlado.
+- Estimación: M
+- Riesgos: falsas asunciones de backup.
+
+---
+
+## [EPIC] HMS-OBS-EP07 — Observabilidad Tenant-Aware
+
+### [STORY] HMS-OBS-ST01 — Telemetría accionable
+
+#### [TASK] HMS-OBS-T01 — Logs estructurados con `tenant_id`
+- Objetivo: acelerar diagnóstico por tenant.
+- Descripción: asegurar inclusión consistente de `request_id`, `tenant_id`, actor y `error_code`.
+- Archivos: middleware/logging backend + dashboards.
+- Criterios:
+  - [ ] cobertura de campos obligatorios en rutas críticas.
+- Tests: integration observability smoke.
+- Estimación: S
+- Riesgos: ruido o cardinalidad excesiva.
+
+#### [TASK] HMS-OBS-T02 — Alertas de auth anomalies y sospecha cross-tenant
+- Objetivo: detección temprana de incidentes de seguridad.
+- Descripción: reglas en Prometheus/Grafana para patrones anómalos.
+- Archivos: `monitoring/prometheus/alerts.yml`, dashboards.
+- Criterios:
+  - [ ] alertas con severidad y owner definidos.
+  - [ ] runbook asociado por alerta.
+- Tests: fire drill de alertas.
+- Estimación: M
+- Riesgos: fatiga por falsas alarmas.
+
+#### [TASK] HMS-OBS-T03 — Tracing E2E en flujos críticos
+- Objetivo: trazabilidad punta a punta de latencia/errores.
+- Descripción: asegurar spans completos en login/create booking/close cash.
+- Archivos: instrumentación OTEL backend + collector config.
+- Criterios:
+  - [ ] trazas completas en 3 flujos críticos.
+- Tests: smoke tracing + validación en Tempo/Grafana.
+- Estimación: M
+- Riesgos: instrumentación parcial.
+
+---
+
+## [EPIC] HMS-QA-EP08 — QA Governance Avanzada
+
+### [STORY] HMS-QA-ST01 — Hardening de calidad continua
+
+#### [TASK] HMS-QA-T01 — Coverage thresholds por módulo crítico
+- Objetivo: evitar regresiones silenciosas.
+- Descripción: umbrales mínimos por dominio (auth, booking, tenant isolation).
+- Archivos: scripts CI + config de cobertura.
+- Criterios:
+  - [ ] thresholds versionados y enforzados en CI.
+- Tests: pipeline CI con fail-on-threshold.
+- Estimación: M
+- Riesgos: targets mal calibrados.
+
+#### [TASK] HMS-QA-T02 — Drift check de permisos FE/BE
+- Objetivo: evitar divergencia de authorization matrix.
+- Descripción: comparar capacidades declaradas FE vs enforcement BE.
+- Archivos: tests/fixtures de capacidades + script de comparación.
+- Criterios:
+  - [ ] drift check obligatorio en gate-ci.
+- Tests: `rbac_authorization` + drift gate.
+- Estimación: M
+- Riesgos: falsas diferencias por naming.
+
+#### [TASK] HMS-QA-T03 — Modo estricto de gates documentales en CI
+- Objetivo: asegurar gobernanza documental cuando docs ya están trackeadas.
+- Descripción: permitir modo strict para que faltantes/omisiones en docs fallen en CI.
+- Archivos: `scripts/check-openapi-changelog.sh`, `scripts/check-validation-governance.sh`, workflow.
+- Criterios:
+  - [ ] modo strict configurable y activo en CI remoto.
+- Tests: CI dry-run con cambios OpenAPI y policy docs.
+- Estimación: S
+- Riesgos: ruido de pipeline inicial.
