@@ -1,16 +1,24 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::User;
 use crate::domain::repositories::UserRepository;
+use crate::domain::security::PasswordHasher;
 use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct UserService {
     user_repo: Arc<dyn UserRepository>,
+    password_hasher: Arc<dyn PasswordHasher>,
 }
 
 impl UserService {
-    pub fn new(user_repo: Arc<dyn UserRepository>) -> Self {
-        Self { user_repo }
+    pub fn new(
+        user_repo: Arc<dyn UserRepository>,
+        password_hasher: Arc<dyn PasswordHasher>,
+    ) -> Self {
+        Self {
+            user_repo,
+            password_hasher,
+        }
     }
 
     pub async fn list_users(&self, hotel_id: Uuid) -> Result<Vec<User>, DomainError> {
@@ -27,7 +35,10 @@ impl UserService {
         password: String,
         role: String,
     ) -> Result<User, DomainError> {
-        let hash = crate::infrastructure::web::passwords::hash_password(&password)
+        let hash = self
+            .password_hasher
+            .hash_password(&password)
+            .await
             .map_err(DomainError::InfrastructureError)?;
 
         let user = User {

@@ -14,6 +14,7 @@ use crate::domain::repositories::{
     ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
     RefreshTokenRepository, RoomRepository, UserRepository,
 };
+use crate::domain::security::{PasswordHasher, TokenSigner};
 use crate::infrastructure::{
     repository::{
         postgres::PostgresRoomRepository, postgres_audit::PostgresAuditRepository,
@@ -27,6 +28,7 @@ use crate::infrastructure::{
         postgres_user::PostgresUserRepository,
     },
     seeder,
+    web::{jwt::JwtTokenSigner, passwords::ArgonPasswordHasher},
 };
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -52,6 +54,12 @@ pub async fn build_app_state(pool: PgPool, config: AppConfig) -> Arc<AppState> {
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
     let hotel_repo =
         Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
+    let password_hasher = Arc::new(ArgonPasswordHasher) as Arc<dyn PasswordHasher>;
+    let token_signer = Arc::new(JwtTokenSigner::new(
+        config.jwt_secret.clone(),
+        config.jwt_previous_secret.clone(),
+        config.jwt_kid.clone(),
+    )) as Arc<dyn TokenSigner>;
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let hotel_service = Arc::new(HotelService::new(hotel_repo.clone()));
@@ -83,10 +91,12 @@ pub async fn build_app_state(pool: PgPool, config: AppConfig) -> Arc<AppState> {
         audit_service.clone(),
     ));
     let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
-    let user_service = Arc::new(UserService::new(user_repo.clone()));
+    let user_service = Arc::new(UserService::new(user_repo.clone(), password_hasher.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
+        password_hasher.clone(),
+        token_signer,
         config.access_ttl_minutes,
         config.refresh_ttl_days,
     ));

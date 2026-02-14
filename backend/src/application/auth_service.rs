@@ -1,6 +1,7 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{RefreshToken, User};
 use crate::domain::repositories::{RefreshTokenRepository, UserRepository};
+use crate::domain::security::{AccessTokenClaims, PasswordHasher, TokenSigner};
 use base64::Engine;
 use chrono::{Duration, Utc};
 use rand::RngCore;
@@ -11,6 +12,8 @@ use uuid::Uuid;
 pub struct AuthService {
     user_repo: Arc<dyn UserRepository>,
     refresh_repo: Arc<dyn RefreshTokenRepository>,
+    password_hasher: Arc<dyn PasswordHasher>,
+    token_signer: Arc<dyn TokenSigner>,
     access_ttl_minutes: i64,
     refresh_ttl_days: i64,
 }
@@ -19,12 +22,16 @@ impl AuthService {
     pub fn new(
         user_repo: Arc<dyn UserRepository>,
         refresh_repo: Arc<dyn RefreshTokenRepository>,
+        password_hasher: Arc<dyn PasswordHasher>,
+        token_signer: Arc<dyn TokenSigner>,
         access_ttl_minutes: i64,
         refresh_ttl_days: i64,
     ) -> Self {
         Self {
             user_repo,
             refresh_repo,
+            password_hasher,
+            token_signer,
             access_ttl_minutes,
             refresh_ttl_days,
         }
@@ -53,15 +60,30 @@ impl AuthService {
             .map_err(map_user_repo_error)?
             .ok_or(DomainError::Unauthorized)?;
 
-        let valid =
-            crate::infrastructure::web::passwords::verify_password(password, &user.password_hash)
-                .map_err(|_| DomainError::Unauthorized)?;
+        let valid = self
+            .password_hasher
+            .verify_password(password, &user.password_hash)
+            .await
+            .map_err(|_| DomainError::Unauthorized)?;
 
         if !valid {
             return Err(DomainError::Unauthorized);
         }
 
         Ok(user)
+    }
+
+    pub async fn issue_access_token(&self, user: &User) -> Result<String, DomainError> {
+        let claims = AccessTokenClaims {
+            sub: user.id.to_string(),
+            hotel_id: user.hotel_id.to_string(),
+            role: user.role.clone(),
+            exp: self.access_exp(),
+        };
+        self.token_signer
+            .sign_access_token(&claims)
+            .await
+            .map_err(DomainError::InfrastructureError)
     }
 
     pub async fn issue_refresh_token(

@@ -58,21 +58,7 @@ pub async fn login_handler(
         .revoke_user_device_tokens(user.hotel_id, user.id, &device_id)
         .await?;
 
-    let exp = auth_ctx.auth_service.access_exp();
-
-    let claims = crate::infrastructure::web::jwt::Claims {
-        sub: user.id.to_string(),
-        hotel_id: user.hotel_id.to_string(),
-        role: user.role.clone(),
-        exp,
-    };
-
-    let access_token = crate::infrastructure::web::jwt::encode_token(
-        &claims,
-        &state.config.jwt_secret,
-        &state.config.jwt_kid,
-    )
-    .map_err(DomainError::InfrastructureError)?;
+    let access_token = auth_ctx.auth_service.issue_access_token(&user).await?;
 
     let (refresh_token, _): (String, crate::domain::models::RefreshToken) = auth_ctx
         .auth_service
@@ -138,20 +124,7 @@ pub async fn refresh_handler(
         .get_session_user(hotel_id, user_id)
         .await?;
 
-    let exp = auth_ctx.auth_service.access_exp();
-    let claims = crate::infrastructure::web::jwt::Claims {
-        sub: user.id.to_string(),
-        hotel_id: user.hotel_id.to_string(),
-        role: user.role.clone(),
-        exp,
-    };
-
-    let access_token = crate::infrastructure::web::jwt::encode_token(
-        &claims,
-        &state.config.jwt_secret,
-        &state.config.jwt_kid,
-    )
-    .map_err(DomainError::InfrastructureError)?;
+    let access_token = auth_ctx.auth_service.issue_access_token(&user).await?;
 
     let refresh_cookie = build_refresh_cookie(&new_refresh, &state.config);
     let access_cookie = build_access_cookie(&access_token, &state.config);

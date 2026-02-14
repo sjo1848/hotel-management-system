@@ -1,5 +1,21 @@
+use crate::domain::security::PasswordHasher as PasswordHasherPort;
 use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use async_trait::async_trait;
 use rand::rngs::OsRng;
+
+#[derive(Default)]
+pub struct ArgonPasswordHasher;
+
+#[async_trait]
+impl PasswordHasherPort for ArgonPasswordHasher {
+    async fn hash_password(&self, password: &str) -> Result<String, String> {
+        hash_password(password)
+    }
+
+    async fn verify_password(&self, password: &str, hash: &str) -> Result<bool, String> {
+        verify_password(password, hash)
+    }
+}
 
 pub fn hash_password(password: &str) -> Result<String, String> {
     let salt = SaltString::generate(&mut OsRng);

@@ -18,6 +18,7 @@ use hms_backend::domain::repositories::{
     ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
     RefreshTokenRepository, RoomRepository, UserRepository,
 };
+use hms_backend::domain::security::{PasswordHasher, TokenSigner};
 use hms_backend::infrastructure::repository::{
     postgres::PostgresRoomRepository, postgres_audit::PostgresAuditRepository,
     postgres_booking::PostgresBookingRepository,
@@ -27,8 +28,9 @@ use hms_backend::infrastructure::repository::{
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
     postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
 };
+use hms_backend::infrastructure::web::jwt::JwtTokenSigner;
 use hms_backend::infrastructure::web::jwt::{encode_token, Claims};
-use hms_backend::infrastructure::web::passwords::hash_password;
+use hms_backend::infrastructure::web::passwords::{hash_password, ArgonPasswordHasher};
 use hms_backend::infrastructure::web::routes::create_router;
 use serde_json::Value;
 use std::net::SocketAddr;
@@ -351,6 +353,12 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
     let hotel_repo =
         Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
+    let password_hasher = Arc::new(ArgonPasswordHasher) as Arc<dyn PasswordHasher>;
+    let token_signer = Arc::new(JwtTokenSigner::new(
+        config.jwt_secret.clone(),
+        config.jwt_previous_secret.clone(),
+        config.jwt_kid.clone(),
+    )) as Arc<dyn TokenSigner>;
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
@@ -382,10 +390,12 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         audit_service.clone(),
     ));
     let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
-    let user_service = Arc::new(UserService::new(user_repo.clone()));
+    let user_service = Arc::new(UserService::new(user_repo.clone(), password_hasher.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
         refresh_repo.clone(),
+        password_hasher,
+        token_signer,
         config.access_ttl_minutes,
         config.refresh_ttl_days,
     ));
