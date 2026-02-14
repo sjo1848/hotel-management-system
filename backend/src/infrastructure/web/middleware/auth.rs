@@ -22,6 +22,8 @@ pub async fn auth_middleware(
         || path == "/ready"
         || path == "/metrics"
         || path == "/"
+        || path.starts_with("/swagger-ui")
+        || path.starts_with("/api-docs")
         || path == "/api/auth/login"
         || path == "/api/auth/refresh"
         || path == "/api/auth/logout"

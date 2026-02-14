@@ -213,7 +213,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
     let auth_layer = middleware::from_fn_with_state(state.clone(), auth_middleware);
 
     Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", ApiDoc::openapi()))
+        .merge(
+            SwaggerUi::new("/swagger-ui")
+                .external_url_unchecked("/api-docs/openapi.json", ApiDoc::openapi_json()),
+        )
         .route("/", get(root_handler))
         .route("/health", get(health_check))
         .route("/ready", get(readiness_check))

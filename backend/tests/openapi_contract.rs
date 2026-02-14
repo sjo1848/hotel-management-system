@@ -113,3 +113,12 @@ fn openapi_covers_runtime_routes_and_methods() {
         );
     }
 }
+
+#[test]
+fn swagger_ui_uses_external_openapi_json_source() {
+    let routes_src = include_str!("../src/infrastructure/web/routes/mod.rs");
+    assert!(
+        routes_src.contains("external_url_unchecked(\"/api-docs/openapi.json\", ApiDoc::openapi_json())"),
+        "Swagger wiring must use external_url_unchecked + openapi_json to prevent contract serialization drift"
+    );
+}
