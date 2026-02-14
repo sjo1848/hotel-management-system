@@ -1,3 +1,4 @@
+use crate::domain::errors::DomainError;
 use crate::domain::models::AuditEvent;
 use crate::domain::repositories::AuditRepository;
 use std::sync::Arc;
@@ -29,5 +30,16 @@ impl AuditService {
         };
 
         let _ = self.audit_repo.record(event).await;
+    }
+
+    pub async fn list_recent(
+        &self,
+        hotel_id: Uuid,
+        limit: i64,
+    ) -> Result<Vec<AuditEvent>, DomainError> {
+        self.audit_repo
+            .find_recent_by_hotel(hotel_id, limit)
+            .await
+            .map_err(DomainError::InfrastructureError)
     }
 }

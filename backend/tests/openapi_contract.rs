@@ -85,6 +85,7 @@ fn openapi_covers_runtime_routes_and_methods() {
         ("/api/v1/users", "post"),
         ("/api/v1/users/{id}", "delete"),
         ("/api/v1/analytics/kpis", "get"),
+        ("/api/v1/audit/events", "get"),
         ("/api/v1/billing/balance", "get"),
         ("/api/v1/billing/close-cash", "post"),
         ("/api/v1/invoices", "get"),

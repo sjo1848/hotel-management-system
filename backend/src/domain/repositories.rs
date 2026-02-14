@@ -145,6 +145,11 @@ pub trait RefreshTokenRepository: Send + Sync {
 #[async_trait]
 pub trait AuditRepository: Send + Sync {
     async fn record(&self, event: AuditEvent) -> Result<(), String>;
+    async fn find_recent_by_hotel(
+        &self,
+        hotel_id: Uuid,
+        limit: i64,
+    ) -> Result<Vec<AuditEvent>, String>;
 }
 
 #[async_trait]

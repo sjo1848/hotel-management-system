@@ -86,6 +86,31 @@ pub async fn get_dashboard_kpis_handler(
 
 #[utoipa::path(
     get,
+    path = "/api/v1/audit/events",
+    responses(
+        (status = 200, description = "Eventos de auditoría recientes del tenant", body = [crate::domain::models::AuditEvent])
+    ),
+    params(
+        ("limit" = Option<usize>, Query, description = "Máximo de eventos (1-200, por defecto 50)")
+    ),
+    tag = "Análisis",
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_audit_events_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Query(params): Query<AuditQueryParams>,
+) -> Result<Json<Value>, DomainError> {
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let limit = params.limit.unwrap_or(50).clamp(1, 200) as i64;
+    let events = state.audit_service.list_recent(hotel_id, limit).await?;
+    Ok(Json(json!(events)))
+}
+
+#[utoipa::path(
+    get,
     path = "/api/v1/reports/revenue",
     responses(
         (status = 200, description = "Reporte de ingresos por día", body = [RevenueReport])

@@ -43,8 +43,9 @@ pub use ops::{
 #[path = "handlers/reporting.rs"]
 mod reporting;
 pub use reporting::{
-    get_dashboard_kpis_handler, get_occupancy_report_handler, get_revenue_report_handler,
-    health_check, readiness_check, root_handler, track_ui_telemetry_handler,
+    get_audit_events_handler, get_dashboard_kpis_handler, get_occupancy_report_handler,
+    get_revenue_report_handler, health_check, readiness_check, root_handler,
+    track_ui_telemetry_handler,
 };
 
 impl IntoResponse for DomainError {
@@ -204,6 +205,11 @@ pub struct UpdateBookingRequest {
 pub struct DateRangeParams {
     pub start: Option<chrono::NaiveDate>,
     pub end: Option<chrono::NaiveDate>,
+}
+
+#[derive(Deserialize)]
+pub struct AuditQueryParams {
+    pub limit: Option<usize>,
 }
 
 #[derive(Deserialize, ToSchema)]

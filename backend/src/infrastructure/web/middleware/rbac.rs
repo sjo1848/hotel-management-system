@@ -23,6 +23,7 @@ const ADMIN_CAPABILITIES: &[&str] = &[
     "billing.invoices.read",
     "billing.invoice.read",
     "analytics.kpis.read",
+    "audit.events.read",
     "reports.revenue.read",
     "reports.occupancy.read",
     "users.read",
@@ -50,6 +51,7 @@ const OPS_CAPABILITIES: &[&str] = &[
     "billing.invoices.read",
     "billing.invoice.read",
     "analytics.kpis.read",
+    "audit.events.read",
     "reports.revenue.read",
     "reports.occupancy.read",
 ];
@@ -162,6 +164,10 @@ pub async fn analytics_read(req: Request, next: Next) -> Result<Response, Domain
     require_capability_middleware("analytics.kpis.read", req, next).await
 }
 
+pub async fn audit_events_read(req: Request, next: Next) -> Result<Response, DomainError> {
+    require_capability_middleware("audit.events.read", req, next).await
+}
+
 pub async fn invoices_read(req: Request, next: Next) -> Result<Response, DomainError> {
     require_capability_middleware("billing.invoices.read", req, next).await
 }
@@ -244,6 +250,7 @@ mod tests {
     #[test]
     fn ops_has_only_operational_read_capabilities() {
         assert!(role_has_capability("ops", "analytics.kpis.read"));
+        assert!(role_has_capability("ops", "audit.events.read"));
         assert!(role_has_capability("ops", "bookings.write"));
         assert!(role_has_capability("ops", "billing.invoices.read"));
         assert!(!role_has_capability("ops", "users.write"));

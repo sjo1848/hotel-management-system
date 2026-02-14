@@ -22,12 +22,12 @@ use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
-    finish_cleaning_handler, get_current_balance_handler, get_dashboard_kpis_handler,
-    get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
-    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler,
-    list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
-    list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
-    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
+    finish_cleaning_handler, get_audit_events_handler, get_current_balance_handler,
+    get_dashboard_kpis_handler, get_invoice_by_booking_handler, get_occupancy_report_handler,
+    get_revenue_report_handler, get_rooms_handler, health_check, list_bookings_handler,
+    list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler, list_hotels_handler,
+    list_invoices_handler, list_users_handler, login_handler, logout_handler, me_handler,
+    readiness_check, refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
     track_ui_telemetry_handler, update_booking_handler, update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
@@ -36,11 +36,12 @@ use crate::infrastructure::web::middleware::{
     metrics::track_metrics,
     rate_limit_logger::rate_limit_logger_middleware,
     rbac::{
-        analytics_read, billing_balance_read, billing_close_cash_write, bookings_read,
-        bookings_update, bookings_write, extra_charges_read, extra_charges_write, guests_read,
-        guests_write, hotels_read, hotels_write, housekeeping_read, housekeeping_write,
-        invoice_read, invoices_read, reports_occupancy_read, reports_revenue_read, rooms_read,
-        rooms_search, rooms_status_write, rooms_write, users_delete, users_read, users_write,
+        analytics_read, audit_events_read, billing_balance_read, billing_close_cash_write,
+        bookings_read, bookings_update, bookings_write, extra_charges_read, extra_charges_write,
+        guests_read, guests_write, hotels_read, hotels_write, housekeeping_read,
+        housekeeping_write, invoice_read, invoices_read, reports_occupancy_read,
+        reports_revenue_read, rooms_read, rooms_search, rooms_status_write, rooms_write,
+        users_delete, users_read, users_write,
     },
     request_id::request_id_middleware,
     security_headers::security_headers_middleware,
@@ -171,6 +172,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/analytics/kpis",
             get(get_dashboard_kpis_handler).layer(middleware::from_fn(analytics_read)),
+        )
+        .route(
+            "/api/v1/audit/events",
+            get(get_audit_events_handler).layer(middleware::from_fn(audit_events_read)),
         )
         .route(
             "/api/v1/billing/balance",

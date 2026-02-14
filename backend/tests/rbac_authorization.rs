@@ -30,6 +30,7 @@ use hms_backend::infrastructure::repository::{
 use hms_backend::infrastructure::web::jwt::{encode_token, Claims};
 use hms_backend::infrastructure::web::passwords::hash_password;
 use hms_backend::infrastructure::web::routes::create_router;
+use serde_json::Value;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower::ServiceExt;
@@ -38,9 +39,17 @@ use uuid::Uuid;
 #[sqlx::test]
 async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
     let hotel_id = Uuid::new_v4();
+    let other_hotel_id = Uuid::new_v4();
     sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
         .bind(hotel_id)
         .bind("Hotel RBAC QA")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(other_hotel_id)
+        .bind("Hotel RBAC QA 2")
         .bind("N/A")
         .execute(&pool)
         .await
@@ -60,6 +69,32 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
     let ops_token = make_token(&config.jwt_secret, ops_id, hotel_id, "ops");
     let reception_token = make_token(&config.jwt_secret, reception_id, hotel_id, "receptionist");
     let hk_token = make_token(&config.jwt_secret, hk_id, hotel_id, "housekeeping");
+
+    // Seed cross-tenant audit data to validate tenant-scoped reads.
+    sqlx::query(
+        "INSERT INTO audit_events (id, hotel_id, user_id, action, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())",
+    )
+    .bind(Uuid::new_v4())
+    .bind(hotel_id)
+    .bind(admin_id)
+    .bind("RBAC_AUDIT_OWN_TENANT")
+    .bind("127.0.0.1")
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO audit_events (id, hotel_id, user_id, action, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())",
+    )
+    .bind(Uuid::new_v4())
+    .bind(other_hotel_id)
+    .bind(Option::<Uuid>::None)
+    .bind("RBAC_AUDIT_OTHER_TENANT")
+    .bind("10.0.0.2")
+    .execute(&pool)
+    .await
+    .unwrap();
 
     // Admin can read users.
     assert_status(
@@ -96,6 +131,47 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         StatusCode::OK,
     )
     .await;
+
+    // Ops can read tenant-scoped audit events.
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/audit/events",
+        &ops_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+
+    let audit_payload = get_json(&app, "/api/v1/audit/events?limit=50", &ops_token).await;
+    let items = audit_payload
+        .as_array()
+        .expect("audit response must be an array");
+    assert!(
+        !items.is_empty(),
+        "audit response should include at least one event"
+    );
+    let hotel_id_str = hotel_id.to_string();
+    let other_hotel_id_str = other_hotel_id.to_string();
+    assert!(
+        items.iter().all(|item| {
+            item.get("hotel_id")
+                .and_then(Value::as_str)
+                .map(|value| value == hotel_id_str)
+                .unwrap_or(false)
+        }),
+        "audit response must include only current tenant events"
+    );
+    assert!(
+        items.iter().all(|item| {
+            item.get("hotel_id")
+                .and_then(Value::as_str)
+                .map(|value| value != other_hotel_id_str)
+                .unwrap_or(true)
+        }),
+        "audit response leaked events from another tenant"
+    );
 
     // SaaS admin can list hotels.
     assert_status(
@@ -210,6 +286,18 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         &reception_token,
         Some(r#"{"notes":"qa denied"}"#.to_string()),
         true,
+        StatusCode::FORBIDDEN,
+    )
+    .await;
+
+    // Reception cannot read audit events.
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/audit/events",
+        &reception_token,
+        None,
+        false,
         StatusCode::FORBIDDEN,
     )
     .await;
@@ -367,4 +455,24 @@ async fn assert_status(
             method_for_error, path, status, expected, body_text
         );
     }
+}
+
+async fn get_json(app: &axum::Router, path: &str, token: &str) -> Value {
+    let mut request = Request::builder()
+        .method(Method::GET)
+        .uri(path)
+        .header(header::AUTHORIZATION, format!("Bearer {}", token))
+        .body(Body::empty())
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(SocketAddr::from(([127, 0, 0, 1], 40000)));
+    request
+        .extensions_mut()
+        .insert(ConnectInfo(SocketAddr::from(([127, 0, 0, 1], 40000))));
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body_bytes = to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    serde_json::from_slice(&body_bytes).expect("response must be valid json")
 }

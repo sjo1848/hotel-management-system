@@ -1,7 +1,8 @@
 use crate::domain::models::AuditEvent;
 use crate::domain::repositories::AuditRepository;
 use async_trait::async_trait;
-use sqlx::PgPool;
+use sqlx::{PgPool, Row};
+use uuid::Uuid;
 
 pub struct PostgresAuditRepository {
     pool: PgPool,
@@ -31,5 +32,39 @@ impl AuditRepository for PostgresAuditRepository {
         .map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+
+    async fn find_recent_by_hotel(
+        &self,
+        hotel_id: Uuid,
+        limit: i64,
+    ) -> Result<Vec<AuditEvent>, String> {
+        let safe_limit = limit.clamp(1, 200);
+        let records = sqlx::query(
+            "SELECT id, hotel_id, user_id, action, ip_address, created_at
+             FROM audit_events
+             WHERE hotel_id = $1
+             ORDER BY created_at DESC
+             LIMIT $2",
+        )
+        .bind(hotel_id)
+        .bind(safe_limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| e.to_string())?;
+
+        let events = records
+            .into_iter()
+            .map(|row| AuditEvent {
+                id: row.try_get("id").unwrap(),
+                hotel_id: row.try_get("hotel_id").ok(),
+                user_id: row.try_get("user_id").ok(),
+                action: row.try_get("action").unwrap_or_default(),
+                ip_address: row.try_get("ip_address").ok(),
+                created_at: row.try_get("created_at").unwrap(),
+            })
+            .collect();
+
+        Ok(events)
     }
 }
