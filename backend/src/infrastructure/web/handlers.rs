@@ -49,87 +49,111 @@ pub use reporting::{
 
 impl IntoResponse for DomainError {
     fn into_response(self) -> Response {
-        let (status, error_code, error_message): (StatusCode, &str, String) = match self {
-            DomainError::RoomNotFound => (
-                StatusCode::NOT_FOUND,
-                "ROOM_NOT_FOUND",
-                "La habitación solicitada no existe".to_string(),
-            ),
-            DomainError::HotelNotFound => (
-                StatusCode::NOT_FOUND,
-                "HOTEL_NOT_FOUND",
-                "El hotel solicitado no existe".to_string(),
-            ),
-            DomainError::HotelAlreadyExists => (
-                StatusCode::CONFLICT,
-                "HOTEL_ALREADY_EXISTS",
-                "Ya existe un hotel con ese nombre".to_string(),
-            ),
-            DomainError::RoomAlreadyExists => (
-                StatusCode::CONFLICT,
-                "ROOM_ALREADY_EXISTS",
-                "Ya existe una habitación con ese número".to_string(),
-            ),
-            DomainError::GuestAlreadyExists => (
-                StatusCode::CONFLICT,
-                "GUEST_ALREADY_EXISTS",
-                "Ya existe un huésped con ese email en este hotel".to_string(),
-            ),
-            DomainError::GuestNotFound => (
-                StatusCode::NOT_FOUND,
-                "GUEST_NOT_FOUND",
-                "El huésped solicitado no existe".to_string(),
-            ),
-            DomainError::UserAlreadyExists => (
-                StatusCode::CONFLICT,
-                "USER_ALREADY_EXISTS",
-                "Ya existe un usuario con ese nombre en este hotel".to_string(),
-            ),
-            DomainError::UserNotFound => (
-                StatusCode::NOT_FOUND,
-                "USER_NOT_FOUND",
-                "El usuario solicitado no existe".to_string(),
-            ),
-            DomainError::InvalidRoomStatusTransition => (
-                StatusCode::BAD_REQUEST,
-                "INVALID_ROOM_STATUS_TRANSITION",
-                "Transición de estado de habitación no permitida".to_string(),
-            ),
-            DomainError::RoomNotAvailable => (
-                StatusCode::CONFLICT,
-                "ROOM_NOT_AVAILABLE",
-                "La habitación ya está ocupada en esas fechas".to_string(),
-            ),
-            DomainError::InvalidBookingDates => (
-                StatusCode::BAD_REQUEST,
-                "INVALID_BOOKING_DATES",
-                "Las fechas de reserva no son válidas".to_string(),
-            ),
-            DomainError::BookingNotFound => (
-                StatusCode::NOT_FOUND,
-                "BOOKING_NOT_FOUND",
-                "La reserva solicitada no existe".to_string(),
-            ),
-            DomainError::InvoiceNotFound => (
-                StatusCode::NOT_FOUND,
-                "INVOICE_NOT_FOUND",
-                "La factura solicitada no existe".to_string(),
-            ),
-            DomainError::InvalidInput(msg) => (StatusCode::BAD_REQUEST, "INVALID_INPUT", msg),
-            DomainError::Unauthorized => (
-                StatusCode::UNAUTHORIZED,
-                "UNAUTHORIZED",
-                "No autorizado".to_string(),
-            ),
-            DomainError::Forbidden => (
-                StatusCode::FORBIDDEN,
-                "FORBIDDEN",
-                "No tiene permisos para realizar esta acción".to_string(),
-            ),
-            DomainError::InfrastructureError(msg) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "INFRA_ERROR", msg)
-            }
-        };
+        let (status, error_code, error_message, details): (StatusCode, &str, String, Value) =
+            match self {
+                DomainError::RoomNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "ROOM_NOT_FOUND",
+                    "La habitación solicitada no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::HotelNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "HOTEL_NOT_FOUND",
+                    "El hotel solicitado no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::HotelAlreadyExists => (
+                    StatusCode::CONFLICT,
+                    "HOTEL_ALREADY_EXISTS",
+                    "Ya existe un hotel con ese nombre".to_string(),
+                    json!({}),
+                ),
+                DomainError::RoomAlreadyExists => (
+                    StatusCode::CONFLICT,
+                    "ROOM_ALREADY_EXISTS",
+                    "Ya existe una habitación con ese número".to_string(),
+                    json!({}),
+                ),
+                DomainError::GuestAlreadyExists => (
+                    StatusCode::CONFLICT,
+                    "GUEST_ALREADY_EXISTS",
+                    "Ya existe un huésped con ese email en este hotel".to_string(),
+                    json!({}),
+                ),
+                DomainError::GuestNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "GUEST_NOT_FOUND",
+                    "El huésped solicitado no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::UserAlreadyExists => (
+                    StatusCode::CONFLICT,
+                    "USER_ALREADY_EXISTS",
+                    "Ya existe un usuario con ese nombre en este hotel".to_string(),
+                    json!({}),
+                ),
+                DomainError::UserNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "USER_NOT_FOUND",
+                    "El usuario solicitado no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::InvalidRoomStatusTransition => (
+                    StatusCode::BAD_REQUEST,
+                    "INVALID_ROOM_STATUS_TRANSITION",
+                    "Transición de estado de habitación no permitida".to_string(),
+                    json!({}),
+                ),
+                DomainError::RoomNotAvailable => (
+                    StatusCode::CONFLICT,
+                    "ROOM_NOT_AVAILABLE",
+                    "La habitación ya está ocupada en esas fechas".to_string(),
+                    json!({}),
+                ),
+                DomainError::InvalidBookingDates => (
+                    StatusCode::BAD_REQUEST,
+                    "INVALID_BOOKING_DATES",
+                    "Las fechas de reserva no son válidas".to_string(),
+                    json!({}),
+                ),
+                DomainError::BookingNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "BOOKING_NOT_FOUND",
+                    "La reserva solicitada no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::InvoiceNotFound => (
+                    StatusCode::NOT_FOUND,
+                    "INVOICE_NOT_FOUND",
+                    "La factura solicitada no existe".to_string(),
+                    json!({}),
+                ),
+                DomainError::InvalidInput(msg) => (
+                    StatusCode::BAD_REQUEST,
+                    "INVALID_INPUT",
+                    msg.clone(),
+                    json!({ "reason": msg }),
+                ),
+                DomainError::Unauthorized => (
+                    StatusCode::UNAUTHORIZED,
+                    "UNAUTHORIZED",
+                    "No autorizado".to_string(),
+                    json!({}),
+                ),
+                DomainError::Forbidden => (
+                    StatusCode::FORBIDDEN,
+                    "FORBIDDEN",
+                    "No tiene permisos para realizar esta acción".to_string(),
+                    json!({}),
+                ),
+                DomainError::InfrastructureError(msg) => (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "INFRA_ERROR",
+                    msg,
+                    json!({}),
+                ),
+            };
 
         let request_id = REQUEST_ID
             .try_with(|value: &String| value.clone())
@@ -138,7 +162,7 @@ impl IntoResponse for DomainError {
             "error_code": error_code,
             "message": error_message,
             "request_id": request_id,
-            "details": {}
+            "details": details
         }));
         (status, body).into_response()
     }
