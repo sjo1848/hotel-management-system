@@ -70,22 +70,99 @@ run_perf_smoke_gate() {
     return 1
   fi
 
-  echo "==> perf smoke gate"
-  docker compose up -d db backend
-  trap 'docker compose stop backend db >/dev/null 2>&1 || true' RETURN
+  local compose_started=false
+  local local_backend_started=false
+  local local_perf_db_container=""
+  local local_perf_db_port="55432"
+  local local_perf_pid_file="/tmp/hms_perf_gate_backend.pid"
+  local local_perf_log_file="/tmp/hms_perf_gate_backend.log"
 
-  ready=false
-  for _ in $(seq 1 60); do
-    code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:3001/health || true)"
-    if [[ "$code" == "200" ]]; then
-      ready=true
-      break
+  cleanup_perf_smoke_gate() {
+    if [[ "$local_backend_started" == "true" ]]; then
+      if [[ -f "$local_perf_pid_file" ]]; then
+        local pid
+        pid="$(cat "$local_perf_pid_file" 2>/dev/null || true)"
+        if [[ -n "${pid:-}" ]] && kill -0 "$pid" >/dev/null 2>&1; then
+          kill "$pid" >/dev/null 2>&1 || true
+        fi
+      fi
+      rm -f "$local_perf_pid_file" >/dev/null 2>&1 || true
+      if [[ -n "$local_perf_db_container" ]]; then
+        docker rm -f "$local_perf_db_container" >/dev/null 2>&1 || true
+      fi
     fi
-    sleep 2
-  done
-  if [[ "$ready" != "true" ]]; then
-    echo "backend did not become healthy at http://localhost:3001/health" >&2
+    if [[ "$compose_started" == "true" ]]; then
+      docker compose stop backend db >/dev/null 2>&1 || true
+    fi
+  }
+  trap cleanup_perf_smoke_gate RETURN
+
+  wait_backend_health() {
+    local max_attempts="${1:-60}"
+    local attempt
+    local code
+    for attempt in $(seq 1 "$max_attempts"); do
+      code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:3001/health || true)"
+      if [[ "$code" == "200" ]]; then
+        return 0
+      fi
+      sleep 2
+    done
     return 1
+  }
+
+  echo "==> perf smoke gate"
+  if wait_backend_health 3; then
+    echo "==> reusing existing healthy backend on localhost:3001"
+  else
+    echo "==> backend not healthy; starting docker compose stack for perf smoke"
+    docker compose up -d db backend
+    compose_started=true
+    if ! wait_backend_health 30; then
+      echo "==> compose backend did not become healthy; switching to isolated local perf backend"
+      docker compose stop backend db >/dev/null 2>&1 || true
+      compose_started=false
+
+      local_perf_db_container="hms-perf-gate-db-$$"
+      docker rm -f "$local_perf_db_container" >/dev/null 2>&1 || true
+      docker run -d \
+        --name "$local_perf_db_container" \
+        -e POSTGRES_USER=admin \
+        -e POSTGRES_PASSWORD=password123 \
+        -e POSTGRES_DB=hms_core \
+        -p "${local_perf_db_port}:5432" \
+        postgres:16-alpine >/dev/null
+
+      local pg_ready=false
+      local attempt
+      for attempt in $(seq 1 30); do
+        if docker exec "$local_perf_db_container" pg_isready -U admin -d hms_core >/dev/null 2>&1; then
+          pg_ready=true
+          break
+        fi
+        sleep 2
+      done
+      if [[ "$pg_ready" != "true" ]]; then
+        echo "isolated perf postgres did not become ready." >&2
+        return 1
+      fi
+
+      (
+        cd backend
+        DATABASE_URL="postgres://admin:password123@localhost:${local_perf_db_port}/hms_core" \
+          cargo run >"$local_perf_log_file" 2>&1 &
+        echo $! >"$local_perf_pid_file"
+      )
+      local_backend_started=true
+
+      if ! wait_backend_health 60; then
+        echo "isolated perf backend did not become healthy at http://localhost:3001/health" >&2
+        if [[ -f "$local_perf_log_file" ]]; then
+          tail -n 80 "$local_perf_log_file" >&2 || true
+        fi
+        return 1
+      fi
+    fi
   fi
 
   ./scripts/perf-baseline.sh \
