@@ -38,9 +38,13 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgres://admin:password123@localhost:5432/hms_core
+      DOCS_GOVERNANCE_STRICT: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Environment Profile Security Preflight
+        run: ./scripts/check-env-profile-security.sh
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable

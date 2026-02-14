@@ -1,0 +1,15 @@
+services:
+  backend:
+    environment:
+      APP_ENV: ${APP_ENV:-staging}
+      AUTH_REQUIRED: "true"
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in staging}
+      JWT_KID: ${JWT_KID:?JWT_KID is required in staging}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in staging}
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in staging}
+      METRICS_PUBLIC: ${METRICS_PUBLIC:-false}
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:?COOKIE_DOMAIN is required in staging}
+      OTEL_ENABLED: ${OTEL_ENABLED:-true}

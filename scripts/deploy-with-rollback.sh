@@ -7,7 +7,7 @@ cd "$ROOT_DIR"
 usage() {
   cat <<USAGE
 Uso:
-  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--env-file <path>] [--profile <auto|dev|prod>] [--skip-tests]
+  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--env-file <path>] [--profile <auto|dev|staging|prod>] [--skip-tests]
 
 Opciones:
   --target-ref <git_ref>  Ref a desplegar (default: origin/main)
@@ -75,8 +75,8 @@ if [ ! -f "$ENV_FILE" ]; then
   echo "❌ No se encontró env file: $ENV_FILE"
   exit 1
 fi
-if [[ "$DEPLOY_PROFILE" != "auto" && "$DEPLOY_PROFILE" != "dev" && "$DEPLOY_PROFILE" != "prod" ]]; then
-  echo "❌ --profile debe ser auto|dev|prod"
+if [[ "$DEPLOY_PROFILE" != "auto" && "$DEPLOY_PROFILE" != "dev" && "$DEPLOY_PROFILE" != "staging" && "$DEPLOY_PROFILE" != "prod" ]]; then
+  echo "❌ --profile debe ser auto|dev|staging|prod"
   exit 1
 fi
 
@@ -97,11 +97,11 @@ resolve_profile() {
 
   local profile
   profile="$(awk -F= '/^APP_ENV=/{print tolower($2)}' "$ENV_FILE" | tail -n1 | tr -d '\"' | tr -d "'" | tr -d ' ')"
-  if [ "$profile" = "prod" ] || [ "$profile" = "production" ]; then
-    echo "prod"
-  else
-    echo "dev"
-  fi
+  case "$profile" in
+    prod|production) echo "prod" ;;
+    staging) echo "staging" ;;
+    *) echo "dev" ;;
+  esac
 }
 
 compose_up() {
@@ -166,9 +166,14 @@ RUNTIME_PROFILE="$(resolve_profile)"
 if [ "$RUNTIME_PROFILE" = "prod" ]; then
   COMPOSE_ARGS+=( -f docker-compose.prod.yml )
   echo "• Profile: prod (overlay docker-compose.prod.yml)"
-  ./scripts/validate-prod-env.sh --env-file "$ENV_FILE"
+  ./scripts/validate-env-profile.sh --profile prod --env-file "$ENV_FILE"
+elif [ "$RUNTIME_PROFILE" = "staging" ]; then
+  COMPOSE_ARGS+=( -f docker-compose.staging.yml )
+  echo "• Profile: staging (overlay docker-compose.staging.yml)"
+  ./scripts/validate-env-profile.sh --profile staging --env-file "$ENV_FILE"
 else
   echo "• Profile: dev"
+  ./scripts/validate-env-profile.sh --profile dev --env-file "$ENV_FILE"
 fi
 
 echo "📦 Creando backup pre-deploy..."

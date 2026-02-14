@@ -24,7 +24,6 @@ login_headers.txt
 
 # --- PRIVATE DOCUMENTATION & TEMP ---
 archivos/
-docs/adr/
 conductor/
 
 # --- OS ---

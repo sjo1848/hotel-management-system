@@ -72,6 +72,9 @@ echo "==> backend fast CI (fmt/clippy/unit + openapi_contract)"
 echo "==> openapi alignment (routes vs openapi + mirror docs)"
 ./scripts/check-openapi-alignment.sh
 
+echo "==> environment profile security preflight"
+./scripts/check-env-profile-security.sh
+
 echo "==> openapi changelog contractual gate"
 ./scripts/check-openapi-changelog.sh
 

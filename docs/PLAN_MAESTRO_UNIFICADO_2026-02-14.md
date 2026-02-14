@@ -10,7 +10,7 @@
 - Estado: **Fase 1 completada / Fase 2 planificada**
 
 ## Seguimiento de ejecución local
-- Última actualización: `2026-02-14 19:41:30 -0300`
+- Última actualización: `2026-02-14 19:59:39 -0300`
 - Sprint 1 (`HMS-SEC-EP01`) estado: **IMPLEMENTADO**
   - `HMS-SEC-T01` ADR tenant context: **IMPLEMENTADO** (ADR operativo y validado en este bloque).
   - `HMS-SEC-T02` migración RLS phase 1: **IMPLEMENTADO** (`0015_rls_phase1_tenant_policies.sql` + convergencia legacy).
@@ -28,8 +28,10 @@
 - Sprint 5 (`HMS-FE-EP05`) estado: **IMPLEMENTADO**
   - `HMS-FE-T01` budgets definidos: **IMPLEMENTADO** (`docs/perf/frontend-performance-budget.md`).
   - `HMS-FE-T02` medición baseline + gate: **IMPLEMENTADO** (`scripts/frontend-perf-budget.sh` + gate local/CI).
-- Sprint 6 (`HMS-SRE-EP06`) estado: **PENDIENTE**
-  - Scope: perfiles por entorno + rollback SLO + DR drill.
+- Sprint 6 (`HMS-SRE-EP06`) estado: **EN CURSO**
+  - `HMS-SRE-T01` perfiles por entorno + preflight CI: **IMPLEMENTADO**.
+  - `HMS-SRE-T02` rollback SLO: **PENDIENTE**.
+  - `HMS-SRE-T03` DR drill: **PENDIENTE**.
 - Sprint 7 (`HMS-OBS-EP07`) estado: **PENDIENTE**
   - Scope: logs/metrics/traces tenant-aware + alertas de seguridad operativa.
 - Sprint 8 (`HMS-QA-EP08`) estado: **PENDIENTE**
@@ -487,8 +489,8 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: separar variables/políticas por entorno y bloquear defaults inseguros fuera de local.
 - Archivos: `docker-compose*.yml`, scripts de deploy/readiness, `.env.example`.
 - Criterios:
-  - [ ] perfiles definidos y documentados.
-  - [ ] preflight de seguridad por entorno en CI.
+  - [x] perfiles definidos y documentados.
+  - [x] preflight de seguridad por entorno en CI.
 - Tests: `./scripts/prod-deploy-readiness.sh`.
 - Estimación: M
 - Riesgos: drift de variables entre ambientes.
@@ -649,3 +651,20 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 2. Tests ejecutados con PASS/FAIL.
 3. Riesgos residuales.
 4. Rollback plan de la task.
+
+## Actualización local — 2026-02-14 19:59:39 -0300
+
+### Cierre HMS-SRE-T01
+- [x] Perfil `staging` formalizado (`docker-compose.staging.yml` + `.env.staging.example`).
+- [x] Validador unificado por perfil creado: `scripts/validate-env-profile.sh` (`dev|staging|prod`).
+- [x] Preflight de seguridad por entorno integrado en gates: `scripts/check-env-profile-security.sh`.
+- [x] Integración en CI/gates locales: `scripts/gate.sh`, `scripts/gate-ci.sh`, `.github/workflows/full-stack-ci.yml`.
+- [x] Gobernanza documental endurecida en CI remoto con `DOCS_GOVERNANCE_STRICT=true`.
+
+### Evidencia de validación
+- [x] `./scripts/check-env-profile-security.sh` PASS.
+- [x] `./scripts/ci-backend.sh` PASS.
+- [x] `DOCS_GOVERNANCE_STRICT=true PATH="/tmp/hms-bin:$PATH" ./scripts/gate-ci.sh --skip-frontend --skip-perf` PASS.
+
+### Siguiente task activo
+- `HMS-SRE-T02` rollback automático por breach de SLO.

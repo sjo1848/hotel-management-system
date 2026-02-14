@@ -186,6 +186,9 @@ echo "==> backend fast CI"
 echo "==> openapi alignment"
 ./scripts/check-openapi-alignment.sh
 
+echo "==> environment profile security preflight"
+./scripts/check-env-profile-security.sh
+
 echo "==> openapi changelog contractual gate"
 ./scripts/check-openapi-changelog.sh
 

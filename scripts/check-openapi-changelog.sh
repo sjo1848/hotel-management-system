@@ -1,12 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+STRICT_MODE="${DOCS_GOVERNANCE_STRICT:-false}"
+
+is_true() {
+  [[ "${1,,}" == "true" ]]
+}
+
 if [ ! -f "backend/openapi.yaml" ]; then
   echo "OpenAPI changelog gate: skipped (backend/openapi.yaml not found)." >&2
   exit 0
 fi
 
 if [ ! -f "docs/api-changelog.md" ]; then
+  if is_true "$STRICT_MODE"; then
+    echo "OpenAPI changelog gate: strict mode enabled and docs/api-changelog.md is required." >&2
+    exit 1
+  fi
   echo "OpenAPI changelog gate: skipped (docs/api-changelog.md not tracked in this workspace)." >&2
   exit 0
 fi
