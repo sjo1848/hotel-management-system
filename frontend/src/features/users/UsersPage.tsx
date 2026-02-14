@@ -67,7 +67,10 @@ const UsersPage = () => {
     {
       header: "Rol del Sistema",
       cell: (item) => (
-        <Badge variant={item.role === "admin" ? "info" : "secondary"} className="gap-1">
+        <Badge
+          variant={item.role === "admin" || item.role === "saas_admin" ? "info" : "secondary"}
+          className="gap-1"
+        >
           <Shield className="w-3 h-3" /> {item.role.toUpperCase()}
         </Badge>
       ),

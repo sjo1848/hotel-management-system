@@ -17,6 +17,8 @@ import { ToastProvider } from "./components/ui/toast";
 import { ApiInterceptor } from "./components/ApiInterceptor";
 import NotFoundPage from "./features/errors/NotFoundPage";
 import GeneralErrorPage from "./features/errors/GeneralErrorPage";
+import AccessDeniedPage from "./features/errors/AccessDeniedPage";
+import { Capability, roleHasCapability } from "./features/auth/capabilities";
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -42,6 +44,22 @@ const RequireAuth = ({ children }: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const RequireCapability = ({
+  capability,
+  children,
+}: {
+  capability: Capability;
+  children: ReactNode;
+}) => {
+  const { user } = useAuth();
+
+  if (!roleHasCapability(user?.role, capability)) {
+    return <Navigate to="/forbidden" replace />;
+  }
+
+  return <>{children}</>;
+};
+
 const router = createBrowserRouter([
   {
     path: "/login",
@@ -58,39 +76,79 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: <DashboardHome />,
+        element: (
+          <RequireCapability capability="analytics.kpis.read">
+            <DashboardHome />
+          </RequireCapability>
+        ),
       },
       {
         path: "/bookings",
-        element: <BookingsPage />,
+        element: (
+          <RequireCapability capability="bookings.read">
+            <BookingsPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/rooms",
-        element: <RoomsPage />,
+        element: (
+          <RequireCapability capability="rooms.read">
+            <RoomsPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/calendar",
-        element: <CalendarPage />,
+        element: (
+          <RequireCapability capability="bookings.read">
+            <CalendarPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/guests",
-        element: <GuestsPage />,
+        element: (
+          <RequireCapability capability="guests.read">
+            <GuestsPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/housekeeping",
-        element: <HousekeepingPage />,
+        element: (
+          <RequireCapability capability="housekeeping.read">
+            <HousekeepingPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/users",
-        element: <UsersPage />,
+        element: (
+          <RequireCapability capability="users.read">
+            <UsersPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/network",
-        element: <HotelNetworkPage />,
+        element: (
+          <RequireCapability capability="saas.hotels.read">
+            <HotelNetworkPage />
+          </RequireCapability>
+        ),
       },
       {
         path: "/reports",
-        element: <ReportsPage />,
+        element: (
+          <RequireCapability capability="reports.revenue.read">
+            <ReportsPage />
+          </RequireCapability>
+        ),
+      },
+      {
+        path: "/forbidden",
+        element: <AccessDeniedPage />,
       },
     ],
   },

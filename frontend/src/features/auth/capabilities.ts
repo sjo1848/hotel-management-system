@@ -1,0 +1,120 @@
+import { UserRole } from "@/types/domain";
+
+export type Capability =
+  | "saas.hotels.read"
+  | "saas.hotels.write"
+  | "rooms.read"
+  | "rooms.write"
+  | "rooms.search"
+  | "rooms.status.write"
+  | "bookings.read"
+  | "bookings.write"
+  | "bookings.update"
+  | "bookings.extra_charges.read"
+  | "bookings.extra_charges.write"
+  | "guests.read"
+  | "guests.write"
+  | "housekeeping.read"
+  | "housekeeping.write"
+  | "billing.balance.read"
+  | "billing.close_cash.write"
+  | "billing.invoices.read"
+  | "billing.invoice.read"
+  | "analytics.kpis.read"
+  | "reports.revenue.read"
+  | "reports.occupancy.read"
+  | "users.read"
+  | "users.write"
+  | "users.delete";
+
+const ADMIN_CAPABILITIES: readonly Capability[] = [
+  "saas.hotels.read",
+  "saas.hotels.write",
+  "rooms.read",
+  "rooms.write",
+  "rooms.search",
+  "rooms.status.write",
+  "bookings.read",
+  "bookings.write",
+  "bookings.update",
+  "bookings.extra_charges.read",
+  "bookings.extra_charges.write",
+  "guests.read",
+  "guests.write",
+  "housekeeping.read",
+  "housekeeping.write",
+  "billing.balance.read",
+  "billing.close_cash.write",
+  "billing.invoices.read",
+  "billing.invoice.read",
+  "analytics.kpis.read",
+  "reports.revenue.read",
+  "reports.occupancy.read",
+  "users.read",
+  "users.write",
+  "users.delete",
+];
+
+const SAAS_ADMIN_CAPABILITIES: readonly Capability[] = [
+  "saas.hotels.read",
+  "saas.hotels.write",
+];
+
+const OPS_CAPABILITIES: readonly Capability[] = [
+  "rooms.read",
+  "rooms.search",
+  "rooms.status.write",
+  "bookings.read",
+  "bookings.write",
+  "bookings.update",
+  "bookings.extra_charges.read",
+  "bookings.extra_charges.write",
+  "guests.read",
+  "guests.write",
+  "housekeeping.read",
+  "housekeeping.write",
+  "billing.balance.read",
+  "billing.close_cash.write",
+  "billing.invoices.read",
+  "billing.invoice.read",
+  "analytics.kpis.read",
+  "reports.revenue.read",
+  "reports.occupancy.read",
+];
+
+const RECEPTIONIST_CAPABILITIES: readonly Capability[] = [
+  "rooms.read",
+  "rooms.search",
+  "bookings.read",
+  "bookings.write",
+  "bookings.update",
+  "bookings.extra_charges.read",
+  "bookings.extra_charges.write",
+  "guests.read",
+  "guests.write",
+  "billing.balance.read",
+  "billing.invoice.read",
+];
+
+const HOUSEKEEPING_CAPABILITIES: readonly Capability[] = [
+  "housekeeping.read",
+  "housekeeping.write",
+];
+
+const ROLE_CAPABILITIES: Record<UserRole, readonly Capability[]> = {
+  admin: ADMIN_CAPABILITIES,
+  saas_admin: SAAS_ADMIN_CAPABILITIES,
+  ops: OPS_CAPABILITIES,
+  receptionist: RECEPTIONIST_CAPABILITIES,
+  housekeeping: HOUSEKEEPING_CAPABILITIES,
+};
+
+export const roleHasCapability = (
+  role: UserRole | string | undefined,
+  capability: Capability,
+): boolean => {
+  if (!role) return false;
+  const capabilities = ROLE_CAPABILITIES[role as UserRole];
+  if (!capabilities) return false;
+  return capabilities.includes(capability);
+};

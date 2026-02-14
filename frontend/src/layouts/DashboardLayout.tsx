@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
+import { Capability, roleHasCapability } from "@/features/auth/capabilities";
 
 const SidebarItem = ({ 
   icon: Icon, 
@@ -63,6 +64,13 @@ const SidebarItem = ({
   );
 };
 
+type NavItem = {
+  icon: any;
+  label: string;
+  path: string;
+  capability: Capability;
+};
+
 const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,6 +109,29 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       setSearchValue("");
     }
   };
+
+  const principalItems: NavItem[] = [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/", capability: "analytics.kpis.read" },
+    { icon: ClipboardList, label: "Reservas", path: "/bookings", capability: "bookings.read" },
+    { icon: CalendarDays, label: "Calendario", path: "/calendar", capability: "bookings.read" },
+  ];
+
+  const managementItems: NavItem[] = [
+    { icon: BedDouble, label: "Habitaciones", path: "/rooms", capability: "rooms.read" },
+    { icon: Users, label: "Huéspedes", path: "/guests", capability: "guests.read" },
+    { icon: Brush, label: "Servicios", path: "/housekeeping", capability: "housekeeping.read" },
+  ];
+
+  const settingsItems: NavItem[] = [
+    { icon: Globe, label: "Red Global", path: "/network", capability: "saas.hotels.read" },
+    { icon: Settings, label: "Usuarios", path: "/users", capability: "users.read" },
+    { icon: TrendingUp, label: "Tendencias", path: "/reports", capability: "reports.revenue.read" },
+  ];
+
+  const canSee = (capability: Capability) => roleHasCapability(user?.role, capability);
+  const visiblePrincipalItems = principalItems.filter((item) => canSee(item.capability));
+  const visibleManagementItems = managementItems.filter((item) => canSee(item.capability));
+  const visibleSettingsItems = settingsItems.filter((item) => canSee(item.capability));
 
   return (
     <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
@@ -143,32 +174,50 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Navigation */}
         <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
           <div>
-            {!isCollapsed && (
+            {!isCollapsed && visiblePrincipalItems.length > 0 && (
               <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
                 Principal
               </p>
             )}
             <div className="space-y-1">
-              <SidebarItem icon={LayoutDashboard} label="Dashboard" path="/" active={location.pathname === "/"} collapsed={isCollapsed} />
-              <SidebarItem icon={ClipboardList} label="Reservas" path="/bookings" active={location.pathname.startsWith("/bookings")} collapsed={isCollapsed} />
-              <SidebarItem icon={CalendarDays} label="Calendario" path="/calendar" active={location.pathname.startsWith("/calendar")} collapsed={isCollapsed} />
+              {visiblePrincipalItems.map((item) => (
+                <SidebarItem
+                  key={item.path}
+                  icon={item.icon}
+                  label={item.label}
+                  path={item.path}
+                  active={
+                    item.path === "/"
+                      ? location.pathname === "/"
+                      : location.pathname.startsWith(item.path)
+                  }
+                  collapsed={isCollapsed}
+                />
+              ))}
             </div>
           </div>
 
           <div>
-            {!isCollapsed && (
+            {!isCollapsed && visibleManagementItems.length > 0 && (
               <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
                 Gestión
               </p>
             )}
             <div className="space-y-1">
-              <SidebarItem icon={BedDouble} label="Habitaciones" path="/rooms" active={location.pathname.startsWith("/rooms")} collapsed={isCollapsed} />
-              <SidebarItem icon={Users} label="Huéspedes" path="/guests" active={location.pathname.startsWith("/guests")} collapsed={isCollapsed} />
-              <SidebarItem icon={Brush} label="Servicios" path="/housekeeping" active={location.pathname.startsWith("/housekeeping")} collapsed={isCollapsed} />
+              {visibleManagementItems.map((item) => (
+                <SidebarItem
+                  key={item.path}
+                  icon={item.icon}
+                  label={item.label}
+                  path={item.path}
+                  active={location.pathname.startsWith(item.path)}
+                  collapsed={isCollapsed}
+                />
+              ))}
             </div>
           </div>
 
-          {user?.role === "admin" && (
+          {visibleSettingsItems.length > 0 && (
             <div>
               {!isCollapsed && (
                 <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
@@ -176,11 +225,16 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                 </p>
               )}
               <div className="space-y-1">
-                {user?.hotel_id === "00000000-0000-0000-0000-000000000001" && (
-                  <SidebarItem icon={Globe} label="Red Global" path="/network" active={location.pathname.startsWith("/network")} collapsed={isCollapsed} />
-                )}
-                <SidebarItem icon={Settings} label="Usuarios" path="/users" active={location.pathname.startsWith("/users")} collapsed={isCollapsed} />
-                <SidebarItem icon={TrendingUp} label="Tendencias" path="/reports" active={location.pathname.startsWith("/reports")} collapsed={isCollapsed} />
+                {visibleSettingsItems.map((item) => (
+                  <SidebarItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    path={item.path}
+                    active={location.pathname.startsWith(item.path)}
+                    collapsed={isCollapsed}
+                  />
+                ))}
               </div>
             </div>
           )}

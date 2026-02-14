@@ -3,7 +3,7 @@
  * This file acts as the single source of truth for frontend entities.
  */
 
-export type UserRole = "admin" | "ops" | "receptionist" | "housekeeping";
+export type UserRole = "admin" | "saas_admin" | "ops" | "receptionist" | "housekeeping";
 
 export type User = {
   id: string;
