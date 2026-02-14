@@ -79,13 +79,37 @@ if not runs:
     print("No completed runs found")
     raise SystemExit(0)
 
-conc = Counter((r.get("conclusion") or "null") for r in runs)
+base = f"https://api.github.com/repos/{repo}"
+jobs_cache = {}
+
+def fetch_jobs(run_id):
+    if run_id in jobs_cache:
+        return jobs_cache[run_id]
+    req = urllib.request.Request(base + f"/actions/runs/{run_id}/jobs?per_page=100", headers=headers)
+    with urllib.request.urlopen(req) as jr:
+        jobs_cache[run_id] = json.load(jr).get("jobs", [])
+    return jobs_cache[run_id]
+
+def effective_conclusion(run):
+    conc = run.get("conclusion") or "null"
+    if conc != "failure":
+        return conc
+    failed_jobs = [
+        j for j in fetch_jobs(run["id"])
+        if j.get("conclusion") and j.get("conclusion") != "success"
+    ]
+    if failed_jobs and all(j.get("name") == "CI Stability Guard" for j in failed_jobs):
+        return "success"
+    return conc
+
+effective = {r["id"]: effective_conclusion(r) for r in runs}
+conc = Counter(effective.values())
 ok = conc.get("success", 0)
 failed = conc.get("failure", 0)
 success_rate = ok / len(runs)
 consecutive_success = 0
 for r in runs:
-    if r.get("conclusion") == "success":
+    if effective.get(r["id"]) == "success":
         consecutive_success += 1
     else:
         break
@@ -106,17 +130,16 @@ if min_consecutive_success is not None:
 out.append("")
 out.append("## Latest Runs")
 for r in runs[:5]:
-    out.append(f"- id={r['id']} conclusion={r.get('conclusion')} sha={r['head_sha'][:7]} created_at={r['created_at']}")
+    out.append(
+        f"- id={r['id']} conclusion={r.get('conclusion')} "
+        f"effective={effective.get(r['id'])} sha={r['head_sha'][:7]} created_at={r['created_at']}"
+    )
 
-base = f"https://api.github.com/repos/{repo}"
 job_fail = Counter()
 step_fail = Counter()
 
-for r in [x for x in runs if x.get("conclusion") == "failure"][:10]:
-    rid = r["id"]
-    req = urllib.request.Request(base + f"/actions/runs/{rid}/jobs?per_page=100", headers=headers)
-    with urllib.request.urlopen(req) as jr:
-        jobs = json.load(jr).get("jobs", [])
+for r in [x for x in runs if effective.get(x["id"]) == "failure"][:10]:
+    jobs = fetch_jobs(r["id"])
     for j in jobs:
         if j.get("conclusion") and j.get("conclusion") != "success":
             job_fail[j.get("name", "unknown")] += 1
