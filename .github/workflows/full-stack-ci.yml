@@ -67,6 +67,9 @@ jobs:
       - name: Security Regression Tests (AuthZ + CSRF/AuthN)
         run: ./scripts/backend-security-regression.sh
 
+      - name: QA Core Journeys Gate (HMS-QA-010)
+        run: ./scripts/qa-core-journeys.sh
+
   frontend:
     name: Frontend CI
     runs-on: ubuntu-latest
