@@ -1,38 +1,100 @@
-# HMS Elite - Hotel Management System
+# HMS Elite — Hotel Management SaaS (PMS)
 
-Sistema PMS SaaS multi-hotel construido con **Arquitectura Hexagonal** y enfoque **DDD pragmático**.
+Plataforma SaaS multi-hotel para gestión operativa y financiera de hotelería.
 
-## Estado actual
-- Sprint 1 (arquitectura API + contrato): completado.
-- Sprint 2 (seguridad frontend + hardening `/metrics`): completado.
-- Sprint 3 (QA/performance): en ejecución con baseline de journeys y performance en verde.
+HMS Elite integra:
+- **Operación hotelera**: habitaciones, reservas, housekeeping.
+- **Backoffice**: usuarios, roles, auditoría, telemetría.
+- **Finanzas**: cargos extra, facturas, cierre de caja.
+- **Insights**: KPIs y reportes de revenue/ocupación.
+
+---
+
+## Tabla de contenidos
+- [Visión general](#visión-general)
+- [Arquitectura](#arquitectura)
+- [Stack tecnológico](#stack-tecnológico)
+- [Estructura del repositorio](#estructura-del-repositorio)
+- [Quickstart local](#quickstart-local)
+- [Configuración de entorno](#configuración-de-entorno)
+- [API y contrato](#api-y-contrato)
+- [Calidad y testing](#calidad-y-testing)
+- [CI/CD y operaciones](#cicd-y-operaciones)
+- [Observabilidad](#observabilidad)
+- [Documentación adicional](#documentación-adicional)
+
+---
+
+## Visión general
+
+**HMS Elite** está diseñado bajo principios de **Clean/Hexagonal Architecture** para mantener la lógica de negocio desacoplada de frameworks e infraestructura.
+
+Objetivo del producto:
+- Escalar como SaaS multi-tenant para múltiples hoteles.
+- Sostener seguridad operativa (AuthN/AuthZ, auditoría, hardening).
+- Permitir evolución rápida con calidad y trazabilidad.
+
+---
 
 ## Arquitectura
 
-### Backend
-- **Domain**: entidades, reglas de negocio, errores de dominio, traits de repositorios.
-- **Application**: servicios de caso de uso y orquestación.
+### Backend (Rust + Axum)
+- **Domain**: modelos de negocio y contratos (ports/traits).
+- **Application**: casos de uso y orquestación.
 - **Infrastructure**:
-  - `repository/`: SQLx + PostgreSQL.
-  - `web/`: Axum (routes, middlewares, handlers modulares por bounded context).
+  - `repository/`: persistencia PostgreSQL con SQLx.
+  - `web/`: API REST, middlewares, validación, auth, observabilidad.
 
-### Frontend
-- React + TypeScript + Vite.
-- Ruteo protegido por capacidad (`deny-by-default`) alineado con RBAC backend.
+### Frontend (React + TypeScript)
+- Organización **feature-first** con servicios por módulo de negocio.
+- Cliente HTTP centralizado con interceptores de errores/auth.
+- Route guards por capability con enfoque deny-by-default (`HMS-SEC-010`).
 
-## Stack
-- Backend: Rust, Axum, SQLx, Tokio.
-- Frontend: React 18, TypeScript, Tailwind, Vite.
-- DB: PostgreSQL 16.
-- Observabilidad: Prometheus, Grafana, Alertmanager, Tempo, OTel Collector.
-- Orquestación local: Docker Compose.
+### Persistencia
+- PostgreSQL 16 con migraciones versionadas en `backend/migrations`.
+- `database/init.sql` funciona como shim de compatibilidad para flujos legacy.
 
-## Inicio rápido
+---
 
-### Requisitos
-- Docker + Docker Compose.
+## Stack tecnológico
 
-### Levantar entorno
+- **Backend**: Rust, Axum, SQLx, Tokio, Utoipa (OpenAPI)
+- **Frontend**: React 18, TypeScript, Vite, Tailwind
+- **DB**: PostgreSQL 16
+- **Observabilidad**: Prometheus, Grafana, Tempo, OpenTelemetry
+- **Contenerización**: Docker + Docker Compose
+
+---
+
+## Estructura del repositorio
+
+```text
+.
+├── backend/                 # API Rust (hexagonal)
+│   ├── src/
+│   │   ├── domain/
+│   │   ├── application/
+│   │   └── infrastructure/
+│   ├── migrations/
+│   └── tests/
+├── frontend/                # React + TypeScript
+│   └── src/
+├── database/                # shim legacy para bootstrap SQL
+├── monitoring/              # Prometheus/Grafana/Tempo/Otel collector
+├── scripts/                 # CI, seguridad, despliegue, backup/restore, perf
+└── docs/                    # OpenAPI, changelog y documentos de arquitectura
+```
+
+---
+
+## Quickstart local
+
+Requisitos:
+- Docker
+- Docker Compose
+
+Pasos:
+
 ```bash
 git clone https://github.com/sjo1848/hotel-management-system.git
 cd hotel-management-system
@@ -42,54 +104,117 @@ docker compose up --build
 
 Servicios:
 - Frontend: `http://localhost:5173`
-- Backend: `http://localhost:3001`
-- Health: `http://localhost:3001/health`
+- Backend API: `http://localhost:3001`
+- Health check: `http://localhost:3001/health`
 - Swagger UI: `http://localhost:3001/swagger-ui`
 
-## Seguridad y operación
-- `AUTH_REQUIRED=true` por defecto.
-- `/metrics` endurecido (`HMS-SEC-011`):
-  - en prod `METRICS_PUBLIC` debe ser `false`;
-  - acceso permitido por red privada/loopback o `X-Metrics-Auth` (token de proxy).
-- Validación de entorno productivo:
+---
+
+## Configuración de entorno
+
+Variables base:
+- `.env.example`
+- `.env.prod.example`
+
+Hardening de métricas (`HMS-SEC-011`):
+- En producción: `METRICS_PUBLIC=false` obligatorio.
+- Acceso a `/metrics` por red privada/loopback o header `X-Metrics-Auth`.
+
+Validación de entorno productivo:
+
 ```bash
 scripts/validate-prod-env.sh --env-file .env.prod.example
 ```
 
-## Quality gates principales
+---
 
-Backend:
+## API y contrato
+
+Prefijo base: `/api/v1`
+
+Dominios principales:
+- `auth/*`
+- `rooms/*`
+- `bookings/*`
+- `guests/*`
+- `users/*`
+- `billing/*`
+- `invoices/*`
+- `reports/*`
+- `analytics/*`
+
+Contrato OpenAPI:
+- Fuente canónica: `backend/openapi.yaml`
+- Espejo para docs: `docs/openapi.yaml`
+- Check de alineación: `./scripts/check-openapi-alignment.sh`
+
+---
+
+## Calidad y testing
+
+Backend gates:
+
 ```bash
 ./scripts/ci-backend.sh
-./scripts/check-openapi-alignment.sh
+./scripts/ci-backend-integration.sh
+./scripts/backend-security-regression.sh
+./scripts/qa-core-journeys.sh
 ```
 
-Frontend:
+Frontend gates:
+
 ```bash
 docker compose exec -T frontend npm run lint
 docker compose exec -T frontend npm run test -- --run
 docker compose exec -T frontend npm run build
 ```
 
-Regresiones de seguridad backend:
-```bash
-./scripts/backend-security-regression.sh
-```
+Performance baseline:
 
-Baseline de performance:
 ```bash
 ./scripts/perf-baseline.sh --report /tmp/perf_baseline.md
 ```
 
-## API v1 (referencia rápida)
-- Auth: `/api/v1/auth/*`
-- Rooms: `/api/v1/rooms*`
-- Bookings: `/api/v1/bookings*`
-- Guests: `/api/v1/guests`
-- Users: `/api/v1/users*`
-- Billing/Invoices: `/api/v1/billing/*`, `/api/v1/invoices`
-- Reports/Analytics: `/api/v1/reports/*`, `/api/v1/analytics/kpis`
+---
 
-Contrato OpenAPI:
-- fuente canónica: `backend/openapi.yaml`
-- espejo docs: `docs/openapi.yaml`
+## CI/CD y operaciones
+
+Workflow principal:
+- `.github/workflows/full-stack-ci.yml`
+
+Incluye:
+- Secret scanning
+- Backend unit/integration/security/core journeys
+- Frontend lint/test/build
+- Guard de estabilidad CI
+
+Scripts operativos relevantes:
+- Deploy con rollback: `scripts/deploy-with-rollback.sh`
+- Backups/restore: `scripts/backup.sh`, `scripts/restore.sh`
+- Readiness prod: `scripts/prod-deploy-readiness.sh`
+
+---
+
+## Observabilidad
+
+Stack local:
+- Prometheus
+- Grafana
+- Alertmanager
+- Tempo
+- OTel Collector
+
+Smoke operativo recomendado:
+
+```bash
+docker compose exec -T prometheus wget -qO- http://localhost:9090/-/ready
+docker compose exec -T prometheus wget -qO- "http://localhost:9090/api/v1/query?query=up%7Bjob%3D%22hms-backend%22%7D"
+```
+
+---
+
+## Documentación adicional
+
+- `docs/CHANGELOG.md`
+- `docs/openapi.yaml`
+- Carpeta operativa local `archivos/` para bitácora de ejecución y handoffs.
