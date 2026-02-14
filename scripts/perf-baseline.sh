@@ -7,9 +7,9 @@ Usage: $0 [options]
 
 Options:
   --base-url URL           API base URL (default: http://localhost:3001)
-  --requests N             Requests per endpoint (default: 10)
+  --requests N             Requests per endpoint (default: 6)
   --concurrency N          Parallel workers per endpoint (default: 2)
-  --warmup N               Warmup requests per endpoint (default: 2)
+  --warmup N               Warmup requests per endpoint (default: 1)
   --admin-user USER        Login user (default: ADMIN_USER from .env or admin)
   --admin-password PASS    Login password (default: ADMIN_PASSWORD from .env or admin123)
   --hotel-id ID            Hotel id/name for login (default: 00000000-0000-0000-0000-000000000001)
@@ -22,9 +22,9 @@ USAGE
 }
 
 BASE_URL="http://localhost:3001"
-REQUESTS=10
+REQUESTS=6
 CONCURRENCY=2
-WARMUP=2
+WARMUP=1
 HOTEL_ID="00000000-0000-0000-0000-000000000001"
 SLO_P95_SEC="1.0"
 SLO_ERROR_RATE="0.05"

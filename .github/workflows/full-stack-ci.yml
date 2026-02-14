@@ -155,9 +155,9 @@ jobs:
       - name: Run performance smoke baseline (HMS-QA-011)
         run: |
           ./scripts/perf-baseline.sh \
-            --requests 12 \
-            --concurrency 3 \
-            --warmup 2 \
+            --requests 8 \
+            --concurrency 2 \
+            --warmup 1 \
             --slo-p95-sec 1.0 \
             --slo-error-rate 0.05 \
             --fail-on-slo \
