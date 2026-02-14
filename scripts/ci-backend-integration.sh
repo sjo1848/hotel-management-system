@@ -73,6 +73,7 @@ wait_for_postgres
 run_sqlx_test_with_retry "analytics_flow"
 run_sqlx_test_with_retry "operational_flow"
 run_sqlx_test_with_retry "tenant_uniqueness_constraints"
+run_sqlx_test_with_retry "tenant_rls_phase1"
 run_sqlx_test_with_retry "booking_flow"
 run_sqlx_test_with_retry "tenant_fk_integrity"
 run_sqlx_test_with_retry "booking_transactional_integrity"

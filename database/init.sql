@@ -25,5 +25,6 @@
 \ir ../backend/migrations/0012_booking_availability_perf_indexes.sql
 \ir ../backend/migrations/0013_refresh_session_hardening.sql
 \ir ../backend/migrations/0014_tenant_query_tuning_indexes.sql
+\ir ../backend/migrations/0015_rls_phase1_tenant_policies.sql
 
 \echo '[hms] migraciones SQLx aplicadas desde database/init.sql (compat shim).'
