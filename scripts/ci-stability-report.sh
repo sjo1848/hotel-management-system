@@ -67,6 +67,8 @@ min_success_rate = float(min_success_rate_raw) if min_success_rate_raw else None
 min_consecutive_success = int(min_consecutive_success_raw) if min_consecutive_success_raw else None
 
 github_token = os.getenv("GITHUB_TOKEN", "")
+current_run_id_raw = os.getenv("GITHUB_RUN_ID", "")
+current_run_id = int(current_run_id_raw) if current_run_id_raw.isdigit() else None
 headers = {"Authorization": f"Bearer {github_token}"} if github_token else {}
 
 with open(path) as f:
@@ -74,6 +76,10 @@ with open(path) as f:
 
 runs_all = data.get("workflow_runs", [])
 runs = [r for r in runs_all if r.get("status") == "completed"]
+current_run_in_progress = any(
+    r.get("id") == current_run_id and r.get("status") != "completed"
+    for r in runs_all
+) if current_run_id is not None else False
 
 if not runs:
     print("No completed runs found")
@@ -108,6 +114,10 @@ ok = conc.get("success", 0)
 failed = conc.get("failure", 0)
 success_rate = ok / len(runs)
 consecutive_success = 0
+if current_run_in_progress:
+    # When this script runs inside CI Stability Guard, the current run is
+    # still in progress but all dependent jobs already succeeded.
+    consecutive_success += 1
 for r in runs:
     if effective.get(r["id"]) == "success":
         consecutive_success += 1
@@ -123,6 +133,8 @@ out.append(f"- success: {ok}")
 out.append(f"- failure: {failed}")
 out.append(f"- success_rate: {success_rate:.2%}")
 out.append(f"- consecutive_success: {consecutive_success}")
+if current_run_in_progress:
+    out.append(f"- consecutive_success_includes_current_in_progress: true")
 if min_success_rate is not None:
     out.append(f"- threshold_min_success_rate: {min_success_rate:.2%}")
 if min_consecutive_success is not None:
