@@ -129,10 +129,49 @@ jobs:
       - name: Run E2E Core Journeys
         run: bash ./scripts/qa-core-journeys-e2e.sh
 
+  perf-smoke:
+    name: Performance Smoke Gate
+    runs-on: ubuntu-latest
+    needs: [backend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start backend stack
+        run: docker compose up -d db backend
+
+      - name: Wait for backend
+        run: |
+          for _ in $(seq 1 60); do
+            code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:3001/health || true)"
+            if [ "$code" = "200" ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not become ready on http://localhost:3001/health" >&2
+          exit 1
+
+      - name: Run performance smoke baseline (HMS-QA-011)
+        run: |
+          ./scripts/perf-baseline.sh \
+            --requests 12 \
+            --concurrency 3 \
+            --warmup 2 \
+            --slo-p95-sec 1.0 \
+            --slo-error-rate 0.05 \
+            --fail-on-slo \
+            --report /tmp/perf_baseline_ci.md
+          cat /tmp/perf_baseline_ci.md
+
+      - name: Stop backend stack
+        if: always()
+        run: docker compose stop backend db
+
   ci-stability-guard:
     name: CI Stability Guard
     runs-on: ubuntu-latest
-    needs: [backend, frontend, e2e-browser, secret-scan]
+    needs: [backend, frontend, e2e-browser, perf-smoke, secret-scan]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

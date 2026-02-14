@@ -15,6 +15,7 @@ Options:
   --hotel-id ID            Hotel id/name for login (default: 00000000-0000-0000-0000-000000000001)
   --slo-p95-sec SEC        P95 SLO threshold in seconds (default: 1.0)
   --slo-error-rate RATE    Error-rate SLO threshold (default: 0.05)
+  --fail-on-slo            Exit with non-zero status when any endpoint breaks SLO
   --report FILE            Write markdown report to file
   -h, --help               Show this help
 USAGE
@@ -27,6 +28,7 @@ WARMUP=2
 HOTEL_ID="00000000-0000-0000-0000-000000000001"
 SLO_P95_SEC="1.0"
 SLO_ERROR_RATE="0.05"
+FAIL_ON_SLO=0
 REPORT_FILE=""
 
 if [[ -f .env ]]; then
@@ -48,6 +50,7 @@ while [[ $# -gt 0 ]]; do
     --hotel-id) HOTEL_ID="$2"; shift 2 ;;
     --slo-p95-sec) SLO_P95_SEC="$2"; shift 2 ;;
     --slo-error-rate) SLO_ERROR_RATE="$2"; shift 2 ;;
+    --fail-on-slo) FAIL_ON_SLO=1; shift ;;
     --report) REPORT_FILE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
@@ -117,12 +120,13 @@ if [[ "$me_code" != "200" ]]; then
   exit 1
 fi
 
-# name|method|path
+# name|method|path|mode
 ENDPOINTS=(
-  "bookings|GET|/api/v1/bookings"
-  "dashboard_kpis|GET|/api/v1/analytics/kpis"
-  "revenue_report|GET|/api/v1/reports/revenue?start=2026-02-01&end=2026-02-13"
-  "occupancy_report|GET|/api/v1/reports/occupancy?start=2026-02-01&end=2026-02-13"
+  "bookings|GET|/api/v1/bookings|stateless"
+  "auth_refresh|POST|/api/v1/auth/refresh|stateful_refresh"
+  "dashboard_kpis|GET|/api/v1/analytics/kpis|stateless"
+  "revenue_report|GET|/api/v1/reports/revenue?start=2026-02-01&end=2026-02-13|stateless"
+  "occupancy_report|GET|/api/v1/reports/occupancy?start=2026-02-01&end=2026-02-13|stateless"
 )
 
 TMP_DIR="$(mktemp -d)"
@@ -132,23 +136,62 @@ bench_endpoint() {
   local name="$1"
   local method="$2"
   local path="$3"
+  local mode="$4"
   local outfile="$TMP_DIR/$name.out"
 
   local url="$BASE_URL$path"
 
-  if (( WARMUP > 0 )); then
-    for _ in $(seq 1 "$WARMUP"); do
-      curl -sS -o /dev/null -X "$method" "$url" -b "$COOKIE_JAR" >/dev/null
-    done
-  fi
+  extract_csrf_token() {
+    awk '$1 !~ /^#/ && $6 == "csrf_token" { token = $7 } END { if (token != "") print token }' "$COOKIE_JAR"
+  }
 
   local start_ns end_ns duration_sec
-  start_ns="$(date +%s%N)"
+  if [[ "$mode" == "stateful_refresh" ]]; then
+    if (( WARMUP > 0 )); then
+      for _ in $(seq 1 "$WARMUP"); do
+        csrf_token="$(extract_csrf_token)"
+        if [[ -z "$csrf_token" ]]; then
+          echo "Missing csrf_token cookie before warmup for endpoint $name." >&2
+          exit 1
+        fi
+        curl -sS -o /dev/null -X "$method" "$url" \
+          -H "Content-Type: application/json" \
+          -H "x-csrf-token: $csrf_token" \
+          -d '{}' \
+          -b "$COOKIE_JAR" \
+          -c "$COOKIE_JAR" >/dev/null
+      done
+    fi
 
-  seq 1 "$REQUESTS" | xargs -I{} -P "$CONCURRENCY" -n1 bash -lc '
-    curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
-      -X "'$method'" "'$url'" -b "'$COOKIE_JAR'"
-  ' > "$outfile"
+    start_ns="$(date +%s%N)"
+    : > "$outfile"
+    for _ in $(seq 1 "$REQUESTS"); do
+      csrf_token="$(extract_csrf_token)"
+      if [[ -z "$csrf_token" ]]; then
+        echo "Missing csrf_token cookie before request for endpoint $name." >&2
+        exit 1
+      fi
+      curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
+        -X "$method" "$url" \
+        -H "Content-Type: application/json" \
+        -H "x-csrf-token: $csrf_token" \
+        -d '{}' \
+        -b "$COOKIE_JAR" \
+        -c "$COOKIE_JAR" >> "$outfile"
+    done
+  else
+    if (( WARMUP > 0 )); then
+      for _ in $(seq 1 "$WARMUP"); do
+        curl -sS -o /dev/null -X "$method" "$url" -b "$COOKIE_JAR" >/dev/null
+      done
+    fi
+
+    start_ns="$(date +%s%N)"
+    seq 1 "$REQUESTS" | xargs -I{} -P "$CONCURRENCY" -n1 bash -lc '
+      curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
+        -X "'$method'" "'$url'" -b "'$COOKIE_JAR'"
+    ' > "$outfile"
+  fi
 
   end_ns="$(date +%s%N)"
   duration_sec="$(awk -v s="$start_ns" -v e="$end_ns" 'BEGIN { printf "%.6f", (e-s)/1000000000 }')"
@@ -194,8 +237,8 @@ bench_endpoint() {
 
 RESULTS=()
 for item in "${ENDPOINTS[@]}"; do
-  IFS='|' read -r name method path <<< "$item"
-  RESULTS+=("$(bench_endpoint "$name" "$method" "$path")")
+  IFS='|' read -r name method path mode <<< "$item"
+  RESULTS+=("$(bench_endpoint "$name" "$method" "$path" "$mode")")
 done
 
 now_iso="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -211,6 +254,8 @@ report_body+="- slo_error_rate: $SLO_ERROR_RATE\n\n"
 report_body+="| endpoint | n | avg_s | p50_s | p95_s | p99_s | error_rate | rps | duration_s | http_statuses | slo_p95 | slo_error_rate |\n"
 report_body+="|---|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|\n"
 
+failed_slo_count=0
+
 for row in "${RESULTS[@]}"; do
   IFS='|' read -r endpoint n avg p50 p95 p99 error_rate rps duration http_statuses <<< "$row"
 
@@ -219,9 +264,19 @@ for row in "${RESULTS[@]}"; do
 
   if awk -v x="$p95" -v y="$SLO_P95_SEC" 'BEGIN { exit (x<=y)?0:1 }'; then :; else p95_status="FAIL"; fi
   if awk -v x="$error_rate" -v y="$SLO_ERROR_RATE" 'BEGIN { exit (x<=y)?0:1 }'; then :; else err_status="FAIL"; fi
+  if [[ "$p95_status" == "FAIL" || "$err_status" == "FAIL" ]]; then
+    failed_slo_count=$((failed_slo_count + 1))
+  fi
 
   report_body+="| $endpoint | $n | $avg | $p50 | $p95 | $p99 | $error_rate | $rps | $duration | $http_statuses | $p95_status | $err_status |\n"
 done
+
+overall_gate="PASS"
+if (( failed_slo_count > 0 )); then
+  overall_gate="FAIL"
+fi
+report_body+="\n- gate_result: $overall_gate\n"
+report_body+="- endpoints_with_slo_failures: $failed_slo_count\n"
 
 printf "%b" "$report_body"
 
@@ -230,4 +285,9 @@ if [[ -n "$REPORT_FILE" ]]; then
   printf "%b" "$report_body" > "$REPORT_FILE"
   echo
   echo "Report written to: $REPORT_FILE"
+fi
+
+if (( FAIL_ON_SLO == 1 && failed_slo_count > 0 )); then
+  echo "Performance SLO gate failed: $failed_slo_count endpoint(s) outside thresholds." >&2
+  exit 1
 fi
