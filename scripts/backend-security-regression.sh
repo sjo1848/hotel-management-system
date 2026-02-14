@@ -11,7 +11,8 @@ export DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/
 run_sqlx_test_with_retry() {
   local test_name="$1"
   local attempt=1
-  local max_attempts=2
+  local max_attempts=4
+  local base_backoff_seconds=2
   local output_file
   output_file="$(mktemp)"
   trap 'rm -f "$output_file"' RETURN
@@ -33,9 +34,11 @@ run_sqlx_test_with_retry() {
       return 0
     fi
 
-    if grep -qE 'database "_sqlx_test_[^"]+" does not exist|failed to connect (test pool|to setup test database): .*PoolTimedOut' "$output_file"; then
+    if grep -qE 'database "_sqlx_test_[^"]+" does not exist|failed to connect (test pool|to setup test database): .*PoolTimedOut|timed out while waiting for an open connection|pool timed out while waiting for an open connection' "$output_file"; then
       if [ "$attempt" -lt "$max_attempts" ]; then
-        echo "Detected transient sqlx test DB race. Retrying ${test_name} once..."
+        local sleep_seconds=$((base_backoff_seconds * attempt))
+        echo "Detected transient sqlx test DB race. Retrying ${test_name} after ${sleep_seconds}s backoff..."
+        sleep "$sleep_seconds"
         attempt=$((attempt + 1))
         continue
       fi
