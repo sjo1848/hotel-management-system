@@ -1,54 +1,95 @@
 # HMS Elite - Hotel Management System
 
-Sistema de gestión hotelera de alta performance bajo estándares de **Arquitectura Hexagonal** y **Domain-Driven Design (DDD)**.
+Sistema PMS SaaS multi-hotel construido con **Arquitectura Hexagonal** y enfoque **DDD pragmático**.
 
-> 📘 **Documentación**: Consulta el [Historial de Cambios](docs/CHANGELOG.md) para ver las últimas mejoras.
+## Estado actual
+- Sprint 1 (arquitectura API + contrato): completado.
+- Sprint 2 (seguridad frontend + hardening `/metrics`): completado.
+- Sprint 3 (QA/performance): en ejecución con baseline de journeys y performance en verde.
 
-## Arquitectura del Sistema
-El proyecto está estructurado siguiendo el patrón de **Puertos y Adaptadores** para garantizar el desacoplamiento total de la lógica de negocio frente a la infraestructura.
+## Arquitectura
 
-### Estructura de Capas (Backend)
-- **Domain:** Contiene las entidades de negocio y las interfaces (Ports/Traits). No tiene dependencias externas.
-- **Application:** Casos de uso que orquestan el flujo de datos entre el dominio y la infraestructura.
-- **Infrastructure:** Implementaciones técnicas (Adapters). 
-    - `repository/`: Persistencia en PostgreSQL mediante SQLx.
-    - `web/`: Handlers de API Rest con Axum.
+### Backend
+- **Domain**: entidades, reglas de negocio, errores de dominio, traits de repositorios.
+- **Application**: servicios de caso de uso y orquestación.
+- **Infrastructure**:
+  - `repository/`: SQLx + PostgreSQL.
+  - `web/`: Axum (routes, middlewares, handlers modulares por bounded context).
 
-## Stack Tecnológico
-- **Backend:** Rust (Axum, SQLx, Tokio).
-- **Frontend:** React 18 (TypeScript, Vite, Tailwind CSS).
-- **Base de Datos:** PostgreSQL 16.
-- **Contenerización:** Docker & Docker Compose.
+### Frontend
+- React + TypeScript + Vite.
+- Ruteo protegido por capacidad (`deny-by-default`) alineado con RBAC backend.
 
-## Instalación y Despliegue
+## Stack
+- Backend: Rust, Axum, SQLx, Tokio.
+- Frontend: React 18, TypeScript, Tailwind, Vite.
+- DB: PostgreSQL 16.
+- Observabilidad: Prometheus, Grafana, Alertmanager, Tempo, OTel Collector.
+- Orquestación local: Docker Compose.
+
+## Inicio rápido
 
 ### Requisitos
-- Docker y Docker Desktop instalados.
+- Docker + Docker Compose.
 
-### Pasos para iniciar
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/sjo1848/hotel-management-system.git
-   cd hotel-management-system
-   ```
-2. Configura las variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
-3. Levanta el ecosistema completo:
-   ```bash
-   docker compose up --build
-   ```
+### Levantar entorno
+```bash
+git clone https://github.com/sjo1848/hotel-management-system.git
+cd hotel-management-system
+cp .env.example .env
+docker compose up --build
+```
 
-El sistema estará disponible en:
-- **Frontend:** http://localhost:5173
-- **API Backend:** http://localhost:3001
-- **Salud del Sistema:** http://localhost:3001/health
+Servicios:
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:3001`
+- Health: `http://localhost:3001/health`
+- Swagger UI: `http://localhost:3001/swagger-ui`
 
-### Mapa de API (v1)
-- `GET /api/v1/rooms`: Gestión de habitaciones.
-- `GET /api/v1/bookings`: Gestión de reservas con filtros.
-- `GET /api/v1/auth`: Autenticación segura (JWT/Refresh Tokens).
+## Seguridad y operación
+- `AUTH_REQUIRED=true` por defecto.
+- `/metrics` endurecido (`HMS-SEC-011`):
+  - en prod `METRICS_PUBLIC` debe ser `false`;
+  - acceso permitido por red privada/loopback o `X-Metrics-Auth` (token de proxy).
+- Validación de entorno productivo:
+```bash
+scripts/validate-prod-env.sh --env-file .env.prod.example
+```
 
----
-HMS Elite - Ingeniería de Software de alta disponibilidad.
+## Quality gates principales
+
+Backend:
+```bash
+./scripts/ci-backend.sh
+./scripts/check-openapi-alignment.sh
+```
+
+Frontend:
+```bash
+docker compose exec -T frontend npm run lint
+docker compose exec -T frontend npm run test -- --run
+docker compose exec -T frontend npm run build
+```
+
+Regresiones de seguridad backend:
+```bash
+./scripts/backend-security-regression.sh
+```
+
+Baseline de performance:
+```bash
+./scripts/perf-baseline.sh --report /tmp/perf_baseline.md
+```
+
+## API v1 (referencia rápida)
+- Auth: `/api/v1/auth/*`
+- Rooms: `/api/v1/rooms*`
+- Bookings: `/api/v1/bookings*`
+- Guests: `/api/v1/guests`
+- Users: `/api/v1/users*`
+- Billing/Invoices: `/api/v1/billing/*`, `/api/v1/invoices`
+- Reports/Analytics: `/api/v1/reports/*`, `/api/v1/analytics/kpis`
+
+Contrato OpenAPI:
+- fuente canónica: `backend/openapi.yaml`
+- espejo docs: `docs/openapi.yaml`
