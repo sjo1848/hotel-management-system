@@ -425,6 +425,27 @@ paths:
               schema:
                 type: object
                 additionalProperties: true
+  /api/v1/audit/events:
+    get:
+      summary: Eventos de auditoría recientes del tenant
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Eventos de auditoría recientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEvent"
   /api/v1/billing/balance:
     get:
       summary: Balance actual de caja
@@ -720,6 +741,28 @@ components:
           type: integer
         status:
           type: string
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+          nullable: true
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        action:
+          type: string
+        ip_address:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
     CreateBookingRequest:
       type: object
       required: [room_id, guest_name, check_in, check_out]
