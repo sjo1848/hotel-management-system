@@ -35,6 +35,9 @@ run_frontend_gates() {
       docker compose exec -T frontend npm run build
       return 0
     fi
+    echo "==> docker compose running but no frontend service; fallback to host"
+  else
+    echo "==> docker not available; running frontend on host"
   fi
   (
     cd frontend
@@ -50,18 +53,28 @@ run_perf_smoke_gate() {
     echo "docker is required for perf smoke gate." >&2
     return 1
   fi
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl is required for perf smoke gate." >&2
+    return 1
+  fi
 
   echo "==> perf smoke gate"
   docker compose up -d db backend
   trap 'docker compose stop backend db >/dev/null 2>&1 || true' RETURN
 
+  ready=false
   for _ in $(seq 1 60); do
     code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:3001/health || true)"
     if [[ "$code" == "200" ]]; then
+      ready=true
       break
     fi
     sleep 2
   done
+  if [[ "$ready" != "true" ]]; then
+    echo "backend did not become healthy at http://localhost:3001/health" >&2
+    return 1
+  fi
 
   ./scripts/perf-baseline.sh \
     --requests 8 \
