@@ -108,6 +108,16 @@ compose_up() {
   docker compose "${COMPOSE_ARGS[@]}" up -d --build
 }
 
+compose_up_with_retry() {
+  if compose_up; then
+    return 0
+  fi
+
+  echo "⚠️  compose up failed; trying cleanup + retry..."
+  docker compose "${COMPOSE_ARGS[@]}" rm -sf backend frontend db >/dev/null 2>&1 || true
+  compose_up
+}
+
 rollback() {
   if [ "$rollback_needed" != true ]; then
     return
@@ -121,19 +131,24 @@ rollback() {
   fi
 
   echo "🔁 Restaurando servicios al commit previo..."
-  if ! compose_up; then
-    echo "❌ No se pudo restaurar servicios al commit previo"
+  echo "🗄️  Asegurando DB para rollback..."
+  if ! docker compose "${COMPOSE_ARGS[@]}" up -d db; then
+    echo "❌ No se pudo iniciar DB para rollback"
     exit 1
   fi
-
   if [ -f "$BACKUP_PATH" ]; then
     echo "🗄️  Restaurando base de datos desde backup pre-deploy..."
-    if ! ./scripts/restore.sh "$BACKUP_PATH" --yes; then
+    if ! ./scripts/restore.sh "$BACKUP_PATH" --recreate-db --yes; then
       echo "❌ Falló la restauración de DB durante rollback"
       exit 1
     fi
   else
     echo "⚠️  No se encontró backup pre-deploy en $BACKUP_PATH"
+  fi
+
+  if ! compose_up_with_retry; then
+    echo "❌ No se pudo restaurar servicios al commit previo"
+    exit 1
   fi
 
   echo "✅ Rollback finalizado sobre commit $(git rev-parse --short HEAD)"
@@ -173,7 +188,7 @@ TARGET_COMMIT="$(git rev-parse --verify "$TARGET_REF")"
 git checkout -q "$TARGET_COMMIT"
 
 echo "🏗️  Aplicando despliegue del commit $(git rev-parse --short HEAD)..."
-compose_up
+compose_up_with_retry
 
 if [ "$SKIP_TESTS" = false ]; then
   echo "🩺 Ejecutando health + smoke tests..."

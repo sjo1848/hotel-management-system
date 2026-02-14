@@ -1,0 +1,38 @@
+name: deploy-rollback-drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_file:
+        description: Env file path
+        required: false
+        default: .env
+      profile:
+        description: Deploy profile
+        required: false
+        default: auto
+  schedule:
+    - cron: "15 5 1 * *"
+
+jobs:
+  rollback-drill:
+    name: Rollback Drill
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure scripts are executable
+        run: chmod +x scripts/*.sh
+
+      - name: Run rollback drill
+        env:
+          ENV_FILE: ${{ github.event.inputs.env_file }}
+          PROFILE: ${{ github.event.inputs.profile }}
+        run: |
+          env_file="${ENV_FILE:-.env}"
+          profile="${PROFILE:-auto}"
+          ./scripts/deploy-rollback-drill.sh --env-file "$env_file" --profile "$profile"
+

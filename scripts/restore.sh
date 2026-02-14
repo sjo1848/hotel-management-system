@@ -5,11 +5,12 @@ set -euo pipefail
 usage() {
     cat <<EOF
 Uso:
-  ./scripts/restore.sh <backup.sql.gz> [--db <db_name>] [--create-db] [--yes]
+  ./scripts/restore.sh <backup.sql.gz> [--db <db_name>] [--create-db] [--recreate-db] [--yes]
 
 Opciones:
   --db <db_name>   Base destino (default: hms_core)
   --create-db      Crea la base destino si no existe
+  --recreate-db    Elimina y recrea la base destino antes de restaurar
   --yes            Omite confirmación interactiva
 EOF
 }
@@ -25,6 +26,7 @@ shift
 DB_NAME="hms_core"
 DB_USER="${DB_USER:-admin}"
 CREATE_DB=false
+RECREATE_DB=false
 ASSUME_YES=false
 
 while [ $# -gt 0 ]; do
@@ -35,6 +37,10 @@ while [ $# -gt 0 ]; do
             ;;
         --create-db)
             CREATE_DB=true
+            shift
+            ;;
+        --recreate-db)
+            RECREATE_DB=true
             shift
             ;;
         --yes)
@@ -59,6 +65,13 @@ if [ "$CREATE_DB" = true ]; then
     docker compose exec -T db bash -lc "psql -U '$DB_USER' -d postgres -tAc \"SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'\" | grep -q 1 || createdb -U '$DB_USER' '$DB_NAME'"
 fi
 
+if [ "$RECREATE_DB" = true ]; then
+    echo "🧹 Recreando base destino: $DB_NAME"
+    docker compose exec -T db psql -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" >/dev/null
+    docker compose exec -T db dropdb --if-exists -U "$DB_USER" "$DB_NAME"
+    docker compose exec -T db createdb -U "$DB_USER" "$DB_NAME"
+fi
+
 if [ "$ASSUME_YES" != true ]; then
     echo "⚠️  ADVERTENCIA: restaurarás sobre la base destino '$DB_NAME'."
     read -r -p "¿Continuar? (s/n): " confirm
@@ -69,6 +82,6 @@ if [ "$ASSUME_YES" != true ]; then
 fi
 
 echo "🔄 Restaurando base de datos '$DB_NAME' desde '$BACKUP_FILE'..."
-gunzip -c "$BACKUP_FILE" | docker compose exec -T db psql -U "$DB_USER" "$DB_NAME"
+gunzip -c "$BACKUP_FILE" | docker compose exec -T db psql -v ON_ERROR_STOP=1 -U "$DB_USER" "$DB_NAME"
 
 echo "✅ Restauración completada con éxito."
