@@ -1,0 +1,42 @@
+name: dr-restore-drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_db:
+        description: Source DB to backup and restore
+        required: false
+        default: hms_core
+      keep_artifacts:
+        description: Keep restored DB and backup artifact on runner
+        required: false
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 5 1 * *"
+
+jobs:
+  restore-drill:
+    name: Monthly Restore Drill
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure scripts are executable
+        run: chmod +x scripts/*.sh
+
+      - name: Run restore drill
+        env:
+          SOURCE_DB: ${{ github.event.inputs.source_db }}
+          KEEP_ARTIFACTS: ${{ github.event.inputs.keep_artifacts }}
+        run: |
+          ARGS=()
+          if [ -n "${SOURCE_DB}" ]; then
+            ARGS+=(--source-db "${SOURCE_DB}")
+          fi
+          if [ "${KEEP_ARTIFACTS}" = "true" ]; then
+            ARGS+=(--keep-artifacts)
+          fi
+          ./scripts/restore-drill.sh "${ARGS[@]}"
+
