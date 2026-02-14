@@ -144,7 +144,7 @@ jobs:
           ./scripts/ci-stability-report.sh \
             --runs 20 \
             --min-success-rate 0.50 \
-            --min-consecutive-success 2 \
+            --min-consecutive-success 3 \
             --fail-on-threshold \
             --output /tmp/ci_stability_report.md
           cat /tmp/ci_stability_report.md
