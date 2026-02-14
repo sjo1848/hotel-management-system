@@ -55,8 +55,14 @@ jobs:
       - name: OpenAPI Route Alignment
         run: ./scripts/check-openapi-alignment.sh
 
+      - name: OpenAPI Changelog Contract Gate
+        run: ./scripts/check-openapi-changelog.sh
+
       - name: Legacy Schema Convergence
         run: ./scripts/check-legacy-schema-convergence.sh
+
+      - name: Validation Governance Docs Gate
+        run: ./scripts/check-validation-governance.sh
 
       - name: Backend Unit Gate (fmt/clippy/lib/contract)
         run: ./scripts/ci-backend.sh
@@ -102,6 +108,9 @@ jobs:
       - name: Build (includes Typecheck)
         run: npm run build
         working-directory: frontend
+
+      - name: Frontend Performance Budget Gate
+        run: ./scripts/frontend-perf-budget.sh
 
   e2e-browser:
     name: E2E Browser Core Journeys

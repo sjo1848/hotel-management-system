@@ -32,6 +32,7 @@ run_frontend_gates() {
       docker compose exec -T frontend npm run lint
       docker compose exec -T frontend npm run test -- --run
       docker compose exec -T frontend npm run build
+      ./scripts/frontend-perf-budget.sh
       return 0
     fi
     echo "==> docker compose running but no frontend service; fallback to host"
@@ -44,7 +45,18 @@ run_frontend_gates() {
     npm run lint
     npm run test -- --run
     npm run build
+    ../scripts/frontend-perf-budget.sh
   )
+}
+
+resolve_qa_runner() {
+  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
+    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+      echo "docker"
+      return 0
+    fi
+  fi
+  echo "host"
 }
 
 echo "=============================="
@@ -60,16 +72,23 @@ echo "==> backend fast CI (fmt/clippy/unit + openapi_contract)"
 echo "==> openapi alignment (routes vs openapi + mirror docs)"
 ./scripts/check-openapi-alignment.sh
 
+echo "==> openapi changelog contractual gate"
+./scripts/check-openapi-changelog.sh
+
 echo "==> legacy schema convergence"
 ./scripts/check-legacy-schema-convergence.sh
+
+echo "==> validation governance docs gate"
+./scripts/check-validation-governance.sh
 
 if [[ "$FULL" == "true" ]]; then
   echo "==> backend integration"
   ./scripts/ci-backend-integration.sh
   echo "==> backend security regression"
   ./scripts/backend-security-regression.sh
-  echo "==> QA core journeys"
-  ./scripts/qa-core-journeys.sh --runner host
+  QA_RUNNER="$(resolve_qa_runner)"
+  echo "==> QA core journeys (runner=${QA_RUNNER})"
+  ./scripts/qa-core-journeys.sh --runner "$QA_RUNNER"
 fi
 
 run_frontend_gates
