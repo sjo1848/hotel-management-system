@@ -79,14 +79,14 @@ if [[ "$RUNNER" == "docker" ]]; then
   echo "==> Installing Playwright browsers in frontend container"
   docker compose exec -T frontend npx playwright install chromium
   docker compose exec -T frontend sh -lc '
-    npx playwright test --project=chromium --grep "journey|lifecycle|billing|rbac"
+    npx playwright test --grep "journey|lifecycle|billing|rbac"
   '
 else
   (
     cd frontend
     npx playwright install chromium
     PLAYWRIGHT_BASE_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:5173}" \
-      npm run test:e2e -- --project=chromium --grep "journey|lifecycle|billing|rbac"
+      npm run test:e2e -- --grep "journey|lifecycle|billing|rbac"
   )
 fi
 
