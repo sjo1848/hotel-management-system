@@ -589,3 +589,63 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Tests: CI dry-run con cambios OpenAPI y policy docs.
 - Estimación: S
 - Riesgos: ruido de pipeline inicial.
+
+---
+
+## Tablero de ejecución Sprint 6 (operativo)
+
+**Actualizado:** `2026-02-14 19:44:09 -0300`
+
+### Orden de ejecución obligatorio
+1. `HMS-SRE-T01` — Perfiles `dev/staging/prod` explícitos.
+2. `HMS-SRE-T02` — Rollback automático por breach de SLO.
+3. `HMS-SRE-T03` — DR drill con evidencia RPO/RTO.
+
+### Gate 0 — Plan (antes de tocar código)
+1. Resumen de alcance (máx 5 líneas).
+2. Archivos a tocar.
+3. Pasos de implementación (máx 8).
+4. Comandos de test exactos.
+5. Criterio PASS/FAIL explícito por task.
+
+### `HMS-SRE-T01` — Perfiles `dev/staging/prod`
+1. Archivos objetivo: `docker-compose.yml`, `scripts/prod-deploy-readiness.sh`, `.env.example`, `scripts/gate-ci.sh` (si aplica).
+2. Implementación mínima:
+   - separar defaults por entorno,
+   - bloquear secretos/defaults inseguros fuera de local,
+   - validar variables obligatorias por ambiente.
+3. Validación (comandos):
+   - `./scripts/prod-deploy-readiness.sh`
+   - `./scripts/ci-backend.sh`
+   - `./scripts/gate-ci.sh --skip-frontend --skip-perf`
+4. PASS: preflight prod en verde y gates backend/security en verde sin relajar controles.
+5. FAIL: cualquier variable crítica sin validar o bypass de política de seguridad.
+
+### `HMS-SRE-T02` — Rollback por SLO
+1. Archivos objetivo: `scripts/perf-baseline.sh`, `scripts/gate-ci.sh`, runbook de rollback (docs operativas).
+2. Implementación mínima:
+   - definir umbrales de disparo (`p95`, `error_rate`, auth failures),
+   - comando único de rollback y estado de salida no ambiguo.
+3. Validación (comandos):
+   - `./scripts/perf-baseline.sh --requests 8 --concurrency 2 --warmup 1 --slo-p95-sec 1.0 --slo-error-rate 0.05 --fail-on-slo`
+   - `./scripts/gate-ci.sh --skip-frontend`
+4. PASS: trigger de rollback reproducible y evidencia de simulación.
+5. FAIL: rollback manual ad-hoc o no determinista.
+
+### `HMS-SRE-T03` — DR drill
+1. Archivos objetivo: runbook DR, scripts de backup/restore, reporte de evidencia.
+2. Implementación mínima:
+   - ejecutar restore end-to-end en entorno controlado,
+   - medir y registrar RPO/RTO reales.
+3. Validación (comandos):
+   - `./scripts/prod-deploy-readiness.sh`
+   - comando de restore definido por runbook (a versionar en scripts)
+   - `./scripts/qa-core-journeys.sh --runner docker`
+4. PASS: restore completo + RPO/RTO medidos y aceptados.
+5. FAIL: restore parcial o sin evidencia temporal verificable.
+
+### Salida obligatoria por task
+1. Diff por archivo.
+2. Tests ejecutados con PASS/FAIL.
+3. Riesgos residuales.
+4. Rollback plan de la task.
