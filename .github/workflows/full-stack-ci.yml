@@ -99,3 +99,23 @@ jobs:
       - name: Build (includes Typecheck)
         run: npm run build
         working-directory: frontend
+
+  ci-stability-guard:
+    name: CI Stability Guard
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, secret-scan]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Evaluate CI Stability Thresholds
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./scripts/ci-stability-report.sh \
+            --runs 20 \
+            --min-success-rate 0.50 \
+            --min-consecutive-success 3 \
+            --fail-on-threshold \
+            --output /tmp/ci_stability_report.md
+          cat /tmp/ci_stability_report.md
