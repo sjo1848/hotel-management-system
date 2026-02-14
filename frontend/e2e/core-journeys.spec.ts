@@ -27,7 +27,7 @@ test("booking lifecycle: bookings list is accessible", async ({ page }) => {
   await login(page);
   await page.getByRole("link", { name: "Reservas" }).click();
   await expect(page).toHaveURL(/\/bookings$/);
-  await expect(page.getByText("Reservas")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: /^Reservas$/ })).toBeVisible();
 });
 
 test("billing journey: cash closure widget is visible in dashboard", async ({ page }) => {
