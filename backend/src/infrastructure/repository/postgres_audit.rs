@@ -41,7 +41,8 @@ impl AuditRepository for PostgresAuditRepository {
     ) -> Result<Vec<AuditEvent>, String> {
         let safe_limit = limit.clamp(1, 200);
         let records = sqlx::query(
-            "SELECT id, hotel_id, user_id, action, ip_address, created_at
+            "SELECT id, hotel_id, user_id, action, ip_address,
+                    created_at AT TIME ZONE 'UTC' AS created_at
              FROM audit_events
              WHERE hotel_id = $1
              ORDER BY created_at DESC
