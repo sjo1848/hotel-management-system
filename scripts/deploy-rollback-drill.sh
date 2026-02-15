@@ -3,7 +3,7 @@ set -euo pipefail
 
 usage() {
   cat <<USAGE
-Usage: $0 [--env-file PATH] [--profile auto|dev|prod]
+Usage: $0 [--env-file PATH] [--profile auto|dev|staging|prod]
 
 Executes a rollback drill by invoking deploy-with-rollback against an invalid ref.
 Expected behavior: deploy script fails, rollback restores previous commit and service health.
@@ -22,8 +22,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$PROFILE" != "auto" && "$PROFILE" != "dev" && "$PROFILE" != "prod" ]]; then
-  echo "--profile must be auto|dev|prod" >&2
+if [[ "$PROFILE" != "auto" && "$PROFILE" != "dev" && "$PROFILE" != "staging" && "$PROFILE" != "prod" ]]; then
+  echo "--profile must be auto|dev|staging|prod" >&2
   exit 1
 fi
 

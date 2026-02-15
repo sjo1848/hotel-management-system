@@ -12,6 +12,7 @@ use std::{
     net::{IpAddr, SocketAddr},
     sync::Arc,
 };
+use tracing::Span;
 
 pub async fn auth_middleware(
     State(state): State<Arc<AppState>>,
@@ -86,6 +87,11 @@ pub async fn auth_middleware(
         state.config.jwt_previous_secret.as_deref(),
     )
     .map_err(|_| DomainError::Unauthorized)?;
+
+    let span = Span::current();
+    span.record("tenant_id", claims.hotel_id.as_str());
+    span.record("user_id", claims.sub.as_str());
+    span.record("role", claims.role.as_str());
 
     // Role check is now handled by RBAC middleware
 

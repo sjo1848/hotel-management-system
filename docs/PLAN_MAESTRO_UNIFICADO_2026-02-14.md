@@ -7,10 +7,10 @@
 - Owner técnico: Principal Engineer
 - Owner seguridad: Security Engineer
 - Owner calidad: QA Lead
-- Estado: **Fase 1 completada / Fase 2 planificada**
+- Estado: **Fase 1 y Fase 2 completadas (plan maestro implementado)**
 
 ## Seguimiento de ejecución local
-- Última actualización: `2026-02-14 19:59:39 -0300`
+- Última actualización: `2026-02-14 20:42:56 -0300`
 - Sprint 1 (`HMS-SEC-EP01`) estado: **IMPLEMENTADO**
   - `HMS-SEC-T01` ADR tenant context: **IMPLEMENTADO** (ADR operativo y validado en este bloque).
   - `HMS-SEC-T02` migración RLS phase 1: **IMPLEMENTADO** (`0015_rls_phase1_tenant_policies.sql` + convergencia legacy).
@@ -28,14 +28,18 @@
 - Sprint 5 (`HMS-FE-EP05`) estado: **IMPLEMENTADO**
   - `HMS-FE-T01` budgets definidos: **IMPLEMENTADO** (`docs/perf/frontend-performance-budget.md`).
   - `HMS-FE-T02` medición baseline + gate: **IMPLEMENTADO** (`scripts/frontend-perf-budget.sh` + gate local/CI).
-- Sprint 6 (`HMS-SRE-EP06`) estado: **EN CURSO**
+- Sprint 6 (`HMS-SRE-EP06`) estado: **IMPLEMENTADO**
   - `HMS-SRE-T01` perfiles por entorno + preflight CI: **IMPLEMENTADO**.
-  - `HMS-SRE-T02` rollback SLO: **PENDIENTE**.
-  - `HMS-SRE-T03` DR drill: **PENDIENTE**.
-- Sprint 7 (`HMS-OBS-EP07`) estado: **PENDIENTE**
-  - Scope: logs/metrics/traces tenant-aware + alertas de seguridad operativa.
-- Sprint 8 (`HMS-QA-EP08`) estado: **PENDIENTE**
-  - Scope: coverage thresholds + drift check permisos FE/BE + quality hardening.
+  - `HMS-SRE-T02` rollback SLO: **IMPLEMENTADO**.
+  - `HMS-SRE-T03` DR drill: **IMPLEMENTADO**.
+- Sprint 7 (`HMS-OBS-EP07`) estado: **IMPLEMENTADO**
+  - `HMS-OBS-T01` logs estructurados tenant-aware: **IMPLEMENTADO**.
+  - `HMS-OBS-T02` alertas auth/cross-tenant + runbook: **IMPLEMENTADO**.
+  - `HMS-OBS-T03` tracing E2E: **IMPLEMENTADO**.
+- Sprint 8 (`HMS-QA-EP08`) estado: **IMPLEMENTADO**
+  - `HMS-QA-T01` coverage thresholds: **IMPLEMENTADO**.
+  - `HMS-QA-T02` drift check FE/BE: **IMPLEMENTADO**.
+  - `HMS-QA-T03` modo strict documental CI: **IMPLEMENTADO**.
 - Nota de entorno local:
   - `./scripts/ci-backend-integration.sh` y `./scripts/gate-ci.sh` pueden fallar en host por `DATABASE_URL=localhost:5432` sin puerto `db` publicado en `docker-compose.yml`.
   - Validación equivalente ejecutada con entorno local aislado y documentada con PASS (`./scripts/gate-ci.sh` completo + fallback perf smoke en `scripts/gate-ci.sh`).
@@ -401,7 +405,7 @@ HMS Elite es un PMS SaaS multi-hotel (Rust/Axum + React/TypeScript + PostgreSQL)
 ---
 
 ## Siguiente paso recomendado
-Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfiles por entorno, rollback por SLO y evidencia de DR drill.
+Plan maestro implementado. Siguiente etapa recomendada: optimización y hardening de frontend orientado a entrega cliente, en backlog separado del plan maestro.
 
 **Contexto del sistema:** HMS Elite PMS SaaS multi-hotel (Rust/Axum + React/TypeScript + PostgreSQL, arquitectura clean/hexagonal).
 
@@ -410,6 +414,8 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 ---
 
 ## Actualización local — 2026-02-14 18:36:18 -0300
+
+> Nota: esta sección y las siguientes son bitácora histórica por timestamp; las líneas de "Siguiente task activo" reflejan el estado de ese momento.
 
 ### Sprint 1 ejecutado (HMS-SEC-EP01: T01–T04)
 - [x] ADR-0001 aplicado en implementación (tenant context + RLS fail-closed).
@@ -427,7 +433,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 
 ### Nota de alcance
 - Frontend funcional no fue refactorizado; solo se añadieron gates de calidad/performance.
-- Documentación permanece local y fuera de tracking por decisión operativa del proyecto.
+- En ese bloque inicial, la documentación permanecía local y fuera de tracking; el estado vigente de tracking y gobernanza es el del encabezado del plan.
 
 ## Actualización local — 2026-02-14 18:50:26 -0300
 
@@ -474,9 +480,9 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - [x] EPIC HMS-API-EP03 cumplido.
 - [x] EPIC HMS-VAL-EP04 cumplido.
 - [x] EPIC HMS-FE-EP05 cumplido.
-- [ ] EPIC HMS-SRE-EP06 pendiente.
-- [ ] EPIC HMS-OBS-EP07 pendiente.
-- [ ] EPIC HMS-QA-EP08 pendiente.
+- [x] EPIC HMS-SRE-EP06 cumplido.
+- [x] EPIC HMS-OBS-EP07 cumplido.
+- [x] EPIC HMS-QA-EP08 cumplido.
 
 ---
 
@@ -500,8 +506,8 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: definir gatillos de rollback (p95/error_rate/auth failures) y runbook ejecutable.
 - Archivos: scripts de deploy/rollback + docs de operación.
 - Criterios:
-  - [ ] rollback reproducible con trigger verificable.
-  - [ ] evidencia de simulación de incidente.
+  - [x] rollback reproducible con trigger verificable.
+  - [x] evidencia de simulación de incidente.
 - Tests: smoke + perf + simulación controlada.
 - Estimación: M
 - Riesgos: rollback incompleto.
@@ -513,8 +519,8 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: ejecutar restore drill de backups y documentar tiempos observados.
 - Archivos: runbooks + reporte DR.
 - Criterios:
-  - [ ] RPO/RTO medidos y aceptados.
-  - [ ] checklist de recuperación completado.
+  - [x] RPO/RTO medidos y aceptados.
+  - [x] checklist de recuperación completado.
 - Tests: restore end-to-end en entorno controlado.
 - Estimación: M
 - Riesgos: falsas asunciones de backup.
@@ -530,7 +536,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: asegurar inclusión consistente de `request_id`, `tenant_id`, actor y `error_code`.
 - Archivos: middleware/logging backend + dashboards.
 - Criterios:
-  - [ ] cobertura de campos obligatorios en rutas críticas.
+  - [x] cobertura de campos obligatorios en rutas críticas.
 - Tests: integration observability smoke.
 - Estimación: S
 - Riesgos: ruido o cardinalidad excesiva.
@@ -540,8 +546,8 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: reglas en Prometheus/Grafana para patrones anómalos.
 - Archivos: `monitoring/prometheus/alerts.yml`, dashboards.
 - Criterios:
-  - [ ] alertas con severidad y owner definidos.
-  - [ ] runbook asociado por alerta.
+  - [x] alertas con severidad y owner definidos.
+  - [x] runbook asociado por alerta.
 - Tests: fire drill de alertas.
 - Estimación: M
 - Riesgos: fatiga por falsas alarmas.
@@ -551,7 +557,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: asegurar spans completos en login/create booking/close cash.
 - Archivos: instrumentación OTEL backend + collector config.
 - Criterios:
-  - [ ] trazas completas en 3 flujos críticos.
+  - [x] trazas completas en 3 flujos críticos.
 - Tests: smoke tracing + validación en Tempo/Grafana.
 - Estimación: M
 - Riesgos: instrumentación parcial.
@@ -567,7 +573,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: umbrales mínimos por dominio (auth, booking, tenant isolation).
 - Archivos: scripts CI + config de cobertura.
 - Criterios:
-  - [ ] thresholds versionados y enforzados en CI.
+  - [x] thresholds versionados y enforzados en CI.
 - Tests: pipeline CI con fail-on-threshold.
 - Estimación: M
 - Riesgos: targets mal calibrados.
@@ -577,7 +583,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: comparar capacidades declaradas FE vs enforcement BE.
 - Archivos: tests/fixtures de capacidades + script de comparación.
 - Criterios:
-  - [ ] drift check obligatorio en gate-ci.
+  - [x] drift check obligatorio en gate-ci.
 - Tests: `rbac_authorization` + drift gate.
 - Estimación: M
 - Riesgos: falsas diferencias por naming.
@@ -587,7 +593,7 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 - Descripción: permitir modo strict para que faltantes/omisiones en docs fallen en CI.
 - Archivos: `scripts/check-openapi-changelog.sh`, `scripts/check-validation-governance.sh`, workflow.
 - Criterios:
-  - [ ] modo strict configurable y activo en CI remoto.
+  - [x] modo strict configurable y activo en CI remoto.
 - Tests: CI dry-run con cambios OpenAPI y policy docs.
 - Estimación: S
 - Riesgos: ruido de pipeline inicial.
@@ -668,3 +674,107 @@ Ejecutar **Sprint 6 (HMS-SRE-EP06)** con foco en confiabilidad operativa: perfil
 
 ### Siguiente task activo
 - `HMS-SRE-T02` rollback automático por breach de SLO.
+
+## Actualización local — 2026-02-14 20:03:07 -0300
+
+### Cierre HMS-SRE-T02
+- [x] Script operable agregado: `scripts/rollback-on-slo-breach.sh`.
+- [x] Trigger verificable de breach por SLO (real o simulado) con salida determinista.
+- [x] Modo seguro por defecto (`dry-run`) + modo ejecución real (`--execute-rollback`).
+- [x] Evidencia de simulación con ejecución real y resultado `executed_success`.
+
+### Evidencia de validación
+- [x] `./scripts/rollback-on-slo-breach.sh --simulate-breach --skip-perf-check --target-ref HEAD --report /tmp/hms_rollback_slo_dryrun.md` PASS (dry-run).
+- [x] `./scripts/rollback-on-slo-breach.sh --simulate-breach --skip-perf-check --execute-rollback --target-ref HEAD --env-file .env --profile dev --skip-deploy-tests --report /tmp/hms_rollback_slo_execute.md` PASS (executed_success).
+
+### Siguiente task activo
+- `HMS-SRE-T03` DR drill con evidencia RPO/RTO.
+
+## Actualización local — 2026-02-14 20:05:24 -0300
+
+### Cierre HMS-SRE-T03
+- [x] DR drill ejecutado con restore end-to-end y validación de paridad en tablas críticas.
+- [x] Reporte versionado generado: `docs/ops/drills/DR-DRILL-2026-02-14.md`.
+- [x] RTO medido y aceptado (6s <= 600s).
+- [x] RPO medido y aceptado (0s <= 60s).
+- [x] Checklist de recuperación completado en reporte.
+
+### Evidencia de validación
+- [x] `./scripts/restore-drill.sh --report docs/ops/drills/DR-DRILL-2026-02-14.md --max-rto-seconds 600 --max-rpo-seconds 60` PASS.
+
+### Estado Sprint 6
+- [x] `HMS-SRE-T01` completo.
+- [x] `HMS-SRE-T02` completo.
+- [x] `HMS-SRE-T03` completo.
+
+### Siguiente task activo
+- `HMS-OBS-T01` logs estructurados con `tenant_id`.
+
+## Actualización local — 2026-02-14 20:09:38 -0300
+
+### Avance HMS-OBS-T02
+- [x] Reglas de alertas agregadas para anomalías auth y sospecha cross-tenant:
+  - `HMSAuthLoginFailureRateHigh`
+  - `HMSAuthRefreshUnauthorizedSpike`
+  - `HMSCrossTenantForbiddenSpike`
+- [x] Labels operativos incorporados: `severity`, `owner`, `runbook`.
+- [x] Runbook versionado: `docs/ops/runbooks/auth-anomaly-cross-tenant.md`.
+
+### Evidencia de validación
+- [x] `docker run --rm --entrypoint /bin/promtool -v "$PWD/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro" prom/prometheus:v2.53.5 check rules /etc/prometheus/alerts.yml` PASS (`SUCCESS: 8 rules found`).
+
+### Siguiente task activo
+- `HMS-OBS-T03` tracing E2E en flujos críticos.
+
+## Actualización local — 2026-02-14 20:10:18 -0300
+
+### Cierre HMS-QA-T03
+- [x] Modo estricto configurable en gates documentales (`DOCS_GOVERNANCE_STRICT`).
+- [x] Modo estricto activo en CI remoto (`.github/workflows/full-stack-ci.yml`).
+
+### Evidencia de validación
+- [x] `DOCS_GOVERNANCE_STRICT=true ./scripts/check-openapi-changelog.sh` PASS.
+- [x] `DOCS_GOVERNANCE_STRICT=true ./scripts/check-validation-governance.sh` PASS.
+- [x] `DOCS_GOVERNANCE_STRICT=true PATH="/tmp/hms-bin:$PATH" ./scripts/gate-ci.sh --skip-frontend --skip-perf` PASS.
+
+### Siguiente task activo
+- `HMS-OBS-T03` tracing E2E en flujos críticos.
+
+## Actualización local — 2026-02-14 20:42:56 -0300
+
+### Cierre HMS-OBS-T01
+- [x] Contexto estructurado obligatorio en spans HTTP (`request_id`, `tenant_id`, `user_id`, `role`, `error_code`) consolidado.
+- [x] Registro de `tenant_id/user_id/role` aplicado en middleware auth.
+- [x] Contrato runtime validado con test de observabilidad (`x-request-id` + `request_id` + `error_code`).
+
+### Cierre HMS-OBS-T03
+- [x] Spans explícitos en flujos críticos:
+  - `auth.login`
+  - `booking.create`
+  - `cash.close`
+- [x] Eventos de éxito en flujos críticos con correlación tenant-aware.
+- [x] Gate de observabilidad integrado en CI/local: `scripts/observability-smoke.sh`.
+
+### Cierre HMS-QA-T01
+- [x] Gate de coverage por módulos críticos implementado: `scripts/backend-coverage-threshold.sh`.
+- [x] Thresholds versionados y enforzados en CI:
+  - auth: `>= 70%`
+  - booking: `>= 45%`
+  - tenant: `>= 45%`
+- [x] Workflow CI actualizado para ejecutar gate de coverage en modo estricto.
+
+### Cierre HMS-QA-T02
+- [x] Drift check FE/BE implementado: `scripts/check-rbac-drift.sh`.
+- [x] Drift corregido (`audit.events.read`) en matriz frontend.
+- [x] Drift gate obligatorio integrado en `gate.sh`, `gate-ci.sh` y workflow CI.
+
+### Evidencia de validación (PASS)
+- [x] `./scripts/check-rbac-drift.sh`
+- [x] `./scripts/observability-smoke.sh --runner host`
+- [x] `HMS_COVERAGE_STRICT=true HMS_AUTO_INSTALL_LLVM_COV=false ./scripts/backend-coverage-threshold.sh`
+- [x] `HMS_COVERAGE_STRICT=true HMS_AUTO_INSTALL_LLVM_COV=false DOCS_GOVERNANCE_STRICT=true PATH="/tmp/hms-bin:$PATH" ./scripts/gate-ci.sh --skip-frontend --skip-perf`
+
+### Estado final del plan maestro
+- [x] Sprint 7 (`HMS-OBS-EP07`) completo.
+- [x] Sprint 8 (`HMS-QA-EP08`) completo.
+- [x] Plan Maestro Unificado implementado end-to-end.

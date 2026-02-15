@@ -15,6 +15,7 @@ describe("roleHasCapability", () => {
 
   it("respeta capacidades operativas por rol", () => {
     expect(roleHasCapability("ops", "reports.revenue.read")).toBe(true);
+    expect(roleHasCapability("ops", "audit.events.read")).toBe(true);
     expect(roleHasCapability("receptionist", "reports.revenue.read")).toBe(false);
     expect(roleHasCapability("housekeeping", "housekeeping.read")).toBe(true);
     expect(roleHasCapability("housekeeping", "bookings.read")).toBe(false);

@@ -19,6 +19,7 @@ use serde_json::{json, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::task_local;
+use tracing::Span;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -159,6 +160,7 @@ impl IntoResponse for DomainError {
         let request_id = REQUEST_ID
             .try_with(|value: &String| value.clone())
             .unwrap_or_else(|_| "unknown".to_string());
+        Span::current().record("error_code", error_code);
         let body = Json(json!({
             "error_code": error_code,
             "message": error_message,

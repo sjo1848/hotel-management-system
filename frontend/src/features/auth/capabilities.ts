@@ -21,6 +21,7 @@ export type Capability =
   | "billing.invoices.read"
   | "billing.invoice.read"
   | "analytics.kpis.read"
+  | "audit.events.read"
   | "reports.revenue.read"
   | "reports.occupancy.read"
   | "users.read"
@@ -48,6 +49,7 @@ const ADMIN_CAPABILITIES: readonly Capability[] = [
   "billing.invoices.read",
   "billing.invoice.read",
   "analytics.kpis.read",
+  "audit.events.read",
   "reports.revenue.read",
   "reports.occupancy.read",
   "users.read",
@@ -78,6 +80,7 @@ const OPS_CAPABILITIES: readonly Capability[] = [
   "billing.invoices.read",
   "billing.invoice.read",
   "analytics.kpis.read",
+  "audit.events.read",
   "reports.revenue.read",
   "reports.occupancy.read",
 ];

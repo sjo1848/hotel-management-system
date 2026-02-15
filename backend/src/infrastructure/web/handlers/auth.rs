@@ -9,6 +9,11 @@ use super::*;
     ),
     tag = "Autenticación"
 )]
+#[tracing::instrument(
+    name = "auth.login",
+    skip(state, headers, payload),
+    fields(flow = "login")
+)]
 pub async fn login_handler(
     State(state): State<Arc<AppState>>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -35,6 +40,8 @@ pub async fn login_handler(
                 DomainError::InvalidInput("Hotel inválido. Usá ID o nombre existente.".to_string())
             })?
     };
+    let hotel_id_str = hotel_id.to_string();
+    tracing::Span::current().record("tenant_id", hotel_id_str.as_str());
 
     let user = match auth_ctx
         .auth_service
@@ -51,6 +58,18 @@ pub async fn login_handler(
             return Err(e);
         }
     };
+    let user_id_str = user.id.to_string();
+    let user_hotel_id_str = user.hotel_id.to_string();
+    let span = tracing::Span::current();
+    span.record("tenant_id", user_hotel_id_str.as_str());
+    span.record("user_id", user_id_str.as_str());
+    span.record("role", user.role.as_str());
+    tracing::info!(
+        tenant_id = %user.hotel_id,
+        user_id = %user.id,
+        role = %user.role,
+        "Login successful"
+    );
 
     let device_id = resolve_device_id(payload.device_id.as_deref(), &headers);
     auth_ctx

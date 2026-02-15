@@ -68,6 +68,9 @@ jobs:
       - name: Validation Governance Docs Gate
         run: ./scripts/check-validation-governance.sh
 
+      - name: RBAC Drift Gate (FE/BE)
+        run: ./scripts/check-rbac-drift.sh
+
       - name: Backend Unit Gate (fmt/clippy/lib/contract)
         run: ./scripts/ci-backend.sh
 
@@ -79,6 +82,18 @@ jobs:
 
       - name: QA Core Journeys Gate (HMS-QA-010)
         run: ./scripts/qa-core-journeys.sh
+
+      - name: Observability Smoke Gate
+        run: ./scripts/observability-smoke.sh
+
+      - name: Backend Coverage Threshold Gate
+        env:
+          HMS_COVERAGE_STRICT: "true"
+          HMS_AUTO_INSTALL_LLVM_COV: "true"
+          HMS_COVERAGE_AUTH_MIN: "70"
+          HMS_COVERAGE_BOOKING_MIN: "45"
+          HMS_COVERAGE_TENANT_MIN: "45"
+        run: ./scripts/backend-coverage-threshold.sh
 
   frontend:
     name: Frontend CI

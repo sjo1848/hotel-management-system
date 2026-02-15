@@ -62,3 +62,43 @@ groups:
         annotations:
           summary: "Alta tasa de fallos en cierre de caja (UI)"
           description: "Más del 30% de eventos close_cash son failure en los últimos 30 minutos."
+
+      - alert: HMSAuthLoginFailureRateHigh
+        expr: |
+          (
+            sum(rate(http_requests_total{path="/api/v1/auth/login",status=~"401|403|429"}[10m]))
+            /
+            clamp_min(sum(rate(http_requests_total{path="/api/v1/auth/login"}[10m])), 1)
+          ) > 0.35
+        for: 10m
+        labels:
+          severity: critical
+          owner: security
+          runbook: docs/ops/runbooks/auth-anomaly-cross-tenant.md
+        annotations:
+          summary: "Anomalía auth: alta tasa de fallo en login"
+          description: "Más del 35% de requests /api/v1/auth/login terminan en 401/403/429 durante 10m."
+
+      - alert: HMSAuthRefreshUnauthorizedSpike
+        expr: |
+          sum(rate(http_requests_total{path="/api/v1/auth/refresh",status="401"}[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          owner: security
+          runbook: docs/ops/runbooks/auth-anomaly-cross-tenant.md
+        annotations:
+          summary: "Anomalía auth: spike de refresh no autorizado"
+          description: "Tasa de 401 en /api/v1/auth/refresh por encima de 0.5 req/s sostenida 5m."
+
+      - alert: HMSCrossTenantForbiddenSpike
+        expr: |
+          sum(rate(http_requests_total{path=~"/api/v1/(bookings|rooms|users|guests).*",status="403"}[10m])) > 0.2
+        for: 10m
+        labels:
+          severity: warning
+          owner: security
+          runbook: docs/ops/runbooks/auth-anomaly-cross-tenant.md
+        annotations:
+          summary: "Posible intento de acceso cross-tenant"
+          description: "Aumento sostenido de 403 en endpoints tenant-scoped críticos (bookings/rooms/users/guests)."

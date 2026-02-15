@@ -198,6 +198,9 @@ echo "==> legacy schema convergence"
 echo "==> validation governance docs gate"
 ./scripts/check-validation-governance.sh
 
+echo "==> rbac drift check (fe/be capability matrix)"
+./scripts/check-rbac-drift.sh
+
 echo "==> backend integration (requires DATABASE_URL / postgres ready)"
 ./scripts/ci-backend-integration.sh
 
@@ -207,6 +210,12 @@ echo "==> backend security regression"
 QA_RUNNER="$(resolve_qa_runner)"
 echo "==> QA core journeys (runner=${QA_RUNNER})"
 ./scripts/qa-core-journeys.sh --runner "$QA_RUNNER"
+
+echo "==> observability smoke (runner=${QA_RUNNER})"
+./scripts/observability-smoke.sh --runner "$QA_RUNNER"
+
+echo "==> backend coverage thresholds"
+./scripts/backend-coverage-threshold.sh
 
 if [[ "$SKIP_FRONTEND" != "true" ]]; then
   echo "==> frontend preflight (rollup fallback)"

@@ -10,6 +10,11 @@ use super::*;
     ),
     tag = "Reservas"
 )]
+#[tracing::instrument(
+    name = "booking.create",
+    skip(state, claims, payload),
+    fields(flow = "create_booking")
+)]
 pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
@@ -17,6 +22,8 @@ pub async fn create_booking_handler(
 ) -> Result<Json<Value>, DomainError> {
     let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let hotel_id_str = hotel_id.to_string();
+    tracing::Span::current().record("tenant_id", hotel_id_str.as_str());
     validate_non_empty_trimmed("guest_name", &payload.guest_name)?;
     validate_len_range("guest_name", &payload.guest_name, 1, 100)?;
     validate_booking_dates(payload.check_in, payload.check_out)?;
@@ -32,6 +39,12 @@ pub async fn create_booking_handler(
             payload.check_out,
         )
         .await?;
+    tracing::info!(
+        tenant_id = %booking.hotel_id,
+        booking_id = %booking.id,
+        room_id = %booking.room_id,
+        "Booking created"
+    );
 
     Ok(Json(json!(booking)))
 }
