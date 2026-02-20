@@ -136,7 +136,7 @@ const BookingList = () => {
                 <TableCell className="py-4 px-6 text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
+                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all text-slate-500 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
                         <MoreVertical className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                       </Button>
                     </DropdownMenuTrigger>

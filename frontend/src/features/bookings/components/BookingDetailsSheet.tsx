@@ -236,7 +236,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                     <div className="flex flex-col sm:flex-row w-full gap-2">
                         {(booking.status === "Confirmed") && (
                             <Button
-                                className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 gap-2"
+                                className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 text-white hover:text-white shadow-lg shadow-emerald-500/20 gap-2"
                                 onClick={() => onUpdateStatus?.(booking.id, "CheckedIn")}
                             >
                                 <CheckCircle className="w-4 h-4" /> Registrar Check-in
@@ -245,7 +245,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
 
                         {(booking.status === "CheckedIn") && (
                             <Button
-                                className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 gap-2"
+                                className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 text-white hover:text-white shadow-lg shadow-blue-500/20 gap-2"
                                 onClick={() => onUpdateStatus?.(booking.id, "CheckedOut")}
                             >
                                 <ArrowRight className="w-4 h-4" /> Registrar Check-out

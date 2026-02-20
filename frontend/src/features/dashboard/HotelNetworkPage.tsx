@@ -165,7 +165,7 @@ const HotelNetworkPage = () => {
             </div>
             
             <SheetFooter className="pt-6 border-t">
-              <Button type="submit" disabled={newHotelLoading} className="w-full h-12 rounded-xl bg-slate-900">
+              <Button type="submit" disabled={newHotelLoading} className="w-full h-12 rounded-xl bg-slate-900 text-white hover:text-white">
                 {newHotelLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Dar de Alta Propiedad"}
               </Button>
             </SheetFooter>

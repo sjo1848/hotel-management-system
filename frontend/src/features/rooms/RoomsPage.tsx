@@ -317,7 +317,7 @@ const RoomsPage = () => {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
                         <MoreVertical className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -354,7 +354,7 @@ const RoomsPage = () => {
                   {room.status === "Available" ? (
                     <Button
                       size="sm"
-                      className="h-8 text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
+                      className="h-8 text-[10px] font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-700 text-white hover:text-white shadow-lg shadow-emerald-500/20"
                       onClick={() => {
                         setSelectedRoom(room);
                         setIsDrawerOpen(true);

@@ -340,7 +340,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
               type="submit"
               disabled={loading}
               className={cn(
-                "rounded-xl h-12 shadow-lg transition-all",
+                "rounded-xl h-12 shadow-lg transition-all text-white hover:text-white",
                 step === 3 ? "bg-emerald-600 hover:bg-emerald-700 flex-[2]" : "bg-slate-900 flex-1"
               )}
             >

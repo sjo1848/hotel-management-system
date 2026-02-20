@@ -79,29 +79,29 @@ const HousekeepingPage = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400 dark:text-slate-500">
+        <div className="flex items-center justify-center py-20 text-slate-600 dark:text-slate-300">
           <Loader2 className="w-8 h-8 animate-spin mr-3" />
           Cargando habitaciones...
         </div>
       ) : rooms.length === 0 ? (
-        <Card className="border-none shadow-xl bg-emerald-50/50 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+        <Card className="rounded-3xl p-10 flex flex-col items-center justify-center text-center border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/30 shadow-xl">
           <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm mb-4">
             <CheckCircle2 className="w-10 h-10 text-emerald-500" />
           </div>
-          <CardTitle className="text-emerald-900 font-black">¡Todo impecable!</CardTitle>
-          <p className="text-emerald-700 mt-2 max-w-sm">No hay habitaciones pendientes de limpieza en este momento.</p>
+          <CardTitle className="text-emerald-900 dark:text-emerald-200 font-black">¡Todo impecable!</CardTitle>
+          <p className="text-emerald-700 dark:text-emerald-300 mt-2 max-w-sm">No hay habitaciones pendientes de limpieza en este momento.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {rooms.map((room) => (
-            <Card key={room.id} className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:shadow-2xl transition-all">
+            <Card key={room.id} className="rounded-3xl overflow-hidden group shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40 border border-slate-200 dark:border-slate-700 hover:shadow-2xl transition-all">
               <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between py-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-mono font-bold">
                     {room.room_number}
                   </div>
                   <div>
-                    <div className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{room.room_type}</div>
+                    <div className="text-xs font-black text-slate-500 dark:text-slate-300 uppercase tracking-widest">{room.room_type}</div>
                   </div>
                 </div>
                 <Badge variant={room.status === "Cleaning" ? "info" : "warning"}>
@@ -110,14 +110,14 @@ const HousekeepingPage = () => {
               </CardHeader>
               <CardContent className="p-6">
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-3 text-slate-700 dark:text-slate-300">
                     <AlertCircle className="w-4 h-4 text-amber-500" />
                     <span className="text-sm font-medium">Requiere atención inmediata</span>
                   </div>
                   
                   {room.status === "Dirty" ? (
                     <Button 
-                      className="w-full h-12 bg-slate-900 rounded-xl shadow-lg transition-all active:scale-95"
+                      className="w-full h-12 bg-slate-900 text-white hover:text-white rounded-xl shadow-lg transition-all active:scale-95"
                       onClick={() => handleStartCleaning(room.id)}
                       disabled={actionLoading === room.id}
                     >
@@ -126,7 +126,7 @@ const HousekeepingPage = () => {
                     </Button>
                   ) : (
                     <Button 
-                      className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-lg transition-all active:scale-95"
+                      className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 text-white hover:text-white rounded-xl shadow-lg transition-all active:scale-95"
                       onClick={() => handleFinishCleaning(room.id)}
                       disabled={actionLoading === room.id}
                     >

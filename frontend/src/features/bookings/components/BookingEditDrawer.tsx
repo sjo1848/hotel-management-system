@@ -379,7 +379,7 @@ const BookingEditDrawer = ({
                 </div>
 
                 <SheetFooter className="pt-6">
-                  <Button type="submit" disabled={loading} className="w-full bg-slate-900 rounded-xl h-12">
+                  <Button type="submit" disabled={loading} className="w-full bg-slate-900 text-white hover:text-white rounded-xl h-12">
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
                   </Button>
                 </SheetFooter>

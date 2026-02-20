@@ -77,7 +77,7 @@ const ReportsPage = () => {
                         <CalendarIcon className="w-4 h-4 mr-2" /> Últimos 30 días
                     </Button>
                     <Button 
-                        className="h-12 rounded-xl bg-slate-900 shadow-lg shadow-slate-200" 
+                        className="h-12 rounded-xl bg-slate-900 text-white hover:text-white shadow-lg shadow-slate-200" 
                         onClick={handleExport}
                     >
                         <Download className="w-4 h-4 mr-2" /> Exportar CSV
