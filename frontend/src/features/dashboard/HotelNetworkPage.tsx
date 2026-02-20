@@ -93,14 +93,14 @@ const HotelNetworkPage = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400 dark:text-slate-500">
+        <div className="flex items-center justify-center py-20 text-slate-600 dark:text-slate-300">
           <Loader2 className="w-8 h-8 animate-spin mr-3" />
           Cargando red...
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {hotels.map((hotel) => (
-            <Card key={hotel.id} className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <Card key={hotel.id} className="rounded-3xl overflow-hidden group border border-slate-200 dark:border-slate-700 shadow-2xl shadow-slate-200/50 dark:shadow-slate-950/40 hover:-translate-y-1 transition-all duration-300">
               <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-6">
                 <div className="flex justify-between items-start">
                   <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex items-center justify-center text-slate-900 dark:text-slate-100">
@@ -123,7 +123,7 @@ const HotelNetworkPage = () => {
                     <ShieldCheck className="w-4 h-4" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Activo</span>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-indigo-600 font-bold gap-2 hover:bg-indigo-50">
+                  <Button variant="ghost" size="sm" className="text-indigo-600 dark:text-indigo-200 font-bold gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/40">
                     Gestionar <ArrowRight className="w-4 h-4" />
                   </Button>
                 </div>
@@ -180,7 +180,9 @@ const HotelNetworkPage = () => {
 const Badge = ({ children, variant = "outline" }: { children: React.ReactNode, variant?: "info" | "outline" }) => (
   <span className={cn(
     "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
-    variant === "info" ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+    variant === "info"
+      ? "bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-200 border-indigo-100 dark:border-indigo-700"
+      : "bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
   )}>
     {children}
   </span>

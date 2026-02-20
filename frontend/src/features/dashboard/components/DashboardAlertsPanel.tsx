@@ -26,14 +26,16 @@ type AlertCardProps = {
 
 const AlertCard = ({ alert, type, onOpenBooking }: AlertCardProps) => (
   <div
-    className="group flex cursor-pointer items-center justify-between rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/70 p-4 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md"
+    className="group flex cursor-pointer items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 p-4 transition-all hover:bg-white dark:hover:bg-slate-800 hover:shadow-md"
     onClick={() => onOpenBooking(alert.booking_id)}
   >
     <div className="flex items-center gap-4">
       <div
         className={cn(
           "flex h-10 w-10 items-center justify-center rounded-lg",
-          type === "arrival" ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600",
+          type === "arrival"
+            ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-200"
+            : "bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-200",
         )}
       >
         {type === "arrival" ? <LogIn className="h-5 w-5" /> : <LogOutIcon className="h-5 w-5" />}
@@ -43,7 +45,7 @@ const AlertCard = ({ alert, type, onOpenBooking }: AlertCardProps) => (
         <div className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Habitación {alert.room_number}</div>
       </div>
     </div>
-    <Button variant="ghost" size="icon" className="rounded-full opacity-0 transition-opacity group-hover:opacity-100">
+    <Button variant="ghost" size="icon" className="rounded-full opacity-0 transition-opacity group-hover:opacity-100 text-slate-500 dark:text-slate-300">
       <MoreVertical className="h-4 w-4 text-slate-400 dark:text-slate-500" />
     </Button>
   </div>

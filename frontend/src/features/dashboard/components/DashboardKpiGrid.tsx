@@ -20,7 +20,7 @@ type KpiCardProps = {
 };
 
 const KpiCard = ({ title, value, subtext, trend, accent, loading, icon: Icon }: KpiCardProps) => (
-  <Card className="group overflow-hidden border-none shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1">
+  <Card className="group overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40 transition-all duration-300 hover:-translate-y-1">
     <div className={cn("h-1 w-full", accent.replace("-50", "-500"))} />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{title}</CardTitle>
@@ -42,7 +42,9 @@ const KpiCard = ({ title, value, subtext, trend, accent, loading, icon: Icon }: 
             <div
               className={cn(
                 "flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-black",
-                trend === "up" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700",
+                trend === "up"
+                  ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-200"
+                  : "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-200",
               )}
             >
               {trend === "up" ? <ArrowUpRight className="mr-0.5 h-3 w-3" /> : <ArrowDownRight className="mr-0.5 h-3 w-3" />}

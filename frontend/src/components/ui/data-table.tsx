@@ -90,7 +90,7 @@ export function DataTable<T extends { id: string | number }>({
                                 <TableCell colSpan={columns.length} className="h-64 text-center">
                                     <div className="flex flex-col items-center justify-center gap-3 text-slate-400 dark:text-slate-500">
                                         <div className="bg-slate-50 dark:bg-slate-800/70 p-4 rounded-full">
-                                            <Inbox className="h-8 w-8 text-slate-300" />
+                                            <Inbox className="h-8 w-8 text-slate-300 dark:text-slate-500" />
                                         </div>
                                         <span className="text-sm font-medium">{emptyMessage}</span>
                                     </div>

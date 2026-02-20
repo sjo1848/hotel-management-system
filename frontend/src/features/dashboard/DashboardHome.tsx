@@ -134,13 +134,13 @@ const DashboardHome = () => {
       </div>
 
       {loadError ? (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4">
-          <p className="text-sm font-semibold text-rose-700">{loadError}</p>
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-4">
+          <p className="text-sm font-semibold text-rose-700 dark:text-rose-200">{loadError}</p>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-lg border-rose-200 bg-white dark:bg-slate-900 text-rose-700 hover:bg-rose-100"
+            className="rounded-lg border-rose-200 dark:border-rose-700 bg-white dark:bg-slate-900 text-rose-700 dark:text-rose-200 hover:bg-rose-100 dark:hover:bg-rose-900/40"
             onClick={() => {
               trackUiEvent("dashboard_retry_clicked");
               void refetchDashboard();

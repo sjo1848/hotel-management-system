@@ -7,7 +7,7 @@ type DashboardRecentBookingsCardProps = {
 };
 
 const DashboardRecentBookingsCard = ({ onViewAll }: DashboardRecentBookingsCardProps) => (
-  <Card className="h-full overflow-hidden rounded-3xl border-none shadow-2xl shadow-slate-200/60">
+  <Card className="h-full overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl shadow-slate-200/60 dark:shadow-slate-950/40">
     <CardHeader className="border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-8 py-6">
       <div className="flex items-center justify-between">
         <div>

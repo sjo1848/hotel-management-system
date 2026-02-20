@@ -133,7 +133,7 @@ const LoginPage = () => {
           </div>
 
           {errorV && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center animate-in slide-in-from-top-2 flex items-center justify-center gap-2">
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-200 text-sm text-center animate-in slide-in-from-top-2 flex items-center justify-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
               {errorV}
             </div>

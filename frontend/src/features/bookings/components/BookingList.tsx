@@ -88,7 +88,7 @@ const BookingList = () => {
   if (loading) {
     return (
       <div className="p-10 flex flex-col items-center justify-center space-y-4">
-        <CheckCircle2 className="w-8 h-8 text-slate-200 animate-pulse" />
+        <CheckCircle2 className="w-8 h-8 text-slate-300 dark:text-slate-500 animate-pulse" />
         <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Actualizando reservas...</span>
       </div>
     );
@@ -97,7 +97,7 @@ const BookingList = () => {
   if (bookings.length === 0) {
     return (
       <div className="p-10 flex flex-col items-center justify-center text-center">
-        <AlertCircle className="w-10 h-10 text-slate-200 mb-2" />
+        <AlertCircle className="w-10 h-10 text-slate-300 dark:text-slate-500 mb-2" />
         <p className="text-sm font-bold text-slate-500 dark:text-slate-400">No hay actividad reciente</p>
       </div>
     );

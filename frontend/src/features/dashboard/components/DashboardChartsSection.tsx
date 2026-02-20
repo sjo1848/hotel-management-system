@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTheme } from "@/features/theme/ThemeProvider";
 
 type RevenuePoint = {
   dateLabel: string;
@@ -29,9 +30,25 @@ type DashboardChartsSectionProps = {
   occupancyData: OccupancyPoint[];
 };
 
-const DashboardChartsSection = ({ loading, revenueData, occupancyData }: DashboardChartsSectionProps) => (
-  <div className="grid gap-8 md:grid-cols-2">
-    <Card className="overflow-hidden rounded-3xl border-none bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60">
+const DashboardChartsSection = ({ loading, revenueData, occupancyData }: DashboardChartsSectionProps) => {
+  const { resolvedTheme } = useTheme();
+  const axisTickColor = resolvedTheme === "light" ? "#64748b" : "#cbd5e1";
+  const gridColor = resolvedTheme === "light" ? "#cbd5e1" : "#334155";
+  const occupancyLowColor = resolvedTheme === "light" ? "#94a3b8" : "#64748b";
+  const tooltipStyle =
+    resolvedTheme === "light"
+      ? { borderRadius: "16px", border: "none", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }
+      : {
+          borderRadius: "16px",
+          border: "1px solid rgb(51 65 85 / 0.8)",
+          boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.45)",
+          backgroundColor: "rgb(15 23 42 / 0.95)",
+          color: "rgb(226 232 240)",
+        };
+
+  return (
+    <div className="grid gap-8 md:grid-cols-2">
+    <Card className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60 dark:shadow-slate-950/40">
       <div className="mb-6 flex flex-col">
         <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">Tendencia de Ingresos</h3>
         <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Últimos 30 días</p>
@@ -48,22 +65,22 @@ const DashboardChartsSection = ({ loading, revenueData, occupancyData }: Dashboa
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
               <XAxis
                 dataKey="dateLabel"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
+                tick={{ fill: axisTickColor, fontSize: 10, fontWeight: 700 }}
                 dy={10}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
+                tick={{ fill: axisTickColor, fontSize: 10, fontWeight: 700 }}
                 tickFormatter={(value) => `$${value}`}
               />
               <Tooltip
-                contentStyle={{ borderRadius: "16px", border: "none", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number | string | undefined) => [`$${Number(value ?? 0).toLocaleString()}`, "Ingreso"]}
               />
               <Area type="monotone" dataKey="amount" stroke="#6366f1" strokeWidth={4} fillOpacity={1} fill="url(#colorRevenue)" />
@@ -73,7 +90,7 @@ const DashboardChartsSection = ({ loading, revenueData, occupancyData }: Dashboa
       </div>
     </Card>
 
-    <Card className="overflow-hidden rounded-3xl border-none bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60">
+    <Card className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60 dark:shadow-slate-950/40">
       <div className="mb-6 flex flex-col">
         <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">Tasa de Ocupación</h3>
         <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Ocupación diaria (%)</p>
@@ -84,28 +101,28 @@ const DashboardChartsSection = ({ loading, revenueData, occupancyData }: Dashboa
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={occupancyData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
               <XAxis
                 dataKey="dateLabel"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
+                tick={{ fill: axisTickColor, fontSize: 10, fontWeight: 700 }}
                 dy={10}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }}
+                tick={{ fill: axisTickColor, fontSize: 10, fontWeight: 700 }}
                 tickFormatter={(value) => `${value}%`}
                 domain={[0, 100]}
               />
               <Tooltip
-                contentStyle={{ borderRadius: "16px", border: "none", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }}
+                contentStyle={tooltipStyle}
                 formatter={(value: number | string | undefined) => [`${Number(value ?? 0)}%`, "Ocupación"]}
               />
               <Bar dataKey="rate" radius={[6, 6, 0, 0]}>
                 {occupancyData.map((entry, index) => (
-                  <Cell key={`occ-${entry.dateLabel}-${index}`} fill={entry.rate > 80 ? "#6366f1" : "#cbd5e1"} />
+                  <Cell key={`occ-${entry.dateLabel}-${index}`} fill={entry.rate > 80 ? "#6366f1" : occupancyLowColor} />
                 ))}
               </Bar>
             </BarChart>
@@ -113,7 +130,8 @@ const DashboardChartsSection = ({ loading, revenueData, occupancyData }: Dashboa
         )}
       </div>
     </Card>
-  </div>
-);
+    </div>
+  );
+};
 
 export default DashboardChartsSection;
