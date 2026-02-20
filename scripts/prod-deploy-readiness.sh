@@ -37,6 +37,8 @@ require_file docker-compose.staging.yml
 require_file scripts/validate-prod-env.sh
 require_file scripts/validate-env-profile.sh
 require_file scripts/deploy-with-rollback.sh
+require_file scripts/post-deploy-synthetics.sh
+require_file scripts/rollback-on-slo-breach.sh
 require_file "$ENV_FILE"
 
 if [[ "$PROFILE" != "auto" && "$PROFILE" != "dev" && "$PROFILE" != "staging" && "$PROFILE" != "prod" ]]; then
@@ -75,3 +77,5 @@ echo "[OK] resolved compose written: /tmp/hms-prod-compose.resolved.yml"
 
 echo "Next command:"
 echo "  ./scripts/deploy-with-rollback.sh --env-file $ENV_FILE --profile $RUNTIME_PROFILE"
+echo "  ./scripts/post-deploy-synthetics.sh --env-file $ENV_FILE --profile $RUNTIME_PROFILE --report /tmp/hms_post_deploy_synthetics.md"
+echo "  ./scripts/rollback-on-slo-breach.sh --env-file $ENV_FILE --profile $RUNTIME_PROFILE --fail-on-breach --report /tmp/hms_rollback_on_slo.md"

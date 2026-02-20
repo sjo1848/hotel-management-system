@@ -18,6 +18,7 @@ Options:
   --simulate-breach          Force breach path without relying on perf results
   --skip-perf-check          Skip perf baseline execution (use with --simulate-breach)
   --execute-rollback         Execute deploy/rollback workflow when breach is detected
+  --fail-on-breach           Exit non-zero when breach is detected (even if rollback succeeds)
   --skip-deploy-tests        Forward --skip-tests to deploy-with-rollback
   --report FILE              Write markdown report (default: /tmp/hms_rollback_on_slo.md)
   -h, --help                 Show this help
@@ -36,6 +37,7 @@ SLO_ERROR_RATE="0.05"
 SIMULATE_BREACH=false
 SKIP_PERF_CHECK=false
 EXECUTE_ROLLBACK=false
+FAIL_ON_BREACH=false
 SKIP_DEPLOY_TESTS=false
 REPORT_FILE="/tmp/hms_rollback_on_slo.md"
 
@@ -53,6 +55,7 @@ while [[ $# -gt 0 ]]; do
     --simulate-breach) SIMULATE_BREACH=true; shift ;;
     --skip-perf-check) SKIP_PERF_CHECK=true; shift ;;
     --execute-rollback) EXECUTE_ROLLBACK=true; shift ;;
+    --fail-on-breach) FAIL_ON_BREACH=true; shift ;;
     --skip-deploy-tests) SKIP_DEPLOY_TESTS=true; shift ;;
     --report) REPORT_FILE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -157,6 +160,7 @@ mkdir -p "$(dirname "$REPORT_FILE")"
   echo "- slo_error_rate: $SLO_ERROR_RATE"
   echo "- simulate_breach: $SIMULATE_BREACH"
   echo "- skip_perf_check: $SKIP_PERF_CHECK"
+  echo "- fail_on_breach: $FAIL_ON_BREACH"
   echo "- perf_failed: $perf_failed"
   echo "- breach_detected: $breach_detected"
   echo "- action_mode: $action_mode"
@@ -173,6 +177,11 @@ echo "Report written to: $REPORT_FILE"
 
 if [[ "$breach_detected" == "true" && "$rollback_result" == "would_execute" ]]; then
   echo "SLO breach detected. Dry-run mode active; rollback command not executed."
+fi
+
+if [[ "$breach_detected" == "true" && "$FAIL_ON_BREACH" == "true" ]]; then
+  echo "SLO breach detected and fail-on-breach is enabled." >&2
+  exit 2
 fi
 
 echo "Rollback-on-SLO flow completed."

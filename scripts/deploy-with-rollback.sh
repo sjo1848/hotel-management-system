@@ -7,20 +7,28 @@ cd "$ROOT_DIR"
 usage() {
   cat <<USAGE
 Uso:
-  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--env-file <path>] [--profile <auto|dev|staging|prod>] [--skip-tests]
+  ./scripts/deploy-with-rollback.sh [--target-ref <git_ref>] [--env-file <path>] [--profile <auto|dev|staging|prod>] [--skip-tests] [--skip-synthetics]
 
 Opciones:
   --target-ref <git_ref>  Ref a desplegar (default: origin/main)
   --env-file <path>       Archivo de variables de entorno (default: .env)
   --profile <...>         Perfil de despliegue (default: auto)
-  --skip-tests            Omite health/smoke tests post-deploy
+  --skip-tests            Omite health/smoke/synthetics post-deploy
+  --skip-synthetics       Omite synthetics post-deploy (mantiene smoke)
+  --synthetics-report P   Ruta del reporte markdown de synthetics (default: /tmp/hms_post_deploy_synthetics.md)
+  --synthetics-base-url U Base URL del backend para synthetics (default: http://localhost:3001)
+  --synthetics-hotel-id H Hotel ID/nombre para login sintético (opcional)
 USAGE
 }
 
 TARGET_REF="origin/main"
 SKIP_TESTS=false
+SKIP_SYNTHETICS=false
 ENV_FILE=".env"
 DEPLOY_PROFILE="auto"
+SYNTHETICS_REPORT="/tmp/hms_post_deploy_synthetics.md"
+SYNTHETICS_BASE_URL="http://localhost:3001"
+SYNTHETICS_HOTEL_ID=""
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -35,6 +43,10 @@ while [ $# -gt 0 ]; do
       ;;
     --skip-tests)
       SKIP_TESTS=true
+      shift
+      ;;
+    --skip-synthetics)
+      SKIP_SYNTHETICS=true
       shift
       ;;
     --env-file)
@@ -53,6 +65,33 @@ while [ $# -gt 0 ]; do
         exit 1
       fi
       DEPLOY_PROFILE="$2"
+      shift 2
+      ;;
+    --synthetics-report)
+      if [ $# -lt 2 ]; then
+        echo "❌ Falta valor para --synthetics-report"
+        usage
+        exit 1
+      fi
+      SYNTHETICS_REPORT="$2"
+      shift 2
+      ;;
+    --synthetics-base-url)
+      if [ $# -lt 2 ]; then
+        echo "❌ Falta valor para --synthetics-base-url"
+        usage
+        exit 1
+      fi
+      SYNTHETICS_BASE_URL="$2"
+      shift 2
+      ;;
+    --synthetics-hotel-id)
+      if [ $# -lt 2 ]; then
+        echo "❌ Falta valor para --synthetics-hotel-id"
+        usage
+        exit 1
+      fi
+      SYNTHETICS_HOTEL_ID="$2"
       shift 2
       ;;
     -h|--help)
@@ -198,6 +237,24 @@ compose_up_with_retry
 if [ "$SKIP_TESTS" = false ]; then
   echo "🩺 Ejecutando health + smoke tests..."
   ./scripts/smoke-test.sh
+
+  if [ "$SKIP_SYNTHETICS" = false ]; then
+    echo "🧪 Ejecutando synthetics post-deploy..."
+    SYNTHETICS_ARGS=(
+      --env-file "$ENV_FILE"
+      --profile "$RUNTIME_PROFILE"
+      --base-url "$SYNTHETICS_BASE_URL"
+      --report "$SYNTHETICS_REPORT"
+    )
+    if [ -n "$SYNTHETICS_HOTEL_ID" ]; then
+      SYNTHETICS_ARGS+=(--hotel-id "$SYNTHETICS_HOTEL_ID")
+    fi
+    ./scripts/post-deploy-synthetics.sh "${SYNTHETICS_ARGS[@]}"
+  else
+    echo "⏭️  Synthetics post-deploy omitidos por --skip-synthetics"
+  fi
+else
+  echo "⏭️  Tests post-deploy omitidos por --skip-tests (incluye smoke + synthetics)"
 fi
 
 rollback_needed=false
@@ -206,3 +263,6 @@ trap - ERR
 echo "✅ Deploy completado con éxito"
 echo "• Commit desplegado: $(git rev-parse --short HEAD)"
 echo "• Backup de rollback: $BACKUP_PATH"
+if [ "$SKIP_TESTS" = false ] && [ "$SKIP_SYNTHETICS" = false ]; then
+  echo "• Reporte synthetics: $SYNTHETICS_REPORT"
+fi

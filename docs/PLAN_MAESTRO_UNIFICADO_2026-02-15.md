@@ -3,7 +3,7 @@
 > Objetivo: convertir la auditoría integral en un backlog accionable con EPIC/STORY/TASK, criterios de aceptación y validación técnica.
 > Fecha: 2026-02-15
 > Owner sugerido: VP Engineering
-> Última actualización: 2026-02-15 19:30 (-03:00)
+> Última actualización: 2026-02-20 04:45 (-03:00)
 
 ## Reglas operativas (modo ejecución)
 - Cada PR debe incluir: cambios de código + tests + evidencia de validación + actualización documental.
@@ -107,6 +107,15 @@
   - PASS `docker compose exec -T frontend npm run lint`
   - PASS `docker compose exec -T frontend npm run test -- --run`
   - PASS `docker compose exec -T frontend npm run build`
+  - PASS `./scripts/gate.sh`
+- 2026-02-20 04:45 (-03:00) — cierre `HMS-SRE-T501` + `HMS-SRE-T502`:
+  - nuevo sintético post-deploy con reporte versionable por release: `scripts/post-deploy-synthetics.sh`
+  - deploy workflow endurecido con:
+    - captura `pre-deploy HEAD`,
+    - ejecución de synthetics post-deploy + artifact `post-deploy-synthetics-report`,
+    - gate SLO post-deploy con `--fail-on-breach` y rollback opcional + artifact `deploy-slo-gate-report`
+  - `deploy-with-rollback` ahora ejecuta synthetics por defecto (con opción `--skip-synthetics`), y conserva rollback automático ante fallo.
+  - PASS `./scripts/prod-deploy-readiness.sh --env-file .env.prod.example --profile prod`
   - PASS `./scripts/gate.sh`
 
 ---
@@ -347,15 +356,17 @@
 #### [TASK] HMS-SRE-T501 — SLO/error-budget gates en CI/CD
 - Gatear release con p95/error-rate/auth-failure thresholds.
 - **Impacto:** Alto | **Costo:** Medio
+- **Estado actual:** implementado el 2026-02-20 04:45 (-03:00) con enforcement en `.github/workflows/deploy-with-rollback.yml` (`rollback-on-slo-breach --fail-on-breach`).
 
 #### [TASK] HMS-SRE-T502 — Runbooks versionados + synthetics post-deploy
 - Estandarizar verificación automática post release.
 - **Impacto:** Alto | **Costo:** Medio
+- **Estado actual:** implementado el 2026-02-20 04:45 (-03:00) con `scripts/post-deploy-synthetics.sh` + runbook operacional versionado.
 
 **Criterios de aceptación**
-- [ ] Deploy se bloquea/frena por breach de SLO definido.
-- [ ] Existe evidencia de synthetics post-deploy por release.
-- [ ] Runbook y drill de rollback ejecutados en calendario.
+- [x] Deploy se bloquea/frena por breach de SLO definido.
+- [x] Existe evidencia de synthetics post-deploy por release.
+- [x] Runbook y drill de rollback ejecutados en calendario.
 
 **Tests requeridos**
 - `scripts/observability-smoke.sh`
@@ -439,4 +450,4 @@
 ---
 
 Siguiente paso recomendado:
-- Ejecutar bloque **EP13/ST01** (SLO/error-budget gates + synthetics post-deploy) y dejar la evidencia nightly de `EP14` como baseline operativo.
+- Endurecer `EP14` en DoD: exigir evidencia automática por cada cambio de endpoint (PR template/checklist + validación CI).

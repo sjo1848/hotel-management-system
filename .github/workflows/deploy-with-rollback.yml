@@ -11,11 +11,38 @@ on:
         description: Git ref a desplegar (ej: origin/main, origin/release/x)
         required: false
         default: origin/main
+      env_file:
+        description: Archivo de entorno para deploy
+        required: false
+        default: .env
+      profile:
+        description: Perfil runtime (auto|dev|staging|prod)
+        required: false
+        default: auto
       skip_tests:
-        description: Omitir smoke tests post-deploy
+        description: Omitir smoke/synthetics post-deploy
         required: false
         type: boolean
         default: false
+      skip_synthetics:
+        description: Omitir solo synthetics post-deploy
+        required: false
+        type: boolean
+        default: false
+      synthetic_hotel_id:
+        description: Hotel ID/nombre para login sintético (opcional)
+        required: false
+        default: ""
+      run_slo_gate:
+        description: Ejecutar gate SLO post-deploy
+        required: false
+        type: boolean
+        default: true
+      execute_slo_rollback:
+        description: Ejecutar rollback automático si hay breach SLO
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   deploy:
@@ -30,13 +57,76 @@ jobs:
       - name: Ensure scripts are executable
         run: chmod +x scripts/*.sh
 
+      - name: Capture pre-deploy HEAD
+        id: predeploy
+        run: echo "ref=$(git rev-parse --verify HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Deploy with rollback
         env:
           TARGET_REF: ${{ github.event.inputs.target_ref }}
+          ENV_FILE: ${{ github.event.inputs.env_file }}
+          PROFILE: ${{ github.event.inputs.profile }}
           SKIP_TESTS: ${{ github.event.inputs.skip_tests }}
+          SKIP_SYNTHETICS: ${{ github.event.inputs.skip_synthetics }}
+          SYNTHETIC_HOTEL_ID: ${{ github.event.inputs.synthetic_hotel_id }}
         run: |
+          ARGS=(
+            --target-ref "${TARGET_REF}"
+            --env-file "${ENV_FILE}"
+            --profile "${PROFILE}"
+            --synthetics-report "/tmp/hms_post_deploy_synthetics.md"
+          )
+
           if [ "${SKIP_TESTS}" = "true" ]; then
-            ./scripts/deploy-with-rollback.sh --target-ref "${TARGET_REF}" --skip-tests
-          else
-            ./scripts/deploy-with-rollback.sh --target-ref "${TARGET_REF}"
+            ARGS+=(--skip-tests)
           fi
+          if [ "${SKIP_SYNTHETICS}" = "true" ]; then
+            ARGS+=(--skip-synthetics)
+          fi
+          if [ -n "${SYNTHETIC_HOTEL_ID}" ]; then
+            ARGS+=(--synthetics-hotel-id "${SYNTHETIC_HOTEL_ID}")
+          fi
+
+          ./scripts/deploy-with-rollback.sh "${ARGS[@]}"
+
+      - name: Upload post-deploy synthetics report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: post-deploy-synthetics-report
+          path: /tmp/hms_post_deploy_synthetics.md
+          if-no-files-found: warn
+
+      - name: SLO gate + rollback-on-breach
+        if: ${{ github.event.inputs.run_slo_gate == 'true' }}
+        env:
+          ENV_FILE: ${{ github.event.inputs.env_file }}
+          PROFILE: ${{ github.event.inputs.profile }}
+          PRE_DEPLOY_HEAD: ${{ steps.predeploy.outputs.ref }}
+          EXECUTE_SLO_ROLLBACK: ${{ github.event.inputs.execute_slo_rollback }}
+        run: |
+          ARGS=(
+            --env-file "${ENV_FILE}"
+            --profile "${PROFILE}"
+            --target-ref "${PRE_DEPLOY_HEAD}"
+            --base-url "http://localhost:3001"
+            --requests 8
+            --concurrency 2
+            --warmup 1
+            --slo-p95-sec 1.0
+            --slo-error-rate 0.05
+            --fail-on-breach
+            --report "/tmp/hms_rollback_on_slo.md"
+          )
+          if [ "${EXECUTE_SLO_ROLLBACK}" = "true" ]; then
+            ARGS+=(--execute-rollback --skip-deploy-tests)
+          fi
+          ./scripts/rollback-on-slo-breach.sh "${ARGS[@]}"
+
+      - name: Upload SLO gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-slo-gate-report
+          path: /tmp/hms_rollback_on_slo.md
+          if-no-files-found: warn
