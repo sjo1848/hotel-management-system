@@ -919,6 +919,12 @@ components:
           format: date-time
     BookingAlert:
       type: object
+      additionalProperties: false
+      required:
+        - booking_id
+        - guest_name
+        - room_number
+        - status
       properties:
         booking_id:
           type: string
@@ -936,6 +942,16 @@ components:
             - Cancelled
     DashboardKpis:
       type: object
+      additionalProperties: false
+      required:
+        - revenue_month_cents
+        - occupancy_rate
+        - today_check_ins
+        - active_bookings_count
+        - arrivals_today
+        - departures_today
+        - rev_par_cents
+        - adr_cents
       properties:
         revenue_month_cents:
           type: integer
@@ -1025,6 +1041,10 @@ components:
           nullable: true
     RevenueReport:
       type: object
+      additionalProperties: false
+      required:
+        - date
+        - revenue_cents
       properties:
         date:
           type: string
@@ -1033,6 +1053,12 @@ components:
           type: integer
     OccupancyReport:
       type: object
+      additionalProperties: false
+      required:
+        - date
+        - occupied_rooms
+        - total_rooms
+        - occupancy_rate
       properties:
         date:
           type: string

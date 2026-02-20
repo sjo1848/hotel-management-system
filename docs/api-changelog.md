@@ -2,6 +2,13 @@
 
 ## v1
 
+### 2026-02-20 04:20 (-03:00)
+- Hardening no-breaking del contrato OpenAPI en analítica/reportes:
+  - `RevenueReport`, `OccupancyReport`, `DashboardKpis` y `BookingAlert` ahora definen `required` explícito y `additionalProperties: false`.
+- Se explicitan enums de estado en contrato core para reducir drift FE/BE:
+  - `Room.status`, `Booking.status`, `BookingAlert.status`.
+  - `PATCH /api/v1/rooms/{id}/status` enum explícito del payload.
+
 ### 2026-02-15 16:40 (-03:00)
 - Se agrega endpoint `GET /api/v1/rooms/{id}` para alinear contrato FE/BE en detalle de habitación.
 - Se formaliza ventana de compatibilidad para endpoints legacy de listado completo:

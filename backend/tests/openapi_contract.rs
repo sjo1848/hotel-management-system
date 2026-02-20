@@ -240,6 +240,68 @@ fn monetization_endpoints_use_explicit_response_schemas() {
 }
 
 #[test]
+fn reporting_schemas_are_strict_and_non_extensible() {
+    let doc = openapi_doc();
+    let components = get_mapping(&doc, "components");
+    let schemas = components
+        .get("schemas")
+        .and_then(Value::as_mapping)
+        .expect("components.schemas must be present");
+
+    let required_sets: &[(&str, &[&str])] = &[
+        ("RevenueReport", &["date", "revenue_cents"]),
+        (
+            "OccupancyReport",
+            &["date", "occupied_rooms", "total_rooms", "occupancy_rate"],
+        ),
+        (
+            "DashboardKpis",
+            &[
+                "revenue_month_cents",
+                "occupancy_rate",
+                "today_check_ins",
+                "active_bookings_count",
+                "arrivals_today",
+                "departures_today",
+                "rev_par_cents",
+                "adr_cents",
+            ],
+        ),
+        (
+            "BookingAlert",
+            &["booking_id", "guest_name", "room_number", "status"],
+        ),
+    ];
+
+    for (schema_name, required_fields) in required_sets {
+        let schema = schemas
+            .get(Value::from(*schema_name))
+            .and_then(Value::as_mapping)
+            .unwrap_or_else(|| panic!("missing schema: {schema_name}"));
+
+        let additional_properties = schema
+            .get("additionalProperties")
+            .and_then(Value::as_bool)
+            .unwrap_or(true);
+        assert!(
+            !additional_properties,
+            "{schema_name} must set additionalProperties=false"
+        );
+
+        let required = schema
+            .get("required")
+            .and_then(Value::as_sequence)
+            .unwrap_or_else(|| panic!("{schema_name} must define required fields"));
+        for field in *required_fields {
+            assert!(
+                required.contains(&Value::from(*field)),
+                "{schema_name}.required must include {field}"
+            );
+        }
+    }
+}
+
+#[test]
 fn status_enums_are_explicit_in_core_contracts() {
     let doc = openapi_doc();
     let components = get_mapping(&doc, "components");
