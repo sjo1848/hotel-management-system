@@ -1192,6 +1192,17 @@ components:
         phone:
           type: string
           nullable: true
+    CreateRoomRequest:
+      type: object
+      additionalProperties: false
+      required: [room_number, room_type, price_cents]
+      properties:
+        room_number:
+          type: string
+        room_type:
+          type: string
+        price_cents:
+          type: integer
     UserView:
       type: object
       properties:

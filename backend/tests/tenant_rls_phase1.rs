@@ -152,6 +152,79 @@ async fn rls_phase1_blocks_cross_tenant_reads_and_writes_when_bypass_disabled(po
     sqlx::query("RESET ROLE").execute(&mut *conn).await.unwrap();
 }
 
+#[sqlx::test]
+async fn rls_phase1_is_fail_closed_when_bypass_and_tenant_context_are_missing(pool: sqlx::PgPool) {
+    setup_rls_test_role(&pool).await;
+    let fixture = seed_fixture(&pool).await;
+
+    let mut conn = pool.acquire().await.unwrap();
+    sqlx::query(&format!("SET ROLE {RLS_TEST_ROLE}"))
+        .execute(&mut *conn)
+        .await
+        .unwrap();
+
+    sqlx::query(
+        "SELECT
+            set_config('app.rls_bypass', '', false),
+            set_config('app.current_hotel_id', '', false),
+            set_config('app.hotel_id', '', false)",
+    )
+    .execute(&mut *conn)
+    .await
+    .unwrap();
+
+    let visible_users = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+    let visible_bookings = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM bookings")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+    let visible_tokens = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM refresh_tokens")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+    let visible_invoices = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM invoices")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+
+    assert_eq!(
+        visible_users, 0,
+        "users must be hidden without tenant context"
+    );
+    assert_eq!(
+        visible_bookings, 0,
+        "bookings must be hidden without tenant context"
+    );
+    assert_eq!(
+        visible_tokens, 0,
+        "refresh tokens must be hidden without tenant context"
+    );
+    assert_eq!(
+        visible_invoices, 0,
+        "invoices must be hidden without tenant context"
+    );
+
+    sqlx::query("SELECT set_config('app.current_hotel_id', $1, false)")
+        .bind(fixture.hotel_a.to_string())
+        .execute(&mut *conn)
+        .await
+        .unwrap();
+
+    let users_with_tenant = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM users")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+    assert_eq!(
+        users_with_tenant, 1,
+        "tenant context should restore scoped access"
+    );
+
+    sqlx::query("RESET ROLE").execute(&mut *conn).await.unwrap();
+}
+
 async fn setup_rls_test_role(pool: &sqlx::PgPool) {
     pool.execute(
         r#"

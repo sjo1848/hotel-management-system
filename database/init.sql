@@ -27,5 +27,6 @@
 \ir ../backend/migrations/0014_tenant_query_tuning_indexes.sql
 \ir ../backend/migrations/0015_rls_phase1_tenant_policies.sql
 \ir ../backend/migrations/0016_keyset_pagination_indexes.sql
+\ir ../backend/migrations/0017_rls_bypass_default_false.sql
 
 \echo '[hms] migraciones SQLx aplicadas desde database/init.sql (compat shim).'

@@ -116,6 +116,9 @@ jobs:
       - name: Frontend Runner Preflight (Rollup optional fallback)
         run: ./scripts/frontend-runner-preflight.sh
 
+      - name: Frontend OpenAPI Codegen Sync
+        run: ./scripts/check-openapi-frontend-codegen.sh
+
       - name: Lint
         run: npm run lint
         working-directory: frontend

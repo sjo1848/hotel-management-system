@@ -189,6 +189,9 @@ echo "==> openapi alignment"
 echo "==> frontend/openapi contractual drift"
 ./scripts/check-openapi-frontend-drift.sh
 
+echo "==> frontend openapi codegen sync"
+./scripts/check-openapi-frontend-codegen.sh
+
 echo "==> environment profile security preflight"
 ./scripts/check-env-profile-security.sh
 

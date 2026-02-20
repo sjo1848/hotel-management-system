@@ -2,6 +2,13 @@
 
 ## v1
 
+### 2026-02-20 02:12 (-03:00)
+- Hardening de contrato OpenAPI para habilitar codegen FE bloqueante:
+  - se agrega schema explícito faltante `CreateRoomRequest` en `components.schemas`.
+- Se incorpora validación contractual de cliente generado FE desde OpenAPI:
+  - nuevo gate `scripts/check-openapi-frontend-codegen.sh` integrado en gates locales/CI.
+  - workflow CI de frontend ahora ejecuta chequeo de sincronización de codegen.
+
 ### 2026-02-20 04:20 (-03:00)
 - Hardening no-breaking del contrato OpenAPI en analítica/reportes:
   - `RevenueReport`, `OccupancyReport`, `DashboardKpis` y `BookingAlert` ahora definen `required` explícito y `additionalProperties: false`.
