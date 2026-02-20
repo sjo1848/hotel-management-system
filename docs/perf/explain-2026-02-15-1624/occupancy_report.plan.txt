@@ -1,0 +1,39 @@
+                                                                                                                                                                                                                         QUERY PLAN                                                                                                                                                                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Sort  (cost=8275.53..8278.03 rows=1000 width=20) (actual time=0.421..0.424 rows=15 loops=1)
+   Output: (((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date), ((SubPlan 1)), (count(*))
+   Sort Key: (((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date)
+   Sort Method: quicksort  Memory: 25kB
+   Buffers: shared hit=35
+   ->  Nested Loop  (cost=8.17..8225.70 rows=1000 width=20) (actual time=0.158..0.188 rows=15 loops=1)
+         Output: (((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date), (SubPlan 1), (count(*))
+         Buffers: shared hit=32
+         ->  Aggregate  (cost=8.17..8.18 rows=1 width=8) (actual time=0.120..0.121 rows=1 loops=1)
+               Output: count(*)
+               Buffers: shared hit=2
+               ->  Index Only Scan using idx_rooms_hotel_status_id on public.rooms  (cost=0.15..8.17 rows=1 width=0) (actual time=0.106..0.109 rows=7 loops=1)
+                     Output: rooms.hotel_id, rooms.status, rooms.id
+                     Index Cond: (rooms.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid)
+                     Heap Fetches: 7
+                     Buffers: shared hit=2
+         ->  Result  (cost=0.00..25.02 rows=1000 width=4) (actual time=0.007..0.015 rows=15 loops=1)
+               Output: ((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date
+               ->  ProjectSet  (cost=0.00..5.02 rows=1000 width=8) (actual time=0.006..0.011 rows=15 loops=1)
+                     Output: generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)
+                     ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.000 rows=1 loops=1)
+         SubPlan 1
+           ->  Aggregate  (cost=8.17..8.18 rows=1 width=8) (actual time=0.002..0.003 rows=1 loops=15)
+                 Output: count(DISTINCT bookings.room_id)
+                 Buffers: shared hit=30
+                 ->  Index Only Scan using idx_bookings_hotel_room_dates_status on public.bookings  (cost=0.14..8.17 rows=1 width=16) (actual time=0.002..0.002 rows=0 loops=15)
+                       Output: bookings.hotel_id, bookings.room_id, bookings.check_in, bookings.check_out, bookings.status
+                       Index Cond: ((bookings.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid) AND (bookings.check_in <= (((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date)) AND (bookings.check_out > (((generate_series(('2026-02-01'::date)::timestamp with time zone, ('2026-02-15'::date)::timestamp with time zone, '1 day'::interval)))::date)))
+                       Filter: ((bookings.status)::text = ANY ('{CONFIRMED,CHECKED_IN}'::text[]))
+                       Heap Fetches: 0
+                       Buffers: shared hit=30
+ Planning:
+   Buffers: shared hit=494 read=1
+ Planning Time: 7.151 ms
+ Execution Time: 0.819 ms
+(35 rows)
+

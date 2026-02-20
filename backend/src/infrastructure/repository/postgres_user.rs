@@ -1,5 +1,6 @@
 use crate::domain::models::User;
 use crate::domain::repositories::UserRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -21,14 +22,16 @@ impl UserRepository for PostgresUserRepository {
         hotel_id: Uuid,
         username: &str,
     ) -> Result<Option<User>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, username, password_hash, role FROM users WHERE hotel_id = $1 AND username = $2",
         )
         .bind(hotel_id)
         .bind(username)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| User {
             id: row.try_get("id").unwrap(),
@@ -40,26 +43,30 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn create(&self, user: User) -> Result<User, String> {
+        let mut tx = begin_tenant_tx(&self.pool, user.hotel_id).await?;
         sqlx::query("INSERT INTO users (id, hotel_id, username, password_hash, role) VALUES ($1, $2, $3, $4, $5)")
             .bind(user.id)
             .bind(user.hotel_id)
             .bind(&user.username)
             .bind(&user.password_hash)
             .bind(&user.role)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(user)
     }
 
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<User>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query("SELECT id, hotel_id, username, password_hash, role FROM users WHERE hotel_id = $1 AND id = $2")
             .bind(hotel_id)
             .bind(id)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| User {
             id: row.try_get("id").unwrap(),
@@ -71,13 +78,15 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<User>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, username, password_hash, role FROM users WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -92,16 +101,18 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn delete(&self, hotel_id: Uuid, id: Uuid) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let result = sqlx::query("DELETE FROM users WHERE hotel_id = $1 AND id = $2")
             .bind(hotel_id)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 
         if result.rows_affected() == 0 {
             return Err("USER_NOT_FOUND".to_string());
         }
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }

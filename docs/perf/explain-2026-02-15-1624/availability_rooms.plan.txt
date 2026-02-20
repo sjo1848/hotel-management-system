@@ -1,0 +1,22 @@
+                                                                             QUERY PLAN                                                                             
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Nested Loop Anti Join  (cost=0.29..16.35 rows=1 width=254) (actual time=0.047..0.055 rows=7 loops=1)
+   Output: r.id, r.hotel_id, r.room_number, r.room_type, r.status, r.price_cents
+   Join Filter: (b.room_id = r.id)
+   Buffers: shared hit=16
+   ->  Index Scan using idx_rooms_hotel_status_id on public.rooms r  (cost=0.15..8.17 rows=1 width=254) (actual time=0.024..0.026 rows=7 loops=1)
+         Output: r.id, r.room_number, r.room_type, r.status, r.price_cents, r.version, r.hotel_id
+         Index Cond: ((r.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid) AND ((r.status)::text = 'AVAILABLE'::text))
+         Buffers: shared hit=2
+   ->  Index Only Scan using idx_bookings_hotel_room_dates_status on public.bookings b  (cost=0.14..8.17 rows=1 width=16) (actual time=0.003..0.003 rows=0 loops=7)
+         Output: b.hotel_id, b.room_id, b.check_in, b.check_out, b.status
+         Index Cond: ((b.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid) AND (b.check_in < '2026-02-15'::date) AND (b.check_out > '2026-02-01'::date))
+         Filter: ((b.status)::text <> 'CANCELLED'::text)
+         Heap Fetches: 0
+         Buffers: shared hit=14
+ Planning:
+   Buffers: shared hit=523 read=3
+ Planning Time: 5.996 ms
+ Execution Time: 0.164 ms
+(18 rows)
+

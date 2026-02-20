@@ -2,10 +2,14 @@
 async fn tenant_query_tuning_indexes_exist(pool: sqlx::PgPool) {
     let expected_indexes = [
         "idx_bookings_hotel_created_at_desc",
+        "idx_bookings_hotel_created_at_id_desc",
         "idx_users_hotel_created_at_desc",
         "idx_guests_hotel_created_at_desc",
+        "idx_guests_hotel_created_at_id_desc",
         "idx_audit_events_hotel_created_at_desc",
+        "idx_audit_events_hotel_created_at_id_desc",
         "idx_invoices_hotel_created_at_desc",
+        "idx_invoices_hotel_created_at_id_desc",
         "idx_cash_closures_hotel_closing_time_desc",
     ];
 

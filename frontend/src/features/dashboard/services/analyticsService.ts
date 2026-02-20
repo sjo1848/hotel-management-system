@@ -21,6 +21,12 @@ export type RevenueReportItem = {
   amount_cents: number;
 };
 
+type RevenueReportItemRaw = {
+  date: string;
+  amount_cents?: number;
+  revenue_cents?: number;
+};
+
 export type OccupancyReportItem = {
   date: string;
   occupancy_rate: number;
@@ -33,8 +39,11 @@ export const getDashboardKpis = async (): Promise<DashboardKpis> => {
 
 export const getRevenueReport = async (start?: string, end?: string): Promise<RevenueReportItem[]> => {
   const params = { start, end };
-  const response = await client.get("/reports/revenue", { params });
-  return response.data;
+  const response = await client.get<RevenueReportItemRaw[]>("/reports/revenue", { params });
+  return (response.data ?? []).map((item) => ({
+    date: item.date,
+    amount_cents: item.amount_cents ?? item.revenue_cents ?? 0,
+  }));
 };
 
 export const getOccupancyReport = async (start?: string, end?: string): Promise<OccupancyReportItem[]> => {

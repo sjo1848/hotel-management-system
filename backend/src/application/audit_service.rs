@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::AuditEvent;
+use crate::domain::models::{AuditEvent, AuditEventPage, BookingPageCursor};
 use crate::domain::repositories::AuditRepository;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -39,6 +39,18 @@ impl AuditService {
     ) -> Result<Vec<AuditEvent>, DomainError> {
         self.audit_repo
             .find_recent_by_hotel(hotel_id, limit)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn list_recent_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<AuditEventPage, DomainError> {
+        self.audit_repo
+            .find_recent_page_by_hotel(hotel_id, limit, cursor)
             .await
             .map_err(DomainError::InfrastructureError)
     }

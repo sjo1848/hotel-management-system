@@ -1,7 +1,8 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{
-    AuditEvent, Booking, BookingStatus, CashClosure, ExtraCharge, Guest, Hotel, Invoice,
-    RefreshToken, Room, User,
+    AuditEvent, AuditEventPage, Booking, BookingPage, BookingPageCursor, BookingStatus,
+    CashClosure, ExtraCharge, Guest, GuestPage, Hotel, Invoice, InvoicePage, RefreshToken, Room,
+    User,
 };
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -50,6 +51,14 @@ pub trait BookingRepository: Send + Sync {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Booking>, String>;
+    async fn find_page(
+        &self,
+        hotel_id: Uuid,
+        start: Option<NaiveDate>,
+        end: Option<NaiveDate>,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<BookingPage, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Booking>, String>;
     async fn update(&self, booking: Booking) -> Result<Booking, String>;
     async fn find_by_room(&self, hotel_id: Uuid, room_id: Uuid) -> Result<Vec<Booking>, String>;
@@ -105,6 +114,12 @@ pub trait BookingTransactionRepository: Send + Sync {
 #[async_trait]
 pub trait GuestRepository: Send + Sync {
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Guest>, String>;
+    async fn find_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<GuestPage, String>;
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Guest>, String>;
     async fn create(&self, guest: Guest) -> Result<Guest, String>;
 }
@@ -126,7 +141,7 @@ pub trait UserRepository: Send + Sync {
 pub trait RefreshTokenRepository: Send + Sync {
     async fn create(&self, token: RefreshToken) -> Result<RefreshToken, String>;
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String>;
-    async fn revoke(&self, token_id: Uuid) -> Result<(), String>;
+    async fn revoke_for_hotel(&self, hotel_id: Uuid, token_id: Uuid) -> Result<(), String>;
     async fn revoke_all_for_device(
         &self,
         hotel_id: Uuid,
@@ -150,6 +165,12 @@ pub trait AuditRepository: Send + Sync {
         hotel_id: Uuid,
         limit: i64,
     ) -> Result<Vec<AuditEvent>, String>;
+    async fn find_recent_page_by_hotel(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<AuditEventPage, String>;
 }
 
 #[async_trait]
@@ -172,6 +193,12 @@ pub trait InvoiceRepository: Send + Sync {
         booking_id: Uuid,
     ) -> Result<Option<Invoice>, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, String>;
+    async fn find_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<InvoicePage, String>;
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String>; // Total, Cash, Card
 }
 

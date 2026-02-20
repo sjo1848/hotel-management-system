@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::Invoice;
+use crate::domain::models::{BookingPageCursor, Invoice, InvoicePage};
 use crate::domain::repositories::InvoiceRepository;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -16,6 +16,18 @@ impl InvoiceService {
     pub async fn list_invoices(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, DomainError> {
         self.invoice_repo
             .find_all(hotel_id)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn list_invoices_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<InvoicePage, DomainError> {
+        self.invoice_repo
+            .find_page(hotel_id, limit, cursor)
             .await
             .map_err(DomainError::InfrastructureError)
     }

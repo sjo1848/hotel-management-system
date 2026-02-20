@@ -78,6 +78,13 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
 
     const statusInfo = getStatusInfo(booking.status);
     const StatusIcon = statusInfo.icon;
+    const invoiceStatusInfo = invoice
+        ? invoice.status === "PAID"
+            ? { label: "Pagada", className: "bg-emerald-600 text-white" }
+            : invoice.status === "VOIDED"
+                ? { label: "Anulada", className: "bg-slate-200 text-slate-700 border-slate-300" }
+                : { label: "Pendiente", className: "bg-amber-100 text-amber-700 border-amber-200" }
+        : null;
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
@@ -198,11 +205,9 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                             </div>
                                             <Badge className={cn(
                                                 "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                                                invoice.status === 'Paid'
-                                                    ? "bg-emerald-600 text-white"
-                                                    : "bg-amber-100 text-amber-700 border-amber-200"
+                                                invoiceStatusInfo?.className
                                             )}>
-                                                {invoice.status === 'Paid' ? 'Pagada' : 'Pendiente'}
+                                                {invoiceStatusInfo?.label}
                                             </Badge>
                                         </div>
 

@@ -1,5 +1,8 @@
 use super::*;
 
+const DEFAULT_AUDIT_PAGE_LIMIT: usize = 50;
+const MAX_AUDIT_PAGE_LIMIT: usize = 100;
+
 pub async fn health_check() -> Json<Value> {
     Json(json!({ "status": "operational" }))
 }
@@ -7,8 +10,8 @@ pub async fn health_check() -> Json<Value> {
 pub async fn readiness_check(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
-    let dummy_hotel = Uuid::nil(); // Solo para verificar conexión
-    let _: Vec<crate::domain::models::Room> = state.room_service.list_rooms(dummy_hotel).await?;
+    // Readiness must validate DB connectivity without requiring tenant context.
+    let _: Vec<crate::domain::models::Hotel> = state.hotel_service.list_hotels().await?;
     Ok(Json(json!({ "status": "ready" })))
 }
 
@@ -107,6 +110,49 @@ pub async fn get_audit_events_handler(
     let limit = params.limit.unwrap_or(50).clamp(1, 200) as i64;
     let events = state.audit_service.list_recent(hotel_id, limit).await?;
     Ok(Json(json!(events)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/audit/events/page",
+    responses(
+        (status = 200, description = "Página de eventos de auditoría", body = AuditEventPageResponse),
+        (status = 400, description = "Cursor inválido")
+    ),
+    params(
+        ("limit" = Option<usize>, Query, description = "Tamaño de página (1-100)"),
+        ("cursor" = Option<String>, Query, description = "Cursor opaco de paginación keyset")
+    ),
+    tag = "Análisis",
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_audit_events_page_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Query(params): Query<CursorPageParams>,
+) -> Result<Json<Value>, DomainError> {
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let cursor = match params.cursor.as_deref() {
+        Some(encoded) if !encoded.trim().is_empty() => Some(decode_page_cursor(encoded)?),
+        _ => None,
+    };
+    let limit = params
+        .limit
+        .unwrap_or(DEFAULT_AUDIT_PAGE_LIMIT)
+        .clamp(1, MAX_AUDIT_PAGE_LIMIT);
+
+    let page = state
+        .audit_service
+        .list_recent_page(hotel_id, limit, cursor)
+        .await?;
+
+    Ok(Json(json!(AuditEventPageResponse {
+        items: page.items,
+        next_cursor: page.next_cursor.as_ref().map(encode_page_cursor),
+        has_more: page.has_more,
+    })))
 }
 
 #[utoipa::path(

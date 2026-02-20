@@ -1,0 +1,30 @@
+name: nightly-qa-e2e-matrix
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  qa-e2e-matrix:
+    name: QA Nightly Cross-Role/Cross-Tenant Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      DOCS_GOVERNANCE_STRICT: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run nightly cross-role/cross-tenant matrix
+        run: ./scripts/qa-core-journeys-e2e.sh --runner docker --skip-browser
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          if-no-files-found: ignore

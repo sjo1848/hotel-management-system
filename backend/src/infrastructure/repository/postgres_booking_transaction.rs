@@ -1,6 +1,7 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{Booking, BookingStatus, RoomStatus};
 use crate::domain::repositories::BookingTransactionRepository;
+use crate::infrastructure::repository::tenant_context::apply_tenant_context;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use sqlx::postgres::PgPool;
@@ -32,6 +33,10 @@ impl BookingTransactionRepository for PostgresBookingTransactionRepository {
         status: Option<BookingStatus>,
     ) -> Result<Booking, DomainError> {
         let mut tx = self.pool.begin().await.map_err(map_sql_error)?;
+        let tenant_id = hotel_id.to_string();
+        apply_tenant_context(&mut tx, &tenant_id)
+            .await
+            .map_err(DomainError::InfrastructureError)?;
 
         let existing = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status

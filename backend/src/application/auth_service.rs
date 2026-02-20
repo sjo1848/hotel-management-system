@@ -138,7 +138,7 @@ impl AuthService {
         }
 
         self.refresh_repo
-            .revoke(refresh.id)
+            .revoke_for_hotel(refresh.hotel_id, refresh.id)
             .await
             .map_err(map_refresh_repo_error)?;
 
@@ -164,7 +164,7 @@ impl AuthService {
             .ok_or(DomainError::Unauthorized)?;
 
         self.refresh_repo
-            .revoke(refresh.id)
+            .revoke_for_hotel(refresh.hotel_id, refresh.id)
             .await
             .map_err(map_refresh_repo_error)?;
 
@@ -208,7 +208,7 @@ impl AuthService {
             .ok_or(DomainError::Unauthorized)?;
 
         self.refresh_repo
-            .revoke(refresh.id)
+            .revoke_for_hotel(refresh.hotel_id, refresh.id)
             .await
             .map_err(map_refresh_repo_error)?;
 

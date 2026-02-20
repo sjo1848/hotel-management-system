@@ -65,6 +65,14 @@ impl RoomService {
             .map_err(DomainError::InfrastructureError)
     }
 
+    pub async fn get_room_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Room, DomainError> {
+        self.room_repo
+            .find_by_id(hotel_id, id)
+            .await
+            .map_err(DomainError::InfrastructureError)?
+            .ok_or(DomainError::RoomNotFound)
+    }
+
     pub async fn update_room_status(
         &self,
         hotel_id: Uuid,

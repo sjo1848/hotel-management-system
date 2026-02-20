@@ -1,239 +1,87 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, CheckCircle, Clock, XCircle, MoreVertical, Filter, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { DataTable, Column } from "@/components/ui/data-table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { getBookings, updateBooking } from "./services/bookingService";
-import { Booking } from "@/types/domain";
-import { useToast } from "@/components/ui/toast";
-import { downloadCSV, cn } from "@/lib/utils";
-import BookingEditDrawer from "./components/BookingEditDrawer";
-import BookingDetailsSheet from "./components/BookingDetailsSheet";
-import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
-import { getErrorMessage } from "@/api/errors";
+import { DataTable } from "@/components/ui/data-table";
+import type { Booking } from "@/types/domain";
+import BookingDetailsSheet from "@/features/bookings/components/BookingDetailsSheet";
+import BookingEditDrawer from "@/features/bookings/components/BookingEditDrawer";
+import BookingsFiltersToolbar from "@/features/bookings/components/BookingsFiltersToolbar";
+import { buildBookingsColumns } from "@/features/bookings/components/bookingsColumns";
+import { useBookingsPageData } from "@/features/bookings/hooks/useBookingsPageData";
 
 const BookingsPage = () => {
-  const { toast } = useToast();
   const navigate = useNavigate();
-  const bookingQueryKey = "bookings:list";
-  const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedBooking, setSelectedRoom] = useState<Booking | null>(null);
+  const {
+    filteredBookings,
+    filterStatus,
+    setFilterStatus,
+    setSearchQuery,
+    isLoading,
+    error,
+    refreshBookings,
+    cancelBooking,
+    exportBookings,
+  } = useBookingsPageData();
+
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const {
-    data: bookingsData,
-    isLoading: loading,
-    error: bookingLoadError,
-    refetch: refetchBookings,
-  } = useResourceQuery<Booking[]>({
-    queryKey: bookingQueryKey,
-    queryFn: getBookings,
-    staleTimeMs: 10_000,
-  });
-
-  const bookings = useMemo(() => bookingsData ?? [], [bookingsData]);
-
-  const handleCancel = async (id: string) => {
-    try {
-      await updateBooking(id, { status: "Cancelled" });
-      toast({ title: "Reserva cancelada", variant: "success" });
-      invalidateResource(bookingQueryKey);
-      await refetchBookings();
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "No se pudo cancelar la reserva"),
-        variant: "error",
-      });
-    }
-  };
-
-  const handleExport = () => {
-    if (bookings.length === 0) {
-      toast({ title: "Sin datos", description: "No hay reservas para exportar", variant: "default" });
-      return;
-    }
-    downloadCSV(bookings, `reservas_${new Date().toISOString().split('T')[0]}.csv`);
-    toast({ title: "Exportación exitosa", description: "El archivo CSV ha sido generado", variant: "success" });
-  };
-
-  const filteredBookings = bookings.filter((b) =>
-    filterStatus === "all" ? true : b.status === filterStatus
+  const columns = useMemo(
+    () =>
+      buildBookingsColumns({
+        onViewDetails: (booking) => {
+          setSelectedBooking(booking);
+          setIsDetailsOpen(true);
+        },
+        onEditStatus: (booking) => {
+          setSelectedBooking(booking);
+          setIsEditOpen(true);
+        },
+        onCancelBooking: (bookingId) => {
+          void cancelBooking(bookingId);
+        },
+      }),
+    [cancelBooking],
   );
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "Confirmed":
-        return <Badge variant="info" className="gap-1"><Clock className="w-3 h-3" /> Confirmada</Badge>;
-      case "CheckedIn":
-        return <Badge variant="success" className="gap-1"><CheckCircle className="w-3 h-3" /> Check-in</Badge>;
-      case "CheckedOut":
-        return <Badge variant="neutral" className="gap-1"><CheckCircle className="w-3 h-3" /> Finalizada</Badge>;
-      case "Cancelled":
-        return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Cancelada</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const columns: Column<Booking>[] = [
-    {
-      header: "Huésped",
-      cell: (item) => (
-        <div>
-          <div className="font-bold text-slate-900">{item.guest_name}</div>
-          <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-0.5">ID: {item.id.slice(0, 8)}</div>
-        </div>
-      ),
-    },
-    {
-      header: "Habitación",
-      accessorKey: "room_id",
-      cell: (item) => <Badge variant="outline" className="font-mono">Room {item.room_id.slice(0, 4)}</Badge>
-    },
-    {
-      header: "Check-in",
-      accessorKey: "check_in",
-    },
-    {
-      header: "Check-out",
-      accessorKey: "check_out",
-    },
-    {
-      header: "Total",
-      cell: (item) => <span className="font-mono font-bold text-slate-700">${(item.total_price_cents / 100).toLocaleString()}</span>,
-    },
-    {
-      header: "Estado",
-      cell: (item) => getStatusBadge(item.status),
-    },
-    {
-      header: "",
-      cell: (item) => (
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-indigo-600 font-bold text-xs"
-            onClick={() => {
-              setSelectedRoom(item);
-              setIsDetailsOpen(true);
-            }}
-          >
-            Detalles
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4 text-slate-400" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {
-                setSelectedRoom(item);
-                setIsEditOpen(true);
-              }}>
-                Editar Estado
-              </DropdownMenuItem>
-              {item.status !== "Cancelled" && item.status !== "CheckedOut" && (
-                <DropdownMenuItem 
-                  className="text-red-600"
-                  onClick={() => handleCancel(item.id)}
-                >
-                  Cancelar Reserva
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      ),
-      className: "w-[120px]",
-    },
-  ];
-
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-            Reservas
-          </h2>
-          <p className="text-slate-500 font-medium mt-2">
-            Gestión de estancias y disponibilidad.
-          </p>
+          <h2 className="text-3xl font-black leading-none tracking-tight text-slate-900">Reservas</h2>
+          <p className="mt-2 font-medium text-slate-500">Gestión de estancias y disponibilidad.</p>
         </div>
 
-        <div className="flex gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={cn("h-10 rounded-xl border-slate-200", filterStatus !== "all" && "bg-indigo-50 border-indigo-200 text-indigo-700")}>
-                <Filter className="w-4 h-4 mr-2" /> 
-                {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-white">
-              <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-10 rounded-xl border-slate-200"
-            onClick={handleExport}
-          >
-            <Download className="w-4 h-4 mr-2" /> Exportar
-          </Button>
-          <Button 
-            size="sm" 
-            className="h-10 rounded-xl bg-slate-900 shadow-lg shadow-slate-200"
-            onClick={() => navigate("/rooms")}
-          >
-            <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
-        {bookingLoadError && (
-          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
-            {bookingLoadError}
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          data={filteredBookings}
-          isLoading={loading}
-          searchable
-          searchPlaceholder="Buscar por huésped o ID..."
+        <BookingsFiltersToolbar
+          filterStatus={filterStatus}
+          onFilterChange={setFilterStatus}
+          onExport={exportBookings}
+          onCreateBooking={() => navigate("/rooms")}
         />
       </div>
 
-      {selectedBooking && (
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+        {error ? <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+        <DataTable
+          columns={columns}
+          data={filteredBookings}
+          isLoading={isLoading}
+          searchable
+          searchPlaceholder="Buscar por huésped o ID..."
+          onSearch={setSearchQuery}
+        />
+      </div>
+
+      {selectedBooking ? (
         <>
-          <BookingEditDrawer 
+          <BookingEditDrawer
             booking={selectedBooking}
             isOpen={isEditOpen}
             onClose={() => {
               setIsEditOpen(false);
-              setSelectedRoom(null);
+              setSelectedBooking(null);
             }}
-            onSuccess={async () => {
-              invalidateResource(bookingQueryKey);
-              await refetchBookings();
-            }}
+            onSuccess={refreshBookings}
             onViewDetails={() => setIsDetailsOpen(true)}
           />
           <BookingDetailsSheet
@@ -241,11 +89,11 @@ const BookingsPage = () => {
             isOpen={isDetailsOpen}
             onClose={() => {
               setIsDetailsOpen(false);
-              setSelectedRoom(null);
+              setSelectedBooking(null);
             }}
           />
         </>
-      )}
+      ) : null}
     </div>
   );
 };

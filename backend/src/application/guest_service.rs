@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::Guest;
+use crate::domain::models::{BookingPageCursor, Guest, GuestPage};
 use crate::domain::repositories::GuestRepository;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -16,6 +16,18 @@ impl GuestService {
     pub async fn list_guests(&self, hotel_id: Uuid) -> Result<Vec<Guest>, DomainError> {
         self.guest_repo
             .find_all(hotel_id)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
+    pub async fn list_guests_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<GuestPage, DomainError> {
+        self.guest_repo
+            .find_page(hotel_id, limit, cursor)
             .await
             .map_err(DomainError::InfrastructureError)
     }

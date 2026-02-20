@@ -5,6 +5,12 @@ export interface RevenueData {
     amount_cents: number;
 }
 
+interface RevenueDataRaw {
+    date: string;
+    amount_cents?: number;
+    revenue_cents?: number;
+}
+
 export interface OccupancyData {
     date: string;
     occupied_rooms: number;
@@ -13,8 +19,11 @@ export interface OccupancyData {
 }
 
 export const getRevenueReport = async (start?: string, end?: string): Promise<RevenueData[]> => {
-    const response = await client.get("/reports/revenue", { params: { start, end } });
-    return response.data;
+    const response = await client.get<RevenueDataRaw[]>("/reports/revenue", { params: { start, end } });
+    return (response.data ?? []).map((item) => ({
+        date: item.date,
+        amount_cents: item.amount_cents ?? item.revenue_cents ?? 0,
+    }));
 };
 
 export const getOccupancyReport = async (start?: string, end?: string): Promise<OccupancyData[]> => {

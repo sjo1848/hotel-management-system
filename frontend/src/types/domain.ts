@@ -47,7 +47,8 @@ export type Guest = {
   created_at?: string;
 };
 
-export type InvoiceStatus = "Pending" | "Paid" | "Cancelled";
+export type InvoiceStatus = "PENDING" | "PAID" | "VOIDED";
+export type InvoicePaymentMethod = "CASH" | "CARD" | "TRANSFER";
 
 export type Invoice = {
   id: string;
@@ -55,6 +56,7 @@ export type Invoice = {
   booking_id: string;
   amount_cents: number;
   status: InvoiceStatus;
+  payment_method: InvoicePaymentMethod;
   created_at: string;
 };
 

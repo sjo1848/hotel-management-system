@@ -20,6 +20,29 @@ pub async fn get_rooms_handler(
 }
 
 #[utoipa::path(
+    get,
+    path = "/api/v1/rooms/{id}",
+    params(
+        ("id" = Uuid, Path, description = "ID de la habitación")
+    ),
+    responses(
+        (status = 200, description = "Habitación encontrada", body = Room),
+        (status = 404, description = "Habitación no encontrada")
+    ),
+    tag = "Hotelería"
+)]
+pub async fn get_room_by_id_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let room = operations.room_service.get_room_by_id(hotel_id, id).await?;
+    Ok(Json(json!(room)))
+}
+
+#[utoipa::path(
     post,
     path = "/api/v1/rooms",
     request_body = CreateRoomRequest,

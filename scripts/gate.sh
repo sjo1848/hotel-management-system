@@ -72,6 +72,9 @@ echo "==> backend fast CI (fmt/clippy/unit + openapi_contract)"
 echo "==> openapi alignment (routes vs openapi + mirror docs)"
 ./scripts/check-openapi-alignment.sh
 
+echo "==> frontend/openapi contractual drift"
+./scripts/check-openapi-frontend-drift.sh
+
 echo "==> environment profile security preflight"
 ./scripts/check-env-profile-security.sh
 
@@ -83,6 +86,9 @@ echo "==> legacy schema convergence"
 
 echo "==> validation governance docs gate"
 ./scripts/check-validation-governance.sh
+
+echo "==> tenant guardrails gate"
+./scripts/check-tenant-guardrails.sh
 
 echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh

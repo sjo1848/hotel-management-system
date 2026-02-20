@@ -1,5 +1,17 @@
 use super::*;
 
+const INVALID_HOTEL_INPUT_MESSAGE: &str = "Hotel inválido. Usá ID o nombre existente.";
+
+fn parse_and_validate_hotel_id_input(hotel_id_input: &str) -> Result<Option<Uuid>, DomainError> {
+    match Uuid::parse_str(hotel_id_input) {
+        Ok(uuid) if uuid.is_nil() => Err(DomainError::InvalidInput(
+            INVALID_HOTEL_INPUT_MESSAGE.to_string(),
+        )),
+        Ok(uuid) => Ok(Some(uuid)),
+        Err(_) => Ok(None),
+    }
+}
+
 #[utoipa::path(
     post,
     path = "/api/v1/auth/login",
@@ -29,16 +41,14 @@ pub async fn login_handler(
     validate_non_empty_trimmed("password", &payload.password)?;
     validate_len_range("password", &payload.password, 8, 128)?;
 
-    let hotel_id = if let Ok(uuid) = Uuid::parse_str(hotel_id_input) {
+    let hotel_id = if let Some(uuid) = parse_and_validate_hotel_id_input(hotel_id_input)? {
         uuid
     } else {
         state
             .hotel_service
             .find_hotel_id_by_name_ci(hotel_id_input)
             .await?
-            .ok_or_else(|| {
-                DomainError::InvalidInput("Hotel inválido. Usá ID o nombre existente.".to_string())
-            })?
+            .ok_or_else(|| DomainError::InvalidInput(INVALID_HOTEL_INPUT_MESSAGE.to_string()))?
     };
     let hotel_id_str = hotel_id.to_string();
     tracing::Span::current().record("tenant_id", hotel_id_str.as_str());
@@ -270,4 +280,33 @@ pub async fn me_handler(
         "role": user.role
 
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_and_validate_hotel_id_input_accepts_non_nil_uuid() {
+        let parsed =
+            parse_and_validate_hotel_id_input("00000000-0000-0000-0000-000000000001").unwrap();
+        assert_eq!(
+            parsed,
+            Some(Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        );
+    }
+
+    #[test]
+    fn parse_and_validate_hotel_id_input_rejects_nil_uuid() {
+        let err = parse_and_validate_hotel_id_input("00000000-0000-0000-0000-000000000000")
+            .expect_err("nil UUID must be rejected");
+        assert!(matches!(err, DomainError::InvalidInput(_)));
+        assert_eq!(err.to_error_contract().message, INVALID_HOTEL_INPUT_MESSAGE);
+    }
+
+    #[test]
+    fn parse_and_validate_hotel_id_input_allows_hotel_name_fallback() {
+        let parsed = parse_and_validate_hotel_id_input("Hotel Sede Central").unwrap();
+        assert_eq!(parsed, None);
+    }
 }

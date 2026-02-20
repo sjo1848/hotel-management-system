@@ -22,11 +22,13 @@ use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
-    finish_cleaning_handler, get_audit_events_handler, get_current_balance_handler,
-    get_dashboard_kpis_handler, get_invoice_by_booking_handler, get_occupancy_report_handler,
-    get_revenue_report_handler, get_rooms_handler, health_check, list_bookings_handler,
-    list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler, list_hotels_handler,
-    list_invoices_handler, list_users_handler, login_handler, logout_handler, me_handler,
+    finish_cleaning_handler, get_audit_events_handler, get_audit_events_page_handler,
+    get_current_balance_handler, get_dashboard_kpis_handler, get_invoice_by_booking_handler,
+    get_occupancy_report_handler, get_revenue_report_handler, get_room_by_id_handler,
+    get_rooms_handler, health_check, list_bookings_handler, list_bookings_page_handler,
+    list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler,
+    list_guests_page_handler, list_hotels_handler, list_invoices_handler,
+    list_invoices_page_handler, list_users_handler, login_handler, logout_handler, me_handler,
     readiness_check, refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
     track_ui_telemetry_handler, update_booking_handler, update_room_status_handler,
 };
@@ -131,6 +133,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(search_rooms_handler).layer(middleware::from_fn(rooms_search)),
         )
         .route(
+            "/api/v1/rooms/:id",
+            get(get_room_by_id_handler).layer(middleware::from_fn(rooms_read)),
+        )
+        .route(
             "/api/v1/rooms/:id/status",
             patch(update_room_status_handler).layer(middleware::from_fn(rooms_status_write)),
         )
@@ -139,6 +145,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(list_bookings_handler)
                 .layer(middleware::from_fn(bookings_read))
                 .merge(post(create_booking_handler).layer(middleware::from_fn(bookings_write))),
+        )
+        .route(
+            "/api/v1/bookings/page",
+            get(list_bookings_page_handler).layer(middleware::from_fn(bookings_read)),
         )
         .route(
             "/api/v1/bookings/:id",
@@ -157,6 +167,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(list_guests_handler)
                 .layer(middleware::from_fn(guests_read))
                 .merge(post(create_guest_handler).layer(middleware::from_fn(guests_write))),
+        )
+        .route(
+            "/api/v1/guests/page",
+            get(list_guests_page_handler).layer(middleware::from_fn(guests_read)),
         )
         .route("/api/v1/auth/me", get(me_handler))
         .route(
@@ -178,6 +192,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(get_audit_events_handler).layer(middleware::from_fn(audit_events_read)),
         )
         .route(
+            "/api/v1/audit/events/page",
+            get(get_audit_events_page_handler).layer(middleware::from_fn(audit_events_read)),
+        )
+        .route(
             "/api/v1/billing/balance",
             get(get_current_balance_handler).layer(middleware::from_fn(billing_balance_read)),
         )
@@ -188,6 +206,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/invoices",
             get(list_invoices_handler).layer(middleware::from_fn(invoices_read)),
+        )
+        .route(
+            "/api/v1/invoices/page",
+            get(list_invoices_page_handler).layer(middleware::from_fn(invoices_read)),
         )
         .route(
             "/api/v1/bookings/:id/invoice",

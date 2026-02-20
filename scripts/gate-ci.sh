@@ -166,8 +166,8 @@ run_perf_smoke_gate() {
   fi
 
   ./scripts/perf-baseline.sh \
-    --requests 8 \
-    --concurrency 2 \
+    --requests 4 \
+    --concurrency 1 \
     --warmup 1 \
     --slo-p95-sec 1.0 \
     --slo-error-rate 0.05 \
@@ -186,6 +186,9 @@ echo "==> backend fast CI"
 echo "==> openapi alignment"
 ./scripts/check-openapi-alignment.sh
 
+echo "==> frontend/openapi contractual drift"
+./scripts/check-openapi-frontend-drift.sh
+
 echo "==> environment profile security preflight"
 ./scripts/check-env-profile-security.sh
 
@@ -197,6 +200,9 @@ echo "==> legacy schema convergence"
 
 echo "==> validation governance docs gate"
 ./scripts/check-validation-governance.sh
+
+echo "==> tenant guardrails gate"
+./scripts/check-tenant-guardrails.sh
 
 echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh

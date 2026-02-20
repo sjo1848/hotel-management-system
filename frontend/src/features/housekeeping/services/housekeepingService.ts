@@ -1,9 +1,10 @@
 import client from "@/api/client";
 import { Room } from "@/types/domain";
+import { toRooms } from "@/types/contractMappers";
 
 export const getDirtyRooms = async (): Promise<Room[]> => {
-    const response = await client.get("/housekeeping/dirty");
-    return response.data as Room[];
+    const response = await client.get<Room[]>("/housekeeping/dirty");
+    return toRooms(response.data);
 };
 
 export const startCleaning = async (roomId: string) => {

@@ -1,7 +1,9 @@
 use crate::application::audit_service::AuditService;
 use crate::application::room_service::RoomService;
 use crate::domain::errors::DomainError;
-use crate::domain::models::{Booking, BookingStatus, Invoice, RoomStatus};
+use crate::domain::models::{
+    Booking, BookingPage, BookingPageCursor, BookingStatus, Invoice, RoomStatus,
+};
 use crate::domain::repositories::{
     BookingRepository, GuestRepository, InvoiceRepository, RoomRepository,
 };
@@ -272,6 +274,21 @@ impl BookingService {
             .await
             .map_err(map_repo_error)
     }
+
+    pub async fn list_bookings_page(
+        &self,
+        hotel_id: Uuid,
+        start: Option<NaiveDate>,
+        end: Option<NaiveDate>,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<BookingPage, DomainError> {
+        validate_optional_range(start, end)?;
+        self.booking_repo
+            .find_page(hotel_id, start, end, limit, cursor)
+            .await
+            .map_err(map_repo_error)
+    }
 }
 
 fn validate_range(start: NaiveDate, end: NaiveDate) -> Result<(), DomainError> {
@@ -281,6 +298,19 @@ fn validate_range(start: NaiveDate, end: NaiveDate) -> Result<(), DomainError> {
         ));
     }
     Ok(())
+}
+
+fn validate_optional_range(
+    start: Option<NaiveDate>,
+    end: Option<NaiveDate>,
+) -> Result<(), DomainError> {
+    match (start, end) {
+        (Some(start), Some(end)) => validate_range(start, end),
+        (None, None) => Ok(()),
+        _ => Err(DomainError::InvalidInput(
+            "Filtros inválidos: 'start' y 'end' deben enviarse juntos".to_string(),
+        )),
+    }
 }
 
 fn map_repo_error(message: String) -> DomainError {
@@ -387,6 +417,13 @@ mod tests {
         let start = chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap();
         let end = chrono::NaiveDate::from_ymd_opt(2026, 2, 19).unwrap();
         let result = validate_range(start, end);
+        assert!(matches!(result, Err(DomainError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn list_bookings_page_rejects_partial_date_filters() {
+        let start = chrono::NaiveDate::from_ymd_opt(2026, 2, 20).unwrap();
+        let result = validate_optional_range(Some(start), None);
         assert!(matches!(result, Err(DomainError::InvalidInput(_))));
     }
 }

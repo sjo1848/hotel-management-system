@@ -1,8 +1,11 @@
-use crate::domain::models::{Invoice, InvoiceStatus, PaymentMethod};
+use crate::domain::models::{
+    BookingPageCursor, Invoice, InvoicePage, InvoiceStatus, PaymentMethod,
+};
 use crate::domain::repositories::InvoiceRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
-use chrono::Utc;
-use sqlx::{PgPool, Row};
+use chrono::{NaiveDateTime, Utc};
+use sqlx::{PgPool, Postgres, QueryBuilder, Row};
 use uuid::Uuid;
 
 pub struct PostgresInvoiceRepository {
@@ -18,6 +21,7 @@ impl PostgresInvoiceRepository {
 #[async_trait]
 impl InvoiceRepository for PostgresInvoiceRepository {
     async fn save(&self, invoice: Invoice) -> Result<Invoice, String> {
+        let mut tx = begin_tenant_tx(&self.pool, invoice.hotel_id).await?;
         let status = match invoice.status {
             InvoiceStatus::Pending => "PENDING",
             InvoiceStatus::Paid => "PAID",
@@ -41,9 +45,10 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         .bind(status)
         .bind(payment_method)
         .bind(invoice.created_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(invoice)
     }
@@ -53,14 +58,16 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         hotel_id: Uuid,
         booking_id: Uuid,
     ) -> Result<Option<Invoice>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, booking_id, amount_cents, status, created_at FROM invoices WHERE hotel_id = $1 AND booking_id = $2",
         )
         .bind(hotel_id)
         .bind(booking_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| {
             let status_str: String = row.try_get("status").unwrap();
@@ -88,13 +95,15 @@ impl InvoiceRepository for PostgresInvoiceRepository {
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, booking_id, amount_cents, status, payment_method, created_at FROM invoices WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -124,13 +133,103 @@ impl InvoiceRepository for PostgresInvoiceRepository {
             .collect())
     }
 
+    async fn find_page(
+        &self,
+        hotel_id: Uuid,
+        limit: usize,
+        cursor: Option<BookingPageCursor>,
+    ) -> Result<InvoicePage, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
+        let safe_limit = limit.clamp(1, 100);
+        let fetch_limit = (safe_limit + 1) as i64;
+
+        let mut query = QueryBuilder::<Postgres>::new(
+            "SELECT id, hotel_id, booking_id, amount_cents, status, payment_method, created_at,
+                    created_at AS created_at_cursor
+             FROM invoices
+             WHERE hotel_id = ",
+        );
+        query.push_bind(hotel_id);
+
+        if let Some(cursor) = cursor {
+            query
+                .push(" AND (created_at, id) < (")
+                .push_bind(cursor.created_at)
+                .push(", ")
+                .push_bind(cursor.id)
+                .push(")");
+        }
+
+        query
+            .push(" ORDER BY created_at DESC, id DESC LIMIT ")
+            .push_bind(fetch_limit);
+
+        let mut records = query
+            .build()
+            .fetch_all(&mut *tx)
+            .await
+            .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        let has_more = records.len() > safe_limit;
+        if has_more {
+            records.truncate(safe_limit);
+        }
+
+        let mut next_cursor = None;
+        let items = records
+            .into_iter()
+            .map(|row| {
+                let id: Uuid = row.try_get("id").unwrap();
+                let created_at_cursor: NaiveDateTime = row.try_get("created_at_cursor").unwrap();
+                let status_str: String = row.try_get("status").unwrap();
+                let pm_str: String = row
+                    .try_get("payment_method")
+                    .unwrap_or_else(|_| "CASH".to_string());
+                next_cursor = Some(BookingPageCursor {
+                    created_at: created_at_cursor,
+                    id,
+                });
+
+                Invoice {
+                    id,
+                    hotel_id: row.try_get("hotel_id").unwrap(),
+                    booking_id: row.try_get("booking_id").unwrap(),
+                    amount_cents: row.try_get("amount_cents").unwrap(),
+                    status: match status_str.as_str() {
+                        "PAID" => InvoiceStatus::Paid,
+                        "VOIDED" => InvoiceStatus::Voided,
+                        _ => InvoiceStatus::Pending,
+                    },
+                    payment_method: match pm_str.as_str() {
+                        "CARD" => PaymentMethod::Card,
+                        "TRANSFER" => PaymentMethod::Transfer,
+                        _ => PaymentMethod::Cash,
+                    },
+                    created_at: row.try_get("created_at").unwrap(),
+                }
+            })
+            .collect();
+
+        if !has_more {
+            next_cursor = None;
+        }
+
+        Ok(InvoicePage {
+            items,
+            next_cursor,
+            has_more,
+        })
+    }
+
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         // Use UNIX epoch when there is no prior closure, but do not hide DB failures.
         let start_time = sqlx::query_scalar::<_, Option<chrono::DateTime<Utc>>>(
             "SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1",
         )
         .bind(hotel_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_else(|| chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap());
@@ -145,9 +244,10 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         )
         .bind(hotel_id)
         .bind(start_time)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok((
             result.try_get("total").map_err(|e| e.to_string())?,

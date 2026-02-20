@@ -6,6 +6,35 @@ type CacheEntry<T> = {
 };
 
 const cacheStore = new Map<string, CacheEntry<unknown>>();
+export const RESOURCE_QUERY_CACHE_EVENT = "hms:resource-query-cache";
+
+export type ResourceQueryCacheEventType =
+  | "cache_hit"
+  | "cache_miss"
+  | "fetch_success"
+  | "fetch_error"
+  | "invalidate";
+
+export type ResourceQueryCacheEvent = {
+  type: ResourceQueryCacheEventType;
+  queryKey: string;
+  timestamp: string;
+  staleTimeMs?: number;
+  ageMs?: number;
+  error?: string;
+};
+
+const dispatchCacheEvent = (event: Omit<ResourceQueryCacheEvent, "timestamp">) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent<ResourceQueryCacheEvent>(RESOURCE_QUERY_CACHE_EVENT, {
+      detail: {
+        ...event,
+        timestamp: new Date().toISOString(),
+      },
+    }),
+  );
+};
 
 export type UseResourceQueryOptions<T> = {
   queryKey: string;
@@ -24,6 +53,10 @@ export type UseResourceQueryResult<T> = {
 
 export const invalidateResource = (queryKey: string) => {
   cacheStore.delete(queryKey);
+  dispatchCacheEvent({
+    type: "invalidate",
+    queryKey,
+  });
 };
 
 export function useResourceQuery<T>({
@@ -46,9 +79,18 @@ export function useResourceQuery<T>({
     try {
       const result = await queryRef.current();
       cacheStore.set(queryKey, { value: result, cachedAt: Date.now() });
+      dispatchCacheEvent({
+        type: "fetch_success",
+        queryKey,
+      });
       setData(result);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error cargando datos";
+      dispatchCacheEvent({
+        type: "fetch_error",
+        queryKey,
+        error: message,
+      });
       setError(message);
     } finally {
       setIsLoading(false);
@@ -64,15 +106,30 @@ export function useResourceQuery<T>({
     const cached = cacheStore.get(queryKey) as CacheEntry<T> | undefined;
     const isFresh = cached && Date.now() - cached.cachedAt <= staleTimeMs;
     if (isFresh) {
+      dispatchCacheEvent({
+        type: "cache_hit",
+        queryKey,
+        staleTimeMs,
+        ageMs: Date.now() - cached.cachedAt,
+      });
       setData(cached.value);
       setIsLoading(false);
       return;
     }
+    dispatchCacheEvent({
+      type: "cache_miss",
+      queryKey,
+      staleTimeMs,
+    });
     void fetchFresh();
   }, [enabled, fetchFresh, queryKey, staleTimeMs]);
 
   const invalidate = useCallback(() => {
     cacheStore.delete(queryKey);
+    dispatchCacheEvent({
+      type: "invalidate",
+      queryKey,
+    });
   }, [queryKey]);
 
   return useMemo(

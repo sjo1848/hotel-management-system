@@ -1,5 +1,6 @@
 use crate::app_state::AppState;
 use crate::domain::errors::DomainError;
+use crate::infrastructure::web::jwt::Claims;
 use crate::infrastructure::web::utils::{csrf_valid, requires_csrf};
 use axum::{
     extract::ConnectInfo,
@@ -8,11 +9,13 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use metrics::counter;
 use std::{
     net::{IpAddr, SocketAddr},
     sync::Arc,
 };
 use tracing::Span;
+use uuid::Uuid;
 
 pub async fn auth_middleware(
     State(state): State<Arc<AppState>>,
@@ -81,12 +84,22 @@ pub async fn auth_middleware(
             .ok_or(DomainError::Unauthorized)?
     };
 
-    let claims = crate::infrastructure::web::jwt::decode_token(
+    let mut claims = crate::infrastructure::web::jwt::decode_token(
         &token,
         &state.config.jwt_secret,
         state.config.jwt_previous_secret.as_deref(),
     )
     .map_err(|_| DomainError::Unauthorized)?;
+
+    match parse_tenant_hotel_id(&claims) {
+        Ok(tenant_id) => {
+            claims.hotel_id = tenant_id.to_string();
+        }
+        Err(reason) => {
+            record_missing_tenant_context(&req, reason);
+            return Err(DomainError::Unauthorized);
+        }
+    }
 
     let span = Span::current();
     span.record("tenant_id", claims.hotel_id.as_str());
@@ -102,6 +115,32 @@ pub async fn auth_middleware(
 
 fn can_access_metrics(req: &Request, expected_token: Option<&str>) -> bool {
     metrics_token_matches(req.headers(), expected_token) || request_from_private_or_loopback(req)
+}
+
+fn parse_tenant_hotel_id(claims: &Claims) -> Result<Uuid, &'static str> {
+    if claims.hotel_id.trim().is_empty() {
+        return Err("empty_hotel_id_claim");
+    }
+    let tenant_id = Uuid::parse_str(claims.hotel_id.trim()).map_err(|_| "invalid_hotel_id_uuid")?;
+    if tenant_id.is_nil() {
+        return Err("nil_hotel_id_claim");
+    }
+    Ok(tenant_id)
+}
+
+fn record_missing_tenant_context(req: &Request, reason: &'static str) {
+    let method = req.method().to_string();
+    let path = req.uri().path().to_string();
+    counter!(
+        "tenant_context_missing_total",
+        &[
+            ("method", method.clone()),
+            ("path", path.clone()),
+            ("reason", reason.to_string())
+        ]
+    )
+    .increment(1);
+    tracing::warn!(%method, %path, reason, "Authenticated request missing valid tenant context");
 }
 
 fn metrics_token_matches(headers: &HeaderMap, expected_token: Option<&str>) -> bool {
@@ -141,9 +180,11 @@ fn is_private_or_loopback_ip(ip: IpAddr) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{can_access_metrics, is_private_or_loopback_ip};
+    use super::{can_access_metrics, is_private_or_loopback_ip, parse_tenant_hotel_id};
+    use crate::infrastructure::web::jwt::Claims;
     use axum::{body::Body, extract::ConnectInfo, http::Request};
     use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+    use uuid::Uuid;
 
     fn request_with_peer(ip: IpAddr) -> Request<Body> {
         let mut request = Request::builder()
@@ -190,5 +231,40 @@ mod tests {
         let request = request_with_peer(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)));
         assert!(!can_access_metrics(&request, None));
         assert!(!can_access_metrics(&request, Some("proxy-secret")));
+    }
+
+    #[test]
+    fn parse_tenant_hotel_id_rejects_empty_invalid_or_nil_values() {
+        let empty = Claims {
+            sub: Uuid::new_v4().to_string(),
+            hotel_id: "".to_string(),
+            role: "ops".to_string(),
+            exp: 2_000_000_000,
+        };
+        assert!(parse_tenant_hotel_id(&empty).is_err());
+
+        let invalid = Claims {
+            hotel_id: "not-a-uuid".to_string(),
+            ..empty.clone()
+        };
+        assert!(parse_tenant_hotel_id(&invalid).is_err());
+
+        let nil = Claims {
+            hotel_id: Uuid::nil().to_string(),
+            ..empty
+        };
+        assert!(parse_tenant_hotel_id(&nil).is_err());
+    }
+
+    #[test]
+    fn parse_tenant_hotel_id_accepts_valid_uuid() {
+        let hotel_id = Uuid::new_v4();
+        let claims = Claims {
+            sub: Uuid::new_v4().to_string(),
+            hotel_id: hotel_id.to_string(),
+            role: "ops".to_string(),
+            exp: 2_000_000_000,
+        };
+        assert_eq!(parse_tenant_hotel_id(&claims).unwrap(), hotel_id);
     }
 }

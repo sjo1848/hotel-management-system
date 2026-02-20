@@ -1,5 +1,6 @@
 import { apiGet, apiPatch, apiPost } from "@/api/sdk";
 import { Booking } from "@/types/domain";
+import { toBooking, toBookings } from "@/types/contractMappers";
 
 export type CreateBookingPayload = {
   room_id: string;
@@ -15,18 +16,21 @@ export type BookingFilterParams = {
 };
 
 export const createBooking = async (bookingData: CreateBookingPayload) => {
-  return apiPost<CreateBookingPayload, Booking>("/bookings", bookingData);
+  const response = await apiPost<CreateBookingPayload, Booking>("/bookings", bookingData);
+  return toBooking(response);
 };
 
 export const getBookings = async (start?: string, end?: string): Promise<Booking[]> => {
-  return apiGet<Booking[]>("/bookings", { start, end });
+  const response = await apiGet<Booking[]>("/bookings", { start, end });
+  return toBookings(response);
 };
 
 export const updateBooking = async (
   id: string,
   data: Partial<Pick<Booking, "guest_id" | "guest_name" | "check_in" | "check_out" | "status">>,
 ) => {
-  return apiPatch<typeof data, Booking>(`/bookings/${id}`, data);
+  const response = await apiPatch<typeof data, Booking>(`/bookings/${id}`, data);
+  return toBooking(response);
 };
 
 const bookingService = {

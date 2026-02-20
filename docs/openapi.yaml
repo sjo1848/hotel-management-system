@@ -160,6 +160,27 @@ paths:
                   $ref: "#/components/schemas/Room"
         "401":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/{id}:
+    get:
+      summary: Obtener habitación por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Habitación encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings:
     get:
       summary: Listar reservas
@@ -192,6 +213,46 @@ paths:
         "400":
           $ref: "#/components/responses/ErrorResponse"
         "409":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/bookings/page:
+    get:
+      summary: Listar reservas paginadas (keyset)
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Página de reservas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingPageResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings/{id}:
     patch:
@@ -250,6 +311,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/Guest"
         "400":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/guests/page:
+    get:
+      summary: Listar huéspedes paginados (keyset)
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Página de huéspedes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuestPageResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/users:
     get:
@@ -319,8 +408,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/Hotel"
     post:
       summary: Crear hotel (SaaS)
       requestBody:
@@ -335,8 +423,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/Hotel"
         "400":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/rooms/{id}/status:
@@ -389,8 +476,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/ExtraCharge"
     post:
       summary: Agregar cargo extra a reserva
       parameters:
@@ -412,8 +498,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/ExtraCharge"
   /api/v1/analytics/kpis:
     get:
       summary: KPI de dashboard
@@ -423,8 +508,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/DashboardKpis"
   /api/v1/audit/events:
     get:
       summary: Eventos de auditoría recientes del tenant
@@ -446,6 +530,34 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditEvent"
+  /api/v1/audit/events/page:
+    get:
+      summary: Eventos de auditoría paginados (keyset)
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Página de eventos de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEventPageResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/billing/balance:
     get:
       summary: Balance actual de caja
@@ -455,14 +567,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  total_amount_cents:
-                    type: integer
-                  cash_amount_cents:
-                    type: integer
-                  card_amount_cents:
-                    type: integer
+                $ref: "#/components/schemas/BillingBalance"
   /api/v1/billing/close-cash:
     post:
       summary: Cierre de caja
@@ -482,8 +587,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/CashClosure"
   /api/v1/invoices:
     get:
       summary: Listar facturas
@@ -495,8 +599,35 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/Invoice"
+  /api/v1/invoices/page:
+    get:
+      summary: Listar facturas paginadas (keyset)
+      parameters:
+        - in: query
+          name: limit
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - in: query
+          name: cursor
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Página de facturas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoicePageResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings/{id}/invoice:
     get:
       summary: Obtener factura de una reserva
@@ -513,8 +644,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/Invoice"
         "404":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/housekeeping/dirty:
@@ -593,8 +723,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/RevenueReport"
   /api/v1/reports/occupancy:
     get:
       summary: Reporte de ocupación
@@ -619,8 +748,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/OccupancyReport"
   /api/v1/telemetry/ui:
     post:
       summary: Ingesta de eventos de telemetría UI
@@ -741,6 +869,208 @@ components:
           type: integer
         status:
           type: string
+    Hotel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+          nullable: true
+    ExtraCharge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        amount_cents:
+          type: integer
+        category:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    BookingAlert:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        guest_name:
+          type: string
+        room_number:
+          type: string
+        status:
+          type: string
+    DashboardKpis:
+      type: object
+      properties:
+        revenue_month_cents:
+          type: integer
+        occupancy_rate:
+          type: number
+          format: double
+        today_check_ins:
+          type: integer
+        active_bookings_count:
+          type: integer
+        arrivals_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingAlert"
+        departures_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingAlert"
+        rev_par_cents:
+          type: integer
+        adr_cents:
+          type: integer
+    BillingBalance:
+      type: object
+      properties:
+        total_amount_cents:
+          type: integer
+        cash_amount_cents:
+          type: integer
+        card_amount_cents:
+          type: integer
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PAID
+            - VOIDED
+        payment_method:
+          type: string
+          enum:
+            - CASH
+            - CARD
+            - TRANSFER
+        created_at:
+          type: string
+          format: date-time
+    CashClosure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        total_amount_cents:
+          type: integer
+        cash_amount_cents:
+          type: integer
+        card_amount_cents:
+          type: integer
+        opening_time:
+          type: string
+          format: date-time
+        closing_time:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+    RevenueReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue_cents:
+          type: integer
+    OccupancyReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        occupied_rooms:
+          type: integer
+        total_rooms:
+          type: integer
+        occupancy_rate:
+          type: number
+          format: double
+    BookingPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+    GuestPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Guest"
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+    InvoicePageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Invoice"
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
+    AuditEventPageResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        next_cursor:
+          type: string
+          nullable: true
+        has_more:
+          type: boolean
     AuditEvent:
       type: object
       properties:

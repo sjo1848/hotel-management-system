@@ -113,3 +113,79 @@ async fn booking_flow_rejects_unknown_guest_id(pool: sqlx::PgPool) {
 
     assert!(matches!(result, Err(DomainError::GuestNotFound)));
 }
+
+#[sqlx::test]
+async fn booking_flow_keyset_pagination_is_deterministic(pool: sqlx::PgPool) {
+    let booking_repo = PostgresBookingRepository::new(pool.clone());
+
+    let hotel_id = Uuid::new_v4();
+    let room_id = Uuid::new_v4();
+
+    sqlx::query("INSERT INTO hotels (id, name, address) VALUES ($1, $2, $3)")
+        .bind(hotel_id)
+        .bind("Hotel QA Booking Pagination")
+        .bind("N/A")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    sqlx::query(
+        "INSERT INTO rooms (id, hotel_id, room_number, room_type, status, price_cents)
+         VALUES ($1, $2, $3, $4, 'AVAILABLE', $5)",
+    )
+    .bind(room_id)
+    .bind(hotel_id)
+    .bind("P101")
+    .bind("Suite")
+    .bind(10000_i64)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let base_check_in = NaiveDate::from_ymd_opt(2026, 2, 10).unwrap();
+    let booking_ids = [Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4()];
+    let created_ats = [
+        "2026-02-03T10:00:00Z",
+        "2026-02-02T10:00:00Z",
+        "2026-02-01T10:00:00Z",
+    ];
+
+    for (idx, booking_id) in booking_ids.iter().enumerate() {
+        let check_in = base_check_in + chrono::Duration::days((idx as i64) * 3);
+        let check_out = check_in + chrono::Duration::days(2);
+        sqlx::query(
+            "INSERT INTO bookings (id, hotel_id, room_id, guest_name, check_in, check_out, total_price_cents, status, created_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'CONFIRMED', $8::timestamptz)",
+        )
+        .bind(booking_id)
+        .bind(hotel_id)
+        .bind(room_id)
+        .bind(format!("Guest {}", idx + 1))
+        .bind(check_in)
+        .bind(check_out)
+        .bind(20000_i64)
+        .bind(created_ats[idx])
+        .execute(&pool)
+        .await
+        .unwrap();
+    }
+
+    let page_1 = booking_repo
+        .find_page(hotel_id, None, None, 2, None)
+        .await
+        .unwrap();
+    assert_eq!(page_1.items.len(), 2);
+    assert!(page_1.has_more);
+    assert!(page_1.next_cursor.is_some());
+    assert_eq!(page_1.items[0].id, booking_ids[0]);
+    assert_eq!(page_1.items[1].id, booking_ids[1]);
+
+    let page_2 = booking_repo
+        .find_page(hotel_id, None, None, 2, page_1.next_cursor)
+        .await
+        .unwrap();
+    assert_eq!(page_2.items.len(), 1);
+    assert!(!page_2.has_more);
+    assert!(page_2.next_cursor.is_none());
+    assert_eq!(page_2.items[0].id, booking_ids[2]);
+}

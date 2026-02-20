@@ -1,5 +1,6 @@
 use crate::domain::models::CashClosure;
 use crate::domain::repositories::CashClosureRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -17,6 +18,7 @@ impl PostgresCashClosureRepository {
 #[async_trait]
 impl CashClosureRepository for PostgresCashClosureRepository {
     async fn create(&self, closure: CashClosure) -> Result<CashClosure, String> {
+        let mut tx = begin_tenant_tx(&self.pool, closure.hotel_id).await?;
         sqlx::query(
             "INSERT INTO cash_closures (id, hotel_id, user_id, total_amount_cents, cash_amount_cents, card_amount_cents, opening_time, closing_time, notes)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
@@ -30,22 +32,25 @@ impl CashClosureRepository for PostgresCashClosureRepository {
         .bind(closure.opening_time)
         .bind(closure.closing_time)
         .bind(&closure.notes)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(closure)
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<CashClosure>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, user_id, total_amount_cents, cash_amount_cents, card_amount_cents, opening_time, closing_time, notes 
              FROM cash_closures WHERE hotel_id = $1 ORDER BY closing_time DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()

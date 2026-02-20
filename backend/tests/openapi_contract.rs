@@ -12,6 +12,25 @@ fn get_mapping<'a>(value: &'a Value, key: &str) -> &'a serde_yaml::Mapping {
         .unwrap_or_else(|| panic!("missing mapping key: {key}"))
 }
 
+fn get_path_method<'a>(doc: &'a Value, path: &str, method: &str) -> &'a serde_yaml::Mapping {
+    let paths = get_mapping(doc, "paths");
+    paths
+        .get(Value::from(path))
+        .and_then(Value::as_mapping)
+        .and_then(|path_node| {
+            path_node
+                .get(Value::from(method))
+                .and_then(Value::as_mapping)
+        })
+        .unwrap_or_else(|| {
+            panic!(
+                "missing OpenAPI node for {} {}",
+                method.to_uppercase(),
+                path
+            )
+        })
+}
+
 #[test]
 fn openapi_server_matches_runtime() {
     let doc = openapi_doc();
@@ -73,22 +92,27 @@ fn openapi_covers_runtime_routes_and_methods() {
         ("/api/v1/rooms", "get"),
         ("/api/v1/rooms", "post"),
         ("/api/v1/rooms/available", "get"),
+        ("/api/v1/rooms/{id}", "get"),
         ("/api/v1/rooms/{id}/status", "patch"),
         ("/api/v1/bookings", "get"),
         ("/api/v1/bookings", "post"),
+        ("/api/v1/bookings/page", "get"),
         ("/api/v1/bookings/{id}", "patch"),
         ("/api/v1/bookings/{id}/extra-charges", "get"),
         ("/api/v1/bookings/{id}/extra-charges", "post"),
         ("/api/v1/guests", "get"),
         ("/api/v1/guests", "post"),
+        ("/api/v1/guests/page", "get"),
         ("/api/v1/users", "get"),
         ("/api/v1/users", "post"),
         ("/api/v1/users/{id}", "delete"),
         ("/api/v1/analytics/kpis", "get"),
         ("/api/v1/audit/events", "get"),
+        ("/api/v1/audit/events/page", "get"),
         ("/api/v1/billing/balance", "get"),
         ("/api/v1/billing/close-cash", "post"),
         ("/api/v1/invoices", "get"),
+        ("/api/v1/invoices/page", "get"),
         ("/api/v1/bookings/{id}/invoice", "get"),
         ("/api/v1/housekeeping/dirty", "get"),
         ("/api/v1/housekeeping/{id}/start", "post"),
@@ -121,5 +145,96 @@ fn swagger_ui_uses_external_openapi_json_source() {
     assert!(
         routes_src.contains("external_url_unchecked(\"/api-docs/openapi.json\", ApiDoc::openapi_json())"),
         "Swagger wiring must use external_url_unchecked + openapi_json to prevent contract serialization drift"
+    );
+}
+
+#[test]
+fn monetization_endpoints_use_explicit_response_schemas() {
+    let doc = openapi_doc();
+
+    let revenue_get = get_path_method(&doc, "/api/v1/reports/revenue", "get");
+    let revenue_items_ref = revenue_get
+        .get("responses")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("200"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("content"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("application/json"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("schema"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("items"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("$ref"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    assert_eq!(
+        revenue_items_ref, "#/components/schemas/RevenueReport",
+        "Revenue report must use explicit typed schema"
+    );
+
+    let occupancy_get = get_path_method(&doc, "/api/v1/reports/occupancy", "get");
+    let occupancy_items_ref = occupancy_get
+        .get("responses")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("200"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("content"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("application/json"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("schema"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("items"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("$ref"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    assert_eq!(
+        occupancy_items_ref, "#/components/schemas/OccupancyReport",
+        "Occupancy report must use explicit typed schema"
+    );
+
+    let invoices_get = get_path_method(&doc, "/api/v1/invoices", "get");
+    let invoices_items_ref = invoices_get
+        .get("responses")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("200"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("content"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("application/json"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("schema"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("items"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("$ref"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    assert_eq!(
+        invoices_items_ref, "#/components/schemas/Invoice",
+        "Invoices list must use explicit typed schema"
+    );
+
+    let invoice_by_booking_get = get_path_method(&doc, "/api/v1/bookings/{id}/invoice", "get");
+    let invoice_ref = invoice_by_booking_get
+        .get("responses")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("200"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("content"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("application/json"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("schema"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("$ref"))
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    assert_eq!(
+        invoice_ref, "#/components/schemas/Invoice",
+        "Invoice-by-booking must use explicit typed schema"
     );
 }

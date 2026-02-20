@@ -1,5 +1,8 @@
 use super::*;
 
+const DEFAULT_GUESTS_PAGE_LIMIT: usize = 25;
+const MAX_GUESTS_PAGE_LIMIT: usize = 100;
+
 pub async fn list_guests_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
@@ -10,6 +13,47 @@ pub async fn list_guests_handler(
     let guests = operations.guest_service.list_guests(hotel_id).await?;
 
     Ok(Json(json!(guests)))
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/v1/guests/page",
+    responses(
+        (status = 200, description = "Página de huéspedes", body = GuestPageResponse),
+        (status = 400, description = "Cursor inválido")
+    ),
+    params(
+        ("limit" = Option<usize>, Query, description = "Tamaño de página (1-100)"),
+        ("cursor" = Option<String>, Query, description = "Cursor opaco de paginación keyset")
+    ),
+    tag = "Huéspedes"
+)]
+pub async fn list_guests_page_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    Query(params): Query<CursorPageParams>,
+) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let cursor = match params.cursor.as_deref() {
+        Some(encoded) if !encoded.trim().is_empty() => Some(decode_page_cursor(encoded)?),
+        _ => None,
+    };
+    let limit = params
+        .limit
+        .unwrap_or(DEFAULT_GUESTS_PAGE_LIMIT)
+        .clamp(1, MAX_GUESTS_PAGE_LIMIT);
+
+    let page = operations
+        .guest_service
+        .list_guests_page(hotel_id, limit, cursor)
+        .await?;
+
+    Ok(Json(json!(GuestPageResponse {
+        items: page.items,
+        next_cursor: page.next_cursor.as_ref().map(encode_page_cursor),
+        has_more: page.has_more,
+    })))
 }
 
 pub async fn create_guest_handler(

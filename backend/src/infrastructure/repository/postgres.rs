@@ -1,5 +1,6 @@
 use crate::domain::models::{Room, RoomStatus};
 use crate::domain::repositories::RoomRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use sqlx::{PgPool, Row};
@@ -18,6 +19,7 @@ impl PostgresRoomRepository {
 #[async_trait]
 impl RoomRepository for PostgresRoomRepository {
     async fn create(&self, room: Room) -> Result<Room, String> {
+        let mut tx = begin_tenant_tx(&self.pool, room.hotel_id).await?;
         sqlx::query(
             "INSERT INTO rooms (id, hotel_id, room_number, room_type, status, price_cents) VALUES ($1, $2, $3, $4, $5, $6)",
         )
@@ -33,21 +35,24 @@ impl RoomRepository for PostgresRoomRepository {
             RoomStatus::Maintenance => "MAINTENANCE",
         })
         .bind(room.price_cents)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(room)
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Room>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -71,14 +76,16 @@ impl RoomRepository for PostgresRoomRepository {
     }
 
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Room>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1 AND id = $2",
         )
         .bind(hotel_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|rec| {
             let status: Option<String> = rec.try_get("status").ok();
@@ -104,14 +111,16 @@ impl RoomRepository for PostgresRoomRepository {
         hotel_id: Uuid,
         room_number: &str,
     ) -> Result<Option<Room>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, room_number, room_type, status, price_cents FROM rooms WHERE hotel_id = $1 AND room_number = $2",
         )
         .bind(hotel_id)
         .bind(room_number)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|rec| {
             let status: Option<String> = rec.try_get("status").ok();
@@ -138,6 +147,7 @@ impl RoomRepository for PostgresRoomRepository {
         id: Uuid,
         status: RoomStatus,
     ) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let status_str = match status {
             RoomStatus::Available => "AVAILABLE",
             RoomStatus::Occupied => "OCCUPIED",
@@ -150,13 +160,14 @@ impl RoomRepository for PostgresRoomRepository {
             .bind(status_str)
             .bind(hotel_id)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 
         if result.rows_affected() == 0 {
             return Err("ROOM_NOT_FOUND".to_string());
         }
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -167,6 +178,7 @@ impl RoomRepository for PostgresRoomRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Room>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             r#"
             SELECT r.id, r.hotel_id, r.room_number, r.room_type, r.status, r.price_cents
@@ -187,9 +199,10 @@ impl RoomRepository for PostgresRoomRepository {
         .bind(hotel_id)
         .bind(start)
         .bind(end)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()

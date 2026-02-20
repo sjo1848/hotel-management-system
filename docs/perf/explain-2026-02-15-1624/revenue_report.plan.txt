@@ -1,0 +1,17 @@
+                                                                                      QUERY PLAN                                                                                      
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ GroupAggregate  (cost=0.14..8.19 rows=1 width=12) (actual time=0.015..0.016 rows=0 loops=1)
+   Output: check_in, (sum(total_price_cents))::bigint
+   Group Key: bookings.check_in
+   Buffers: shared hit=2
+   ->  Index Scan using idx_bookings_hotel_dates_status on public.bookings  (cost=0.14..8.17 rows=1 width=12) (actual time=0.015..0.015 rows=0 loops=1)
+         Output: id, room_id, guest_name, check_in, check_out, total_price_cents, status, created_at, guest_id, hotel_id
+         Index Cond: ((bookings.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid) AND (bookings.check_in >= '2026-02-01'::date) AND (bookings.check_in <= '2026-02-15'::date))
+         Filter: ((bookings.status)::text <> 'CANCELLED'::text)
+         Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=348 read=2
+ Planning Time: 4.458 ms
+ Execution Time: 0.153 ms
+(13 rows)
+

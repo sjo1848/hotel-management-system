@@ -1,0 +1,16 @@
+                                                                                    QUERY PLAN                                                                                     
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Result  (cost=8.15..8.16 rows=1 width=1) (actual time=0.927..0.928 rows=1 loops=1)
+   Output: $0
+   Buffers: shared hit=41
+   InitPlan 1 (returns $0)
+     ->  Index Scan using bookings_no_overlap on public.bookings  (cost=0.12..8.15 rows=1 width=0) (actual time=0.925..0.925 rows=0 loops=1)
+           Index Cond: (bookings.room_id = '3f3fa44b-954d-4ab1-b986-17690b09777d'::uuid)
+           Filter: ((bookings.check_in < '2026-02-15'::date) AND (bookings.check_out > '2026-02-01'::date) AND (bookings.hotel_id = '00000000-0000-0000-0000-000000000001'::uuid))
+           Buffers: shared hit=41
+ Planning:
+   Buffers: shared hit=303
+ Planning Time: 3.179 ms
+ Execution Time: 1.015 ms
+(12 rows)
+

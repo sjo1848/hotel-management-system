@@ -11,10 +11,10 @@ use axum::{
     Extension, Json,
 };
 use base64::Engine;
-use chrono::NaiveDate;
+use chrono::{NaiveDate, NaiveDateTime};
 use metrics::counter;
 use rand::RngCore;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -36,136 +36,35 @@ pub use ops::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
     finish_cleaning_handler, get_current_balance_handler, get_invoice_by_booking_handler,
-    get_rooms_handler, list_bookings_handler, list_dirty_rooms_handler, list_extra_charges_handler,
-    list_guests_handler, list_hotels_handler, list_invoices_handler, list_users_handler,
-    search_rooms_handler, start_cleaning_handler, update_booking_handler,
-    update_room_status_handler,
+    get_room_by_id_handler, get_rooms_handler, list_bookings_handler, list_bookings_page_handler,
+    list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler,
+    list_guests_page_handler, list_hotels_handler, list_invoices_handler,
+    list_invoices_page_handler, list_users_handler, search_rooms_handler, start_cleaning_handler,
+    update_booking_handler, update_room_status_handler,
 };
 #[path = "handlers/reporting.rs"]
 mod reporting;
 pub use reporting::{
-    get_audit_events_handler, get_dashboard_kpis_handler, get_occupancy_report_handler,
-    get_revenue_report_handler, health_check, readiness_check, root_handler,
-    track_ui_telemetry_handler,
+    get_audit_events_handler, get_audit_events_page_handler, get_dashboard_kpis_handler,
+    get_occupancy_report_handler, get_revenue_report_handler, health_check, readiness_check,
+    root_handler, track_ui_telemetry_handler,
 };
 
 impl IntoResponse for DomainError {
     fn into_response(self) -> Response {
-        let (status, error_code, error_message, details): (StatusCode, &str, String, Value) =
-            match self {
-                DomainError::RoomNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "ROOM_NOT_FOUND",
-                    "La habitación solicitada no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::HotelNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "HOTEL_NOT_FOUND",
-                    "El hotel solicitado no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::HotelAlreadyExists => (
-                    StatusCode::CONFLICT,
-                    "HOTEL_ALREADY_EXISTS",
-                    "Ya existe un hotel con ese nombre".to_string(),
-                    json!({}),
-                ),
-                DomainError::RoomAlreadyExists => (
-                    StatusCode::CONFLICT,
-                    "ROOM_ALREADY_EXISTS",
-                    "Ya existe una habitación con ese número".to_string(),
-                    json!({}),
-                ),
-                DomainError::GuestAlreadyExists => (
-                    StatusCode::CONFLICT,
-                    "GUEST_ALREADY_EXISTS",
-                    "Ya existe un huésped con ese email en este hotel".to_string(),
-                    json!({}),
-                ),
-                DomainError::GuestNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "GUEST_NOT_FOUND",
-                    "El huésped solicitado no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::UserAlreadyExists => (
-                    StatusCode::CONFLICT,
-                    "USER_ALREADY_EXISTS",
-                    "Ya existe un usuario con ese nombre en este hotel".to_string(),
-                    json!({}),
-                ),
-                DomainError::UserNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "USER_NOT_FOUND",
-                    "El usuario solicitado no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::InvalidRoomStatusTransition => (
-                    StatusCode::BAD_REQUEST,
-                    "INVALID_ROOM_STATUS_TRANSITION",
-                    "Transición de estado de habitación no permitida".to_string(),
-                    json!({}),
-                ),
-                DomainError::RoomNotAvailable => (
-                    StatusCode::CONFLICT,
-                    "ROOM_NOT_AVAILABLE",
-                    "La habitación ya está ocupada en esas fechas".to_string(),
-                    json!({}),
-                ),
-                DomainError::InvalidBookingDates => (
-                    StatusCode::BAD_REQUEST,
-                    "INVALID_BOOKING_DATES",
-                    "Las fechas de reserva no son válidas".to_string(),
-                    json!({}),
-                ),
-                DomainError::BookingNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "BOOKING_NOT_FOUND",
-                    "La reserva solicitada no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::InvoiceNotFound => (
-                    StatusCode::NOT_FOUND,
-                    "INVOICE_NOT_FOUND",
-                    "La factura solicitada no existe".to_string(),
-                    json!({}),
-                ),
-                DomainError::InvalidInput(msg) => (
-                    StatusCode::BAD_REQUEST,
-                    "INVALID_INPUT",
-                    msg.clone(),
-                    json!({ "reason": msg }),
-                ),
-                DomainError::Unauthorized => (
-                    StatusCode::UNAUTHORIZED,
-                    "UNAUTHORIZED",
-                    "No autorizado".to_string(),
-                    json!({}),
-                ),
-                DomainError::Forbidden => (
-                    StatusCode::FORBIDDEN,
-                    "FORBIDDEN",
-                    "No tiene permisos para realizar esta acción".to_string(),
-                    json!({}),
-                ),
-                DomainError::InfrastructureError(msg) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "INFRA_ERROR",
-                    msg,
-                    json!({}),
-                ),
-            };
+        let contract = self.to_error_contract();
+        let status =
+            StatusCode::from_u16(contract.http_status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
 
         let request_id = REQUEST_ID
             .try_with(|value: &String| value.clone())
             .unwrap_or_else(|_| "unknown".to_string());
-        Span::current().record("error_code", error_code);
+        Span::current().record("error_code", contract.error_code);
         let body = Json(json!({
-            "error_code": error_code,
-            "message": error_message,
+            "error_code": contract.error_code,
+            "message": contract.message,
             "request_id": request_id,
-            "details": details
+            "details": contract.details
         }));
         (status, body).into_response()
     }
@@ -192,6 +91,48 @@ pub struct SearchParams {
 pub struct BookingFilterParams {
     pub start: Option<NaiveDate>,
     pub end: Option<NaiveDate>,
+}
+
+#[derive(Deserialize)]
+pub struct BookingPageParams {
+    pub start: Option<NaiveDate>,
+    pub end: Option<NaiveDate>,
+    pub limit: Option<usize>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct BookingPageResponse {
+    pub items: Vec<crate::domain::models::Booking>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}
+
+#[derive(Deserialize)]
+pub struct CursorPageParams {
+    pub limit: Option<usize>,
+    pub cursor: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct GuestPageResponse {
+    pub items: Vec<crate::domain::models::Guest>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct InvoicePageResponse {
+    pub items: Vec<crate::domain::models::Invoice>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AuditEventPageResponse {
+    pub items: Vec<crate::domain::models::AuditEvent>,
+    pub next_cursor: Option<String>,
+    pub has_more: bool,
 }
 
 #[derive(Deserialize, ToSchema)]
@@ -372,6 +313,34 @@ fn generate_csrf_token() -> String {
     let mut bytes = [0u8; 32];
     rand::thread_rng().fill_bytes(&mut bytes);
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes)
+}
+
+pub(crate) fn encode_page_cursor(cursor: &crate::domain::models::BookingPageCursor) -> String {
+    let raw = format!(
+        "{}|{}",
+        cursor.created_at.format("%Y-%m-%dT%H:%M:%S%.f"),
+        cursor.id
+    );
+    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(raw.as_bytes())
+}
+
+pub(crate) fn decode_page_cursor(
+    encoded: &str,
+) -> Result<crate::domain::models::BookingPageCursor, DomainError> {
+    let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(encoded)
+        .map_err(|_| DomainError::InvalidInput("Cursor inválido".to_string()))?;
+    let raw = String::from_utf8(bytes)
+        .map_err(|_| DomainError::InvalidInput("Cursor inválido".to_string()))?;
+    let (created_at_raw, id_raw) = raw
+        .split_once('|')
+        .ok_or_else(|| DomainError::InvalidInput("Cursor inválido".to_string()))?;
+    let created_at = NaiveDateTime::parse_from_str(created_at_raw, "%Y-%m-%dT%H:%M:%S%.f")
+        .map_err(|_| DomainError::InvalidInput("Cursor inválido".to_string()))?;
+    let id = Uuid::parse_str(id_raw)
+        .map_err(|_| DomainError::InvalidInput("Cursor inválido".to_string()))?;
+
+    Ok(crate::domain::models::BookingPageCursor { created_at, id })
 }
 
 fn build_csrf_cookie(token: &str, config: &crate::config::AppConfig) -> String {

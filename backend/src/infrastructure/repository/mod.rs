@@ -9,3 +9,4 @@ pub mod postgres_hotel;
 pub mod postgres_invoice;
 pub mod postgres_refresh_token;
 pub mod postgres_user;
+pub mod tenant_context;

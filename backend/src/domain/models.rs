@@ -61,6 +61,19 @@ pub struct Booking {
     pub status: BookingStatus,
 }
 
+#[derive(Debug, Clone)]
+pub struct BookingPageCursor {
+    pub created_at: chrono::NaiveDateTime,
+    pub id: Uuid,
+}
+
+#[derive(Debug, Clone)]
+pub struct BookingPage {
+    pub items: Vec<Booking>,
+    pub next_cursor: Option<BookingPageCursor>,
+    pub has_more: bool,
+}
+
 impl Booking {
     pub fn nights(&self) -> i64 {
         let duration = self.check_out - self.check_in;
@@ -154,6 +167,13 @@ pub struct Guest {
     pub created_at: Option<chrono::NaiveDateTime>,
 }
 
+#[derive(Debug, Clone)]
+pub struct GuestPage {
+    pub items: Vec<Guest>,
+    pub next_cursor: Option<BookingPageCursor>,
+    pub has_more: bool,
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct User {
     pub id: Uuid,
@@ -183,6 +203,13 @@ pub struct AuditEvent {
     pub action: String,
     pub ip_address: Option<String>,
     pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone)]
+pub struct AuditEventPage {
+    pub items: Vec<AuditEvent>,
+    pub next_cursor: Option<BookingPageCursor>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -266,6 +293,13 @@ pub struct Invoice {
     pub status: InvoiceStatus,
     pub payment_method: PaymentMethod,
     pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone)]
+pub struct InvoicePage {
+    pub items: Vec<Invoice>,
+    pub next_cursor: Option<BookingPageCursor>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
