@@ -317,7 +317,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Content Scroll Area */}
         <div className="flex-1 overflow-auto p-8 pt-0">
-          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700 motion-fade-up">
             {children}
           </div>
         </div>

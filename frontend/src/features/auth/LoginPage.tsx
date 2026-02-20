@@ -69,7 +69,7 @@ const LoginPage = () => {
       </div>
 
       {/* Glassmorphism Card */}
-      <div className="relative z-10 w-full max-w-md p-8 mx-4 glass rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-700 border-t border-white/50 dark:glass-dark dark:border-white/10">
+      <div className="relative z-10 w-full max-w-md p-8 mx-4 glass rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-700 motion-fade-up border-t border-white/50 dark:glass-dark dark:border-white/10">
 
         {/* Header */}
         <div className="mb-10 text-center space-y-2">

@@ -72,6 +72,11 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 222.2 84% 4.9%;
     --radius: 0.75rem;
+    --motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    --motion-standard: cubic-bezier(0.2, 0, 0, 1);
+    --motion-quick: 160ms;
+    --motion-medium: 240ms;
+    --motion-slow: 360ms;
   }
 
   .dark {
@@ -125,6 +130,30 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+
+  button,
+  input,
+  textarea,
+  select,
+  [role="button"] {
+    transition:
+      color var(--motion-quick) var(--motion-standard),
+      background-color var(--motion-quick) var(--motion-standard),
+      border-color var(--motion-quick) var(--motion-standard),
+      box-shadow var(--motion-medium) var(--motion-emphasized),
+      transform var(--motion-quick) var(--motion-standard);
+  }
+
+  @keyframes motion-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 }
 
 @utility glass {
@@ -176,6 +205,54 @@
 
   .theme-mid .drawer-scrollbar:hover::-webkit-scrollbar-thumb {
     background: rgb(125 142 166 / 0.65);
+  }
+
+  .motion-fade-up {
+    animation: motion-fade-up var(--motion-slow) var(--motion-emphasized);
+  }
+
+  .motion-surface {
+    transition:
+      box-shadow var(--motion-medium) var(--motion-emphasized),
+      transform var(--motion-medium) var(--motion-emphasized),
+      border-color var(--motion-quick) var(--motion-standard),
+      background-color var(--motion-quick) var(--motion-standard);
+  }
+
+  .motion-surface:hover {
+    transform: translateY(-1px);
+  }
+
+  .dark .text-slate-500 {
+    color: rgb(154 172 192 / 1);
+  }
+
+  .dark .text-slate-400 {
+    color: rgb(185 201 218 / 1);
+  }
+
+  .dark .text-slate-600 {
+    color: rgb(199 212 227 / 1);
+  }
+
+  .dark .placeholder\:text-slate-600::placeholder {
+    color: rgb(160 178 198 / 1);
+  }
+
+  .theme-mid .text-slate-500 {
+    color: rgb(169 186 205 / 1);
+  }
+
+  .theme-mid .text-slate-400 {
+    color: rgb(198 211 226 / 1);
+  }
+
+  .theme-mid .text-slate-600 {
+    color: rgb(211 222 234 / 1);
+  }
+
+  .theme-mid .placeholder\:text-slate-600::placeholder {
+    color: rgb(180 197 215 / 1);
   }
 
   .theme-mid .dark\:bg-slate-950 {

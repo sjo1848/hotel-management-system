@@ -30,7 +30,7 @@ describe("housekeepingService contract mapping", () => {
 
     const rooms = await getDirtyRooms();
 
-    expect(client.get).toHaveBeenCalledWith("/housekeeping/dirty");
+    expect(client.get).toHaveBeenCalledWith("/housekeeping/dirty", { params: undefined });
     expect(rooms[0].status).toBe("Dirty");
   });
 });
