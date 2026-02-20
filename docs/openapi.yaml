@@ -441,11 +441,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [status]
-              properties:
-                status:
-                  type: string
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      - AVAILABLE
+                      - OCCUPIED
+                      - DIRTY
+                      - MAINTENANCE
       responses:
         "200":
           description: Estado actualizado
@@ -846,6 +851,12 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - Available
+            - Occupied
+            - Dirty
+            - Cleaning
+            - Maintenance
         price_cents:
           type: integer
     Booking:
@@ -869,6 +880,11 @@ components:
           type: integer
         status:
           type: string
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
     Hotel:
       type: object
       properties:
@@ -913,6 +929,11 @@ components:
           type: string
         status:
           type: string
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
     DashboardKpis:
       type: object
       properties:

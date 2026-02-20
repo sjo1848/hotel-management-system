@@ -238,3 +238,65 @@ fn monetization_endpoints_use_explicit_response_schemas() {
         "Invoice-by-booking must use explicit typed schema"
     );
 }
+
+#[test]
+fn status_enums_are_explicit_in_core_contracts() {
+    let doc = openapi_doc();
+    let components = get_mapping(&doc, "components");
+    let schemas = components
+        .get("schemas")
+        .and_then(Value::as_mapping)
+        .expect("components.schemas must be present");
+
+    let room_status_enum_len = schemas
+        .get("Room")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("properties"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("status"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("enum"))
+        .and_then(Value::as_sequence)
+        .map(|values| values.len())
+        .unwrap_or(0);
+    assert_eq!(room_status_enum_len, 5, "Room.status must define full enum");
+
+    let booking_status_enum_len = schemas
+        .get("Booking")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("properties"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("status"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("enum"))
+        .and_then(Value::as_sequence)
+        .map(|values| values.len())
+        .unwrap_or(0);
+    assert_eq!(
+        booking_status_enum_len, 4,
+        "Booking.status must define canonical enum"
+    );
+
+    let room_status_patch = get_path_method(&doc, "/api/v1/rooms/{id}/status", "patch");
+    let room_status_request_enum_len = room_status_patch
+        .get("requestBody")
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("content"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("application/json"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("schema"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("properties"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("status"))
+        .and_then(Value::as_mapping)
+        .and_then(|v| v.get("enum"))
+        .and_then(Value::as_sequence)
+        .map(|values| values.len())
+        .unwrap_or(0);
+    assert_eq!(
+        room_status_request_enum_len, 4,
+        "PATCH /rooms/{{id}}/status must enumerate accepted values"
+    );
+}
