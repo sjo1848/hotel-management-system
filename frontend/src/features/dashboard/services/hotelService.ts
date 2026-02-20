@@ -1,14 +1,24 @@
-import client from "@/api/client";
+import { apiGet, apiPost } from "@/api/sdk";
+import type { components } from "@/api/generated/openapi";
 import { Hotel } from "@/types/domain";
 
+type HotelRaw = components["schemas"]["Hotel"];
+type CreateHotelRequest = components["schemas"]["CreateHotelRequest"];
+
+const toHotel = (raw: HotelRaw): Hotel => ({
+  id: raw.id ?? "",
+  name: raw.name ?? "",
+  address: raw.address ?? undefined,
+});
+
 export const getHotels = async () => {
-  const response = await client.get("/hotels");
-  return response.data as Hotel[];
+  const response = await apiGet<HotelRaw[]>("/hotels");
+  return (response ?? []).map(toHotel);
 };
 
-export const createHotel = async (hotelData: { name: string, address?: string }) => {
-  const response = await client.post("/hotels", hotelData);
-  return response.data as Hotel;
+export const createHotel = async (hotelData: CreateHotelRequest) => {
+  const response = await apiPost<CreateHotelRequest, HotelRaw>("/hotels", hotelData);
+  return toHotel(response);
 };
 
 const hotelService = {

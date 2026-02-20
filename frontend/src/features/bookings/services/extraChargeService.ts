@@ -1,14 +1,31 @@
-import client from "@/api/client";
+import { apiGet, apiPost } from "@/api/sdk";
+import type { components } from "@/api/generated/openapi";
 import { ExtraCharge } from "@/types/domain";
 
+type ExtraChargeRaw = components["schemas"]["ExtraCharge"];
+type AddExtraChargeRequest = components["schemas"]["AddExtraChargeRequest"];
+
+const toExtraCharge = (raw: ExtraChargeRaw): ExtraCharge => ({
+  id: raw.id ?? "",
+  hotel_id: raw.hotel_id ?? "",
+  booking_id: raw.booking_id ?? "",
+  description: raw.description ?? "",
+  amount_cents: raw.amount_cents ?? 0,
+  category: raw.category ?? "",
+  created_at: raw.created_at,
+});
+
 export const getExtraCharges = async (bookingId: string) => {
-  const response = await client.get(`/bookings/${bookingId}/extra-charges`);
-  return response.data as ExtraCharge[];
+  const response = await apiGet<ExtraChargeRaw[]>(`/bookings/${bookingId}/extra-charges`);
+  return (response ?? []).map(toExtraCharge);
 };
 
-export const addExtraCharge = async (bookingId: string, data: { description: string, amount_cents: number, category: string }) => {
-  const response = await client.post(`/bookings/${bookingId}/extra-charges`, data);
-  return response.data as ExtraCharge;
+export const addExtraCharge = async (bookingId: string, data: AddExtraChargeRequest) => {
+  const response = await apiPost<AddExtraChargeRequest, ExtraChargeRaw>(
+    `/bookings/${bookingId}/extra-charges`,
+    data,
+  );
+  return toExtraCharge(response);
 };
 
 const extraChargeService = {

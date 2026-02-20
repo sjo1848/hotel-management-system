@@ -145,6 +145,39 @@
   pero aclara superficies y bordes para que no quede tan profundo como `dark`.
 */
 @layer utilities {
+  .drawer-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .drawer-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .drawer-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .drawer-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 180ms ease;
+  }
+
+  .drawer-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgb(148 163 184 / 0.55);
+  }
+
+  .dark .drawer-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgb(100 116 139 / 0.55);
+  }
+
+  .theme-mid .drawer-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgb(125 142 166 / 0.65);
+  }
+
   .theme-mid .dark\:bg-slate-950 {
     background-color: rgb(15 23 42 / 0.82) !important;
   }

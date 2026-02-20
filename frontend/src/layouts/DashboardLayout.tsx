@@ -147,30 +147,46 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Brand */}
         <div className={cn("relative transition-all duration-500", isCollapsed ? "p-4 text-center" : "p-8 pb-4")}>
-          <div className={cn("flex items-center gap-4", isCollapsed && "justify-center")}>
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-amber-700 flex items-center justify-center shadow-lg shadow-amber-900/20 shrink-0">
-              <span className="font-bold text-xl text-white">H</span>
-            </div>
-            {!isCollapsed && (
-              <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-                <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none dark:text-white">
-                  HMS <span className="text-secondary">ELITE</span>
-                </h1>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold dark:text-slate-400">
-                  {user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA"}
-                </p>
-              </div>
+          <div
+            className={cn(
+              "flex",
+              isCollapsed
+                ? "flex-col items-center justify-center gap-3"
+                : "items-start justify-between gap-4",
             )}
+          >
+            <div className={cn("flex items-center gap-4", isCollapsed && "justify-center")}>
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-amber-700 flex items-center justify-center shadow-lg shadow-amber-900/20 shrink-0">
+                <span className="font-bold text-xl text-white">H</span>
+              </div>
+              {!isCollapsed && (
+                <div className="animate-in fade-in slide-in-from-left-4 duration-500">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none dark:text-white">
+                    HMS <span className="text-secondary">ELITE</span>
+                  </h1>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold dark:text-slate-400">
+                    {user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA"}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              aria-label={isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"}
+              className={cn(
+                "h-9 w-9 rounded-xl border border-slate-200 bg-white/90 text-slate-600 shadow-sm transition-all hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100",
+                isCollapsed && "h-8 w-8 rounded-lg",
+              )}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="h-4 w-4 mx-auto" />
+              ) : (
+                <ChevronLeft className="h-4 w-4 mx-auto" />
+              )}
+            </button>
           </div>
         </div>
-
-        {/* Collapse Toggle Button */}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-24 w-6 h-6 bg-secondary text-slate-900 dark:text-slate-100 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform z-50"
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
 
         {/* Navigation */}
         <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
