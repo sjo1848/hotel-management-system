@@ -82,17 +82,21 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
   if (loading)
     return (
       <div className="flex justify-center p-20">
-        <Loader2 className="w-10 h-10 animate-spin text-slate-400 dark:text-slate-500" />
+        <Loader2 className="w-10 h-10 animate-spin text-slate-500 dark:text-slate-400" />
       </div>
     );
 
   if (error)
-    return <div className="text-red-500 text-center p-10">{error}</div>;
+    return (
+      <div className="rounded-xl border border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-200 text-center p-10">
+        {error}
+      </div>
+    );
 
   return (
     <>
       {!searchDates?.from || !searchDates?.to ? (
-        <div className="border border-dashed border-amber-200 bg-amber-50/60 rounded-xl p-5 text-sm text-amber-700">
+        <div className="border border-dashed border-amber-200 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-950/35 rounded-xl p-5 text-sm text-amber-700 dark:text-amber-200">
           Seleccioná un rango de fechas para habilitar reservas y ver disponibilidad real.
         </div>
       ) : null}

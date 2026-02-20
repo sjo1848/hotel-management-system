@@ -192,8 +192,8 @@ const BookingEditDrawer = ({
       <SheetContent className="sm:max-w-[440px] bg-white dark:bg-slate-900 border-l shadow-2xl overflow-y-auto">
         {showSuccess ? (
           <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6 animate-in zoom-in fade-in duration-500">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-emerald-100' : 'bg-blue-100'}`}>
-              <CheckCircle2 className={`w-12 h-12 ${showSuccess === 'CheckedIn' ? 'text-emerald-600' : 'text-blue-600'}`} />
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-emerald-100 dark:bg-emerald-900/35' : 'bg-blue-100 dark:bg-blue-900/35'}`}>
+              <CheckCircle2 className={`w-12 h-12 ${showSuccess === 'CheckedIn' ? 'text-emerald-600 dark:text-emerald-200' : 'text-blue-600 dark:text-blue-200'}`} />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
@@ -209,7 +209,7 @@ const BookingEditDrawer = ({
             <div className="flex flex-col w-full gap-3 pt-6">
               {showSuccess === 'CheckedOut' && (
                 <Button 
-                  className="bg-slate-900 text-white rounded-xl h-12 gap-2"
+                  className="bg-slate-900 text-white hover:text-white rounded-xl h-12 gap-2"
                   onClick={() => {
                     onClose();
                     onViewDetails?.();
@@ -239,11 +239,11 @@ const BookingEditDrawer = ({
             <div className="py-6 space-y-6">
               {/* Room Status Warning */}
               {room?.status === 'Dirty' && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <div className="p-4 bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-700 rounded-2xl flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-rose-500 dark:text-rose-200 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-black text-rose-900 leading-tight">Habitación Sucia</p>
-                    <p className="text-xs font-medium text-rose-700 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
+                    <p className="text-sm font-black text-rose-900 dark:text-rose-100 leading-tight">Habitación Sucia</p>
+                    <p className="text-xs font-medium text-rose-700 dark:text-rose-200 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
                   </div>
                 </div>
               )}
@@ -275,7 +275,7 @@ const BookingEditDrawer = ({
                       variant="outline"
                       onClick={() => handleStatusChange('Cancelled')}
                       disabled={loading}
-                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
+                      className="border-rose-200 dark:border-rose-700 text-rose-600 dark:text-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/35"
                     >
                       <XCircle className="w-4 h-4 mr-2" /> Cancelar
                     </Button>
@@ -290,7 +290,7 @@ const BookingEditDrawer = ({
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-7 text-indigo-600 font-bold text-[10px] uppercase"
+                    className="h-7 text-indigo-600 dark:text-indigo-200 font-bold text-[10px] uppercase hover:bg-indigo-50 dark:hover:bg-indigo-900/35"
                     onClick={() => setIsAddingExtra(!isAddingExtra)}
                   >
                     <Plus className="w-3 h-3 mr-1" /> Añadir
@@ -316,12 +316,12 @@ const BookingEditDrawer = ({
 
                 <div className="space-y-2">
                   {extraCharges.length === 0 ? (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-2">Sin consumos registrados</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 italic text-center py-2">Sin consumos registrados</p>
                   ) : (
                     extraCharges.map(charge => (
                       <div key={charge.id} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-800/70 rounded-lg text-xs">
                         <div className="flex items-center gap-2">
-                          <Tag className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                          <Tag className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                           <span className="font-medium text-slate-700 dark:text-slate-300">{charge.description}</span>
                         </div>
                         <span className="font-mono font-bold">${charge.amount_cents / 100}</span>

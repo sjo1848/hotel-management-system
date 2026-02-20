@@ -22,7 +22,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
   const total = nights > 0 ? pricePerNight * nights : 0;
   
   return (
-    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 group bg-white dark:bg-slate-900 hover:-translate-y-1 transition-all duration-300">
+    <Card className="overflow-hidden border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40 group bg-white dark:bg-slate-900 hover:-translate-y-1 transition-all duration-300">
       <div className="relative h-56 bg-slate-100 dark:bg-slate-800 overflow-hidden">
         <img
           src={`https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000`}
@@ -46,7 +46,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
               Habs. {room.room_number}
             </CardTitle>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
                 {room.room_type}
               </span>
             </div>
@@ -55,13 +55,13 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
             <div className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tighter">
               ${pricePerNight.toLocaleString("es-AR")}
             </div>
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest block -mt-1">/ noche</span>
+            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block -mt-1">/ noche</span>
           </div>
         </div>
         
         {nights > 0 && (
           <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-100 dark:border-slate-800">
-            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Estancia {nights} noches</span>
+            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Estancia {nights} noches</span>
             <span className="text-sm font-black text-slate-900 dark:text-slate-100">${total.toLocaleString("es-AR")}</span>
           </div>
         )}
@@ -70,16 +70,16 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
       <CardContent>
         <div className="flex justify-between items-center py-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex gap-4">
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
               <Users className="w-4 h-4" />
               <span className="text-xs font-bold">2 Pers</span>
             </div>
-            <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
               <Wifi className="w-4 h-4" />
               <span className="text-xs font-bold">Fibra</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-emerald-600">
+          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-200">
             <Coffee className="w-4 h-4" />
             <span className="text-xs font-bold">Premium</span>
           </div>

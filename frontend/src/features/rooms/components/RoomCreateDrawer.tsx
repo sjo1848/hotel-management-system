@@ -89,7 +89,7 @@ const RoomCreateDrawer = ({
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="room_number" className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Número de Habitación
+                <Type className="w-4 h-4 text-slate-500 dark:text-slate-400" /> Número de Habitación
               </Label>
               <Input
                 id="room_number"
@@ -103,7 +103,7 @@ const RoomCreateDrawer = ({
 
             <div className="grid gap-2">
               <Label htmlFor="room_type" className="flex items-center gap-2">
-                <DoorOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Tipo de Habitación
+                <DoorOpen className="w-4 h-4 text-slate-500 dark:text-slate-400" /> Tipo de Habitación
               </Label>
               <Input
                 id="room_type"
@@ -117,10 +117,10 @@ const RoomCreateDrawer = ({
 
             <div className="grid gap-2">
               <Label htmlFor="price" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Precio por Noche
+                <DollarSign className="w-4 h-4 text-slate-500 dark:text-slate-400" /> Precio por Noche
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">$</span>
                 <Input
                   id="price"
                   type="number"

@@ -89,7 +89,7 @@ const BookingList = () => {
     return (
       <div className="p-10 flex flex-col items-center justify-center space-y-4">
         <CheckCircle2 className="w-8 h-8 text-slate-300 dark:text-slate-500 animate-pulse" />
-        <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Actualizando reservas...</span>
+        <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Actualizando reservas...</span>
       </div>
     );
   }
@@ -109,10 +109,10 @@ const BookingList = () => {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Huésped</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Estado</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Fechas</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 text-right">Monto</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Huésped</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Estado</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Fechas</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-right">Monto</TableHead>
               <TableHead className="py-4 px-6"></TableHead>
             </TableRow>
           </TableHeader>
@@ -121,14 +121,14 @@ const BookingList = () => {
               <TableRow key={booking.id} className="border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                 <TableCell className="py-4 px-6">
                   <div className="font-bold text-slate-900 dark:text-slate-100">{booking.guest_name}</div>
-                  <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
                 </TableCell>
                 <TableCell className="py-4 px-6">
                   {getStatusBadge(booking.status)}
                 </TableCell>
                 <TableCell className="py-4 px-6">
                   <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{booking.check_in}</div>
-                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">al {booking.check_out}</div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">al {booking.check_out}</div>
                 </TableCell>
                 <TableCell className="py-4 px-6 text-right">
                   <div className="font-mono font-bold text-slate-900 dark:text-slate-100">${(booking.total_price_cents / 100).toLocaleString()}</div>
@@ -137,7 +137,7 @@ const BookingList = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all text-slate-500 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
-                        <MoreVertical className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <MoreVertical className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800 shadow-xl">
@@ -151,7 +151,7 @@ const BookingList = () => {
                         Gestionar
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        className="text-xs font-bold text-rose-600"
+                        className="text-xs font-bold text-rose-600 dark:text-rose-200"
                         disabled={booking.status === 'Cancelled' || booking.status === 'CheckedOut'}
                         onClick={() => handleCancel(booking)}
                       >

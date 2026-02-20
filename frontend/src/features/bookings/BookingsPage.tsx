@@ -61,7 +61,11 @@ const BookingsPage = () => {
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200/50">
-        {error ? <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+        {error ? (
+          <div className="border-b border-red-200 dark:border-red-700 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+            {error}
+          </div>
+        ) : null}
         <DataTable
           columns={columns}
           data={filteredBookings}

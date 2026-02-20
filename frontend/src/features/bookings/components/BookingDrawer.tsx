@@ -188,11 +188,11 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                   <span className="font-bold text-slate-900 dark:text-slate-100">{nights}</span>
                 </div>
                 <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-1 flex justify-between items-end">
-                  <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-bold">Total Estimado</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-bold">Total Estimado</span>
                   <span className="text-xl font-black text-indigo-600">${total.toLocaleString("es-AR")}</span>
                 </div>
               </div>
-              <div className="text-xs text-slate-400 dark:text-slate-500 italic">
+              <div className="text-xs text-slate-500 dark:text-slate-400 italic">
                 * El precio incluye impuestos y cargos base del hotel.
               </div>
             </div>
@@ -215,13 +215,15 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                   )}
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-500 dark:text-slate-400" />
                   <Input
                     id="search-guest"
                     placeholder="Nombre o Email..."
                     className={cn(
                       "pl-10 h-11 rounded-xl transition-all",
-                      selectedGuestId ? "bg-indigo-50 border-indigo-200" : "bg-white dark:bg-slate-900"
+                      selectedGuestId
+                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-700"
+                        : "bg-white dark:bg-slate-900"
                     )}
                     value={searchTerm}
                     onChange={(e) => {
@@ -241,7 +243,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                         <button
                           key={guest.id}
                           type="button"
-                          className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-slate-50 dark:border-slate-800 last:border-0"
+                          className="w-full text-left p-3 hover:bg-indigo-50 dark:hover:bg-indigo-900/35 rounded-lg transition-colors flex flex-col border-b border-slate-50 dark:border-slate-800 last:border-0"
                           onClick={() => handleSelectGuest(guest)}
                         >
                           <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{guest.full_name}</span>
@@ -254,7 +256,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
               </div>
 
               <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2 text-indigo-600 mb-2">
+                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-200 mb-2">
                   <UserPlus className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">
                     {selectedGuestId ? "Detalles del Huésped Seleccionado" : "O registrar nuevo"}
@@ -296,8 +298,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
           {/* PASO 3: CONFIRMACIÓN */}
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-               <div className="rounded-2xl border-2 border-indigo-100 p-5 bg-indigo-50/30">
-                  <h4 className="text-sm font-bold text-indigo-900 mb-4 flex items-center gap-2">
+               <div className="rounded-2xl border-2 border-indigo-100 dark:border-indigo-700 p-5 bg-indigo-50/30 dark:bg-indigo-950/30">
+                  <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-100 mb-4 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" /> Resumen Final
                   </h4>
                   <div className="space-y-2 text-sm">
@@ -315,8 +317,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     </div>
                   </div>
                </div>
-               <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                  <div className="flex justify-between items-center font-black text-emerald-900">
+               <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-700 rounded-xl">
+                  <div className="flex justify-between items-center font-black text-emerald-900 dark:text-emerald-200">
                     <span>A PAGAR:</span>
                     <span className="text-2xl">${total.toLocaleString("es-AR")}</span>
                   </div>

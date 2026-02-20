@@ -63,7 +63,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
                 !date?.from && "text-muted-foreground",
               )}
             >
-              <CalendarIcon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
+              <CalendarIcon className="mr-3 h-5 w-5 text-slate-500 dark:text-slate-400" />
               {date?.from ? (
                 date.to ? (
                   <>
@@ -74,7 +74,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
                   format(date.from, "dd LLL, y", { locale: es })
                 )
               ) : (
-                <span className="text-slate-400 dark:text-slate-500">¿Cuándo vienes?</span>
+                <span className="text-slate-500 dark:text-slate-400">¿Cuándo vienes?</span>
               )}
             </Button>
           </PopoverTrigger>
@@ -103,12 +103,12 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
               </span>
             </div>
           ) : (
-            <div className="text-xs text-red-500 font-medium">
+            <div className="text-xs text-red-500 dark:text-red-200 font-medium">
               La fecha de salida debe ser posterior a la de entrada.
             </div>
           )
         ) : (
-          <div className="text-xs text-slate-400 dark:text-slate-500">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             Seleccioná entrada y salida para ver disponibilidad.
           </div>
         )}

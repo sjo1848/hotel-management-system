@@ -34,7 +34,8 @@ const BookingsFiltersToolbar = ({
           size="sm"
           className={cn(
             "h-10 rounded-xl border-slate-200 dark:border-slate-700",
-            filterStatus !== "all" && "border-indigo-200 bg-indigo-50 text-indigo-700",
+            filterStatus !== "all" &&
+              "border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-900/35 text-indigo-700 dark:text-indigo-200",
           )}
         >
           <Filter className="mr-2 h-4 w-4" />

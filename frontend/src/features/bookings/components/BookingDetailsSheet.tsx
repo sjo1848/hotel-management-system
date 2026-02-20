@@ -64,13 +64,13 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
     const getStatusInfo = (status: BookingStatus) => {
         switch (status) {
             case "Confirmed":
-                return { label: "Confirmada", color: "text-blue-600 bg-blue-50 border-blue-100", icon: Clock };
+                return { label: "Confirmada", color: "text-blue-600 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-700", icon: Clock };
             case "CheckedIn":
-                return { label: "En el Hotel", color: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: CheckCircle };
+                return { label: "En el Hotel", color: "text-emerald-600 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-700", icon: CheckCircle };
             case "CheckedOut":
                 return { label: "Finalizada", color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 border-slate-100 dark:border-slate-800", icon: CheckCircle };
             case "Cancelled":
-                return { label: "Cancelada", color: "text-red-600 bg-red-50 border-red-100", icon: XCircle };
+                return { label: "Cancelada", color: "text-red-600 dark:text-red-200 bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-700", icon: XCircle };
             default:
                 return { label: status, color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 border-slate-100 dark:border-slate-800", icon: Clock };
         }
@@ -83,7 +83,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
             ? { label: "Pagada", className: "bg-emerald-600 text-white" }
             : invoice.status === "VOIDED"
                 ? { label: "Anulada", className: "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600" }
-                : { label: "Pendiente", className: "bg-amber-100 text-amber-700 border-amber-200" }
+                : { label: "Pendiente", className: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200 border-amber-200 dark:border-amber-700" }
         : null;
 
     return (
@@ -95,7 +95,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                             <StatusIcon className="w-3.5 h-3.5" />
                             {statusInfo.label}
                         </Badge>
-                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500">REF: {booking.id.substring(0, 8).toUpperCase()}</span>
+                        <span className="text-xs font-mono text-slate-500 dark:text-slate-400">REF: {booking.id.substring(0, 8).toUpperCase()}</span>
                     </div>
                     <SheetTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">Detalles de Reserva</SheetTitle>
                     <SheetDescription className="text-slate-500 dark:text-slate-400">
@@ -136,14 +136,14 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm">
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mb-1">Check-in</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Check-in</p>
                                 <p className="font-bold text-slate-900 dark:text-slate-100">{format(new Date(booking.check_in), "EEE, dd MMM yyyy", { locale: es })}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Desde las 15:00</p>
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Desde las 15:00</p>
                             </div>
                             <div className="bg-white dark:bg-slate-900 rounded-xl p-3 border border-slate-100 dark:border-slate-800 shadow-sm">
-                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mb-1">Check-out</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">Check-out</p>
                                 <p className="font-bold text-slate-900 dark:text-slate-100">{format(new Date(booking.check_out), "EEE, dd MMM yyyy", { locale: es })}</p>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Hasta las 11:00</p>
+                                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">Hasta las 11:00</p>
                             </div>
                         </div>
                     </section>
@@ -157,7 +157,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                         <div className="flex items-center justify-between p-4 bg-slate-900 rounded-xl text-white shadow-xl overflow-hidden relative group">
                             <div className="absolute right-0 top-0 bottom-0 w-32 bg-secondary opacity-10 group-hover:opacity-20 transition-opacity skew-x-12 -mr-8" />
                             <div className="relative z-10">
-                                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mb-1">Total Reserva</div>
+                                <div className="text-[10px] text-slate-300 font-bold uppercase mb-1">Total Reserva</div>
                                 <div className="text-3xl font-black font-mono">${(booking.total_price_cents / 100).toLocaleString()}</div>
                             </div>
                         </div>
@@ -174,7 +174,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                 <span className="text-lg font-bold text-slate-900 dark:text-slate-100">Total Estancia</span>
                                 <div className="text-right">
                                     <span className="text-2xl font-black text-secondary">${booking.total_price_cents / 100}</span>
-                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">IVA Incluido</p>
+                                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase">IVA Incluido</p>
                                 </div>
                             </div>
                         </div>
@@ -187,7 +187,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                 <CreditCard className="w-4 h-4 text-emerald-600" />
                                 Factura Generada
                             </div>
-                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-5 relative overflow-hidden">
+                            <div className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-700 rounded-xl p-5 relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-3 opacity-10">
                                     <CheckCircle className="w-12 h-12 text-emerald-600" />
                                 </div>
@@ -211,7 +211,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                             </Badge>
                                         </div>
 
-                                        <div className="pt-2 flex justify-between items-end border-t border-emerald-100">
+                                        <div className="pt-2 flex justify-between items-end border-t border-emerald-100 dark:border-emerald-700">
                                             <div>
                                                 <p className="text-[10px] text-emerald-600 font-bold uppercase">Emitida el</p>
                                                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -255,7 +255,7 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                         {(booking.status === "Confirmed" || booking.status === "CheckedIn") && (
                             <Button
                                 variant="outline"
-                                className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 gap-2"
+                                className="w-full sm:w-auto border-red-200 dark:border-red-700 text-red-600 dark:text-red-200 hover:bg-red-50 dark:hover:bg-red-900/30 gap-2"
                                 onClick={() => onUpdateStatus?.(booking.id, "Cancelled")}
                             >
                                 <XCircle className="w-4 h-4" /> Cancelar

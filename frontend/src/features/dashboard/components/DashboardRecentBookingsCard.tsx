@@ -12,7 +12,7 @@ const DashboardRecentBookingsCard = ({ onViewAll }: DashboardRecentBookingsCardP
       <div className="flex items-center justify-between">
         <div>
           <CardTitle className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100">Últimas Reservas</CardTitle>
-          <p className="mt-1 text-sm font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Actividad reciente</p>
+          <p className="mt-1 text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Actividad reciente</p>
         </div>
         <Button
           variant="outline"

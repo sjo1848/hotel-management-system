@@ -149,7 +149,7 @@ const RoomsPage = () => {
             <Button
               size="sm"
               variant="outline"
-              className="h-8 text-xs font-bold uppercase bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+              className="h-8 text-xs font-bold uppercase bg-emerald-50 dark:bg-emerald-900/35 text-emerald-700 dark:text-emerald-200 border-emerald-200 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
               onClick={() => {
                 setSelectedRoom(item);
                 setIsDrawerOpen(true);
@@ -210,7 +210,7 @@ const RoomsPage = () => {
             variant="ghost"
             size="sm"
             className={cn("h-8 px-3 rounded-md transition-all", viewMode === "grid" ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}
-            onClick={() => setViewMode("grid")}
+              onClick={() => setViewMode("grid")}
           >
             <Grid className="w-4 h-4 mr-2" />
             Grid
@@ -219,7 +219,7 @@ const RoomsPage = () => {
             variant="ghost"
             size="sm"
             className={cn("h-8 px-3 rounded-md transition-all", viewMode === "list" ? "bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}
-            onClick={() => setViewMode("list")}
+              onClick={() => setViewMode("list")}
           >
             <List className="w-4 h-4 mr-2" />
             Lista
@@ -233,31 +233,31 @@ const RoomsPage = () => {
       />
 
       {roomsError && (
-        <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl">
+        <div className="px-4 py-3 text-sm text-red-700 dark:text-red-200 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-700 rounded-xl">
           {roomsError}
         </div>
       )}
 
       {isSearching && (
-        <div className="flex items-center justify-between p-4 bg-indigo-50 border border-indigo-100 rounded-xl mb-6 animate-in fade-in zoom-in duration-300">
+        <div className="flex items-center justify-between p-4 bg-indigo-50 dark:bg-indigo-950/35 border border-indigo-100 dark:border-indigo-700 rounded-xl mb-6 animate-in fade-in zoom-in duration-300">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg shadow-indigo-200">
               <CheckCircle className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-sm font-bold text-indigo-900">
+              <p className="text-sm font-bold text-indigo-900 dark:text-indigo-100">
                 Mostrando habitaciones disponibles
               </p>
-              <p className="text-xs text-indigo-600">
+              <p className="text-xs text-indigo-600 dark:text-indigo-200">
                 Para el periodo: <span className="font-bold">{bookingDates?.from} al {bookingDates?.to}</span>
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-black text-indigo-600 leading-none">
+            <p className="text-2xl font-black text-indigo-600 dark:text-indigo-200 leading-none">
               {rooms.length}
             </p>
-            <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-400">
+            <p className="text-[10px] uppercase tracking-widest font-bold text-indigo-500 dark:text-indigo-300">
               Encontradas
             </p>
           </div>
@@ -265,7 +265,7 @@ const RoomsPage = () => {
       )}
 
       {rooms.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 dark:bg-slate-800/70 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-400 dark:text-slate-500 animate-in fade-in zoom-in duration-500">
+        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 dark:bg-slate-800/70 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl text-slate-500 dark:text-slate-400 animate-in fade-in zoom-in duration-500">
           <div className="w-20 h-20 bg-white dark:bg-slate-900 rounded-full flex items-center justify-center shadow-sm mb-4">
             <DoorClosed className="w-10 h-10 opacity-20" />
           </div>
@@ -274,7 +274,7 @@ const RoomsPage = () => {
             Intentá con otro rango de fechas o revisá el estado de limpieza.
           </p>
           {isSearching && (
-            <Button variant="link" onClick={handleClearSearch} className="mt-4 text-indigo-600">
+            <Button variant="link" onClick={handleClearSearch} className="mt-4 text-indigo-600 dark:text-indigo-200">
               Ver todas las habitaciones
             </Button>
           )}
@@ -318,7 +318,7 @@ const RoomsPage = () => {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
-                        <MoreVertical className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                        <MoreVertical className="w-4 h-4 text-slate-500 dark:text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -343,12 +343,12 @@ const RoomsPage = () => {
 
                 <div className="space-y-1 mb-4">
                   <h3 className="font-bold text-slate-800 dark:text-slate-200">{room.room_type}</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status: {room.status}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 uppercase tracking-wider">Status: {room.status}</p>
                 </div>
 
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-bold">Precio</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold">Precio</span>
                     <span className="font-mono font-medium text-slate-700 dark:text-slate-300">${(room.price_cents / 100).toLocaleString()}</span>
                   </div>
                   {room.status === "Available" ? (
@@ -371,7 +371,7 @@ const RoomsPage = () => {
 
             {/* Add New Room Card */}
             <div
-              className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
+              className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-5 flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
               onClick={() => setIsCreateOpen(true)}
             >
               <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800/70 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
