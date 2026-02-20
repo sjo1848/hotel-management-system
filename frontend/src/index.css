@@ -223,6 +223,30 @@
     transform: translateY(-1px);
   }
 
+  .text-slate-500 {
+    color: rgb(71 85 105 / 1);
+  }
+
+  .text-slate-400 {
+    color: rgb(100 116 139 / 1);
+  }
+
+  .text-slate-600 {
+    color: rgb(51 65 85 / 1);
+  }
+
+  .placeholder\:text-slate-500::placeholder {
+    color: rgb(100 116 139 / 1);
+  }
+
+  .placeholder\:text-slate-600::placeholder {
+    color: rgb(100 116 139 / 1);
+  }
+
+  .placeholder\:text-slate-400::placeholder {
+    color: rgb(120 138 160 / 1);
+  }
+
   .dark .text-slate-500 {
     color: rgb(154 172 192 / 1);
   }
@@ -239,6 +263,14 @@
     color: rgb(160 178 198 / 1);
   }
 
+  .dark .placeholder\:text-slate-500::placeholder {
+    color: rgb(180 197 215 / 1);
+  }
+
+  .dark .placeholder\:text-slate-400::placeholder {
+    color: rgb(200 214 229 / 1);
+  }
+
   .theme-mid .text-slate-500 {
     color: rgb(169 186 205 / 1);
   }
@@ -253,6 +285,146 @@
 
   .theme-mid .placeholder\:text-slate-600::placeholder {
     color: rgb(180 197 215 / 1);
+  }
+
+  .theme-mid .placeholder\:text-slate-500::placeholder {
+    color: rgb(194 208 224 / 1);
+  }
+
+  .theme-mid .placeholder\:text-slate-400::placeholder {
+    color: rgb(208 220 233 / 1);
+  }
+
+  .dark .text-indigo-600,
+  .theme-mid .text-indigo-600 {
+    color: rgb(199 210 254 / 1);
+  }
+
+  .dark .text-indigo-500,
+  .theme-mid .text-indigo-500 {
+    color: rgb(165 180 252 / 1);
+  }
+
+  .dark .text-indigo-400,
+  .theme-mid .text-indigo-400 {
+    color: rgb(196 208 255 / 1);
+  }
+
+  .dark .text-indigo-700,
+  .theme-mid .text-indigo-700 {
+    color: rgb(224 231 255 / 1);
+  }
+
+  .dark .text-emerald-600,
+  .theme-mid .text-emerald-600 {
+    color: rgb(110 231 183 / 1);
+  }
+
+  .dark .text-emerald-700,
+  .theme-mid .text-emerald-700 {
+    color: rgb(167 243 208 / 1);
+  }
+
+  .dark .text-emerald-500,
+  .theme-mid .text-emerald-500 {
+    color: rgb(134 239 172 / 1);
+  }
+
+  .dark .text-rose-600,
+  .theme-mid .text-rose-600,
+  .dark .text-red-600,
+  .theme-mid .text-red-600 {
+    color: rgb(253 164 175 / 1);
+  }
+
+  .dark .text-rose-700,
+  .theme-mid .text-rose-700,
+  .dark .text-red-700,
+  .theme-mid .text-red-700 {
+    color: rgb(254 205 211 / 1);
+  }
+
+  .dark .text-red-500,
+  .theme-mid .text-red-500,
+  .dark .text-rose-500,
+  .theme-mid .text-rose-500 {
+    color: rgb(252 165 165 / 1);
+  }
+
+  .dark .text-red-400,
+  .theme-mid .text-red-400,
+  .dark .text-rose-400,
+  .theme-mid .text-rose-400 {
+    color: rgb(254 202 202 / 1);
+  }
+
+  .dark .text-amber-600,
+  .theme-mid .text-amber-600 {
+    color: rgb(253 230 138 / 1);
+  }
+
+  .dark .text-amber-500,
+  .theme-mid .text-amber-500 {
+    color: rgb(252 211 77 / 1);
+  }
+
+  .dark .text-amber-700,
+  .theme-mid .text-amber-700 {
+    color: rgb(254 243 199 / 1);
+  }
+
+  .dark .bg-indigo-50,
+  .theme-mid .bg-indigo-50 {
+    background-color: rgb(30 41 59 / 0.7);
+  }
+
+  .dark .bg-emerald-50,
+  .theme-mid .bg-emerald-50 {
+    background-color: rgb(6 78 59 / 0.35);
+  }
+
+  .dark .bg-rose-50,
+  .theme-mid .bg-rose-50,
+  .dark .bg-red-50,
+  .theme-mid .bg-red-50 {
+    background-color: rgb(127 29 29 / 0.28);
+  }
+
+  .dark .bg-amber-50,
+  .theme-mid .bg-amber-50 {
+    background-color: rgb(120 53 15 / 0.3);
+  }
+
+  .dark .border-indigo-100,
+  .dark .border-indigo-200,
+  .theme-mid .border-indigo-100,
+  .theme-mid .border-indigo-200 {
+    border-color: rgb(99 102 241 / 0.45);
+  }
+
+  .dark .border-emerald-100,
+  .dark .border-emerald-200,
+  .theme-mid .border-emerald-100,
+  .theme-mid .border-emerald-200 {
+    border-color: rgb(16 185 129 / 0.4);
+  }
+
+  .dark .border-rose-100,
+  .dark .border-rose-200,
+  .theme-mid .border-rose-100,
+  .theme-mid .border-rose-200,
+  .dark .border-red-100,
+  .dark .border-red-200,
+  .theme-mid .border-red-100,
+  .theme-mid .border-red-200 {
+    border-color: rgb(244 63 94 / 0.4);
+  }
+
+  .dark .border-amber-100,
+  .dark .border-amber-200,
+  .theme-mid .border-amber-100,
+  .theme-mid .border-amber-200 {
+    border-color: rgb(245 158 11 / 0.4);
   }
 
   .theme-mid .dark\:bg-slate-950 {
