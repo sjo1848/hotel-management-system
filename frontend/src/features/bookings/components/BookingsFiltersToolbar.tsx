@@ -54,7 +54,11 @@ const BookingsFiltersToolbar = ({
       <Download className="mr-2 h-4 w-4" /> Exportar
     </Button>
 
-    <Button size="sm" className="h-10 rounded-xl bg-slate-900 shadow-lg shadow-slate-200" onClick={onCreateBooking}>
+    <Button
+      size="sm"
+      className="h-10 rounded-xl bg-slate-900 text-white hover:text-white shadow-lg shadow-slate-200"
+      onClick={onCreateBooking}
+    >
       <Plus className="mr-2 h-4 w-4" /> Nueva Reserva
     </Button>
   </div>

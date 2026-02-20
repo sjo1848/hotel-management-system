@@ -119,7 +119,7 @@ const UsersPage = () => {
         </div>
 
         <Button 
-          className="h-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
+          className="h-12 rounded-xl bg-slate-900 text-white hover:text-white shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
           onClick={() => setIsCreateOpen(true)}
         >
           <Plus className="w-4 h-4" />
