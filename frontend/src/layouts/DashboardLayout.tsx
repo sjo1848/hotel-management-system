@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
 import { Capability, roleHasCapability } from "@/features/auth/capabilities";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const SidebarItem = ({ 
   icon: Icon, 
@@ -42,8 +43,8 @@ const SidebarItem = ({
         className={cn(
           "flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 group relative overflow-hidden",
           active
-            ? "bg-white/10 text-white shadow-lg backdrop-blur-md border border-white/5"
-            : "text-slate-400 hover:bg-white/5 hover:text-white",
+            ? "bg-slate-100 text-slate-900 shadow-lg backdrop-blur-md border border-slate-200 dark:bg-white/10 dark:text-white dark:border-white/5"
+            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white",
           collapsed && "justify-center px-0"
         )}
       >
@@ -52,7 +53,7 @@ const SidebarItem = ({
         )}
         <Icon className={cn(
           "w-5 h-5 shrink-0 transition-transform duration-300 group-hover:scale-110", 
-          active ? "text-secondary" : "text-slate-500 group-hover:text-slate-300"
+          active ? "text-secondary" : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
         )} />
         {!collapsed && (
           <span className="font-medium text-sm tracking-wide animate-in fade-in slide-in-from-left-2 duration-300">
@@ -134,15 +135,15 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const visibleSettingsItems = settingsItems.filter((item) => canSee(item.capability));
 
   return (
-    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+    <div className="flex h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden dark:bg-slate-950 dark:text-slate-100">
       {/* SIDEBAR - DEEP THEME */}
       <aside className={cn(
-        "bg-slate-950 text-white flex flex-col shadow-2xl z-50 relative transition-all duration-500 ease-in-out",
+        "bg-white text-slate-900 flex flex-col shadow-2xl z-50 relative transition-all duration-500 ease-in-out border-r border-slate-200 dark:bg-slate-950 dark:text-white dark:border-slate-800",
         isCollapsed ? "w-20" : "w-72"
       )}>
         {/* Abstract Background Decoration */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 pointer-events-none" />
-        <div className="absolute top-0 left-0 right-0 h-64 bg-secondary/5 blur-[100px] pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-100 to-white pointer-events-none dark:from-slate-900 dark:to-slate-950" />
+        <div className="absolute top-0 left-0 right-0 h-64 bg-secondary/10 blur-[100px] pointer-events-none dark:bg-secondary/5" />
 
         {/* Brand */}
         <div className={cn("relative transition-all duration-500", isCollapsed ? "p-4 text-center" : "p-8 pb-4")}>
@@ -152,10 +153,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
             {!isCollapsed && (
               <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-                <h1 className="text-2xl font-bold tracking-tight text-white leading-none">
+                <h1 className="text-2xl font-bold tracking-tight text-slate-900 leading-none dark:text-white">
                   HMS <span className="text-secondary">ELITE</span>
                 </h1>
-                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold">
+                <p className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-1 font-semibold dark:text-slate-400">
                   {user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA"}
                 </p>
               </div>
@@ -166,7 +167,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Collapse Toggle Button */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-24 w-6 h-6 bg-secondary text-slate-900 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform z-50"
+          className="absolute -right-3 top-24 w-6 h-6 bg-secondary text-slate-900 dark:text-slate-100 rounded-full flex items-center justify-center shadow-xl hover:scale-110 transition-transform z-50"
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -175,7 +176,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         <nav className="relative flex-1 px-4 py-6 space-y-8 overflow-y-auto custom-scrollbar overflow-x-hidden">
           <div>
             {!isCollapsed && visiblePrincipalItems.length > 0 && (
-              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+              <p className="px-4 text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
                 Principal
               </p>
             )}
@@ -199,7 +200,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           <div>
             {!isCollapsed && visibleManagementItems.length > 0 && (
-              <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+              <p className="px-4 text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
                 Gestión
               </p>
             )}
@@ -220,7 +221,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           {visibleSettingsItems.length > 0 && (
             <div>
               {!isCollapsed && (
-                <p className="px-4 text-xs font-bold text-slate-500 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
+                <p className="px-4 text-xs font-bold text-slate-500 dark:text-slate-400 mb-4 uppercase tracking-widest animate-in fade-in duration-300">
                   Configuración
                 </p>
               )}
@@ -242,7 +243,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
         {/* User Footer */}
         <div className={cn(
-          "relative p-4 mx-4 mb-4 rounded-2xl bg-white/5 border border-white/5 backdrop-blur-sm transition-all duration-500",
+          "relative p-4 mx-4 mb-4 rounded-2xl bg-white border border-slate-200 backdrop-blur-sm transition-all duration-500 dark:bg-white/5 dark:border-white/5",
           isCollapsed && "mx-2 p-2"
         )}>
           <div className={cn("flex items-center gap-3", !isCollapsed && "mb-3", isCollapsed && "justify-center")}>
@@ -251,8 +252,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
             {!isCollapsed && (
               <div className="overflow-hidden animate-in fade-in duration-300">
-                <p className="text-sm font-medium truncate">{user?.username || "Usuario"}</p>
-                <p className="text-xs text-slate-500 truncate capitalize">{user?.role || "Staff"}</p>
+                <p className="text-sm font-medium truncate text-slate-800 dark:text-slate-100">{user?.username || "Usuario"}</p>
+                <p className="text-xs text-slate-500 truncate capitalize dark:text-slate-400">{user?.role || "Staff"}</p>
               </div>
             )}
           </div>
@@ -260,7 +261,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <Button
               variant="ghost"
               onClick={handleLogout}
-              className="w-full justify-start text-slate-400 hover:text-white hover:bg-white/10 h-9 text-xs animate-in fade-in duration-300"
+              className="w-full justify-start text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 h-9 text-xs animate-in fade-in duration-300 dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10"
             >
               <LogOut className="w-4 h-4 mr-2" />
               Cerrar Sesión
@@ -270,15 +271,15 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative">
+      <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 relative dark:bg-slate-950/70">
         {/* Top Header Glass */}
         <header className="h-20 px-8 flex items-center justify-between z-40 sticky top-0 md:relative">
           <div className="flex-1 max-w-xl">
             <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-600 transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 group-focus-within:text-slate-600 transition-colors" />
               <Input
                 placeholder="Buscar reservas, habitaciones o huéspedes..."
-                className="pl-10 bg-white border-slate-200/60 shadow-sm focus:ring-secondary/20 rounded-xl h-10 w-full transition-all duration-300 focus:w-[105%]"
+                className="pl-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/60 shadow-sm focus:ring-secondary/20 rounded-xl h-10 w-full transition-all duration-300 focus:w-[105%]"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={handleSearch}
@@ -287,9 +288,10 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <div className="flex items-center gap-4 ml-4">
-            <Button size="icon" variant="ghost" className="rounded-full hover:bg-white hover:shadow-sm text-slate-500 relative">
+            <ThemeToggle />
+            <Button size="icon" variant="ghost" className="rounded-full hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm text-slate-500 dark:text-slate-400 relative">
               <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-slate-900"></span>
             </Button>
             <Button size="icon" variant="ghost" className="md:hidden" onClick={() => setIsCollapsed(!isCollapsed)}>
               <Menu className="w-5 h-5" />

@@ -34,17 +34,17 @@ const GuestDetailsSheet: React.FC<GuestDetailsSheetProps> = ({
 
     return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="sm:max-w-md bg-white border-l shadow-2xl overflow-y-auto">
-                <SheetHeader className="pb-6 border-b border-slate-100">
+            <SheetContent className="sm:max-w-md bg-white dark:bg-slate-900 border-l shadow-2xl overflow-y-auto">
+                <SheetHeader className="pb-6 border-b border-slate-100 dark:border-slate-800">
                     <div className="flex items-center justify-between mb-2">
                         <Badge className="px-2.5 py-0.5 border font-medium flex items-center gap-1 bg-indigo-50 text-indigo-600 border-indigo-100">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             Huésped Verificado
                         </Badge>
-                        <span className="text-xs font-mono text-slate-400">ID: {guest.id.substring(0, 8).toUpperCase()}</span>
+                        <span className="text-xs font-mono text-slate-400 dark:text-slate-500">ID: {guest.id.substring(0, 8).toUpperCase()}</span>
                     </div>
-                    <SheetTitle className="text-2xl font-bold text-slate-900">{guest.full_name}</SheetTitle>
-                    <SheetDescription className="text-slate-500">
+                    <SheetTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">{guest.full_name}</SheetTitle>
+                    <SheetDescription className="text-slate-500 dark:text-slate-400">
                         Perfil completo y registros históricos.
                     </SheetDescription>
                 </SheetHeader>
@@ -56,31 +56,31 @@ const GuestDetailsSheet: React.FC<GuestDetailsSheetProps> = ({
                             {guest.full_name.charAt(0)}
                         </div>
                         <div>
-                            <h3 className="text-xl font-bold text-slate-900">{guest.full_name}</h3>
-                            <p className="text-slate-500 text-sm">Cliente Premium</p>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{guest.full_name}</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm">Cliente Premium</p>
                         </div>
                     </div>
 
                     {/* Información de Contacto */}
                     <section className="space-y-4">
-                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b pb-2">Información de Contacto</div>
+                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b pb-2">Información de Contacto</div>
                         <div className="grid gap-4">
-                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
                                     <Mail className="w-4 h-4 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Email</p>
-                                    <p className="text-sm font-medium text-slate-700">{guest.email}</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Email</p>
+                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{guest.email}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                            <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div className="p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
                                     <Phone className="w-4 h-4 text-indigo-600" />
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Teléfono</p>
-                                    <p className="text-sm font-medium text-slate-700">{guest.phone || "No registrado"}</p>
+                                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Teléfono</p>
+                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{guest.phone || "No registrado"}</p>
                                 </div>
                             </div>
                         </div>
@@ -88,14 +88,14 @@ const GuestDetailsSheet: React.FC<GuestDetailsSheetProps> = ({
 
                     {/* Historial y Actividad */}
                     <section className="space-y-4">
-                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 border-b pb-2">Actividad en el Sistema</div>
-                        <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="p-2 bg-white rounded-lg shadow-sm">
+                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b pb-2">Actividad en el Sistema</div>
+                        <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <div className="p-2 bg-white dark:bg-slate-900 rounded-lg shadow-sm">
                                 <Calendar className="w-4 h-4 text-emerald-600" />
                             </div>
                             <div>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase">Miembro desde</p>
-                                <p className="text-sm font-medium text-slate-700">
+                                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase">Miembro desde</p>
+                                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                                     {guest.created_at ? format(new Date(guest.created_at), "PPP", { locale: es }) : "N/A"}
                                 </p>
                             </div>

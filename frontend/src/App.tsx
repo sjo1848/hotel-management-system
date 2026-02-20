@@ -19,6 +19,7 @@ import NotFoundPage from "./features/errors/NotFoundPage";
 import GeneralErrorPage from "./features/errors/GeneralErrorPage";
 import AccessDeniedPage from "./features/errors/AccessDeniedPage";
 import { Capability, roleHasCapability } from "./features/auth/capabilities";
+import { ThemeProvider } from "./features/theme/ThemeProvider";
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -31,7 +32,7 @@ const RequireAuth = ({ children }: { children: ReactNode }) => {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
+      <div className="min-h-screen flex items-center justify-center text-slate-500 dark:text-slate-400">
         Verificando sesión...
       </div>
     );
@@ -160,12 +161,14 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <ApiInterceptor />
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <ApiInterceptor />
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

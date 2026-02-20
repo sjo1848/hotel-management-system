@@ -64,16 +64,16 @@ const ReportsPage = () => {
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">
                         Analítica Avanzada
                     </h2>
-                    <p className="text-slate-500 font-medium mt-2">
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
                         Rendimiento financiero y métricas de ocupación.
                     </p>
                 </div>
 
                 <div className="flex gap-3">
-                    <Button variant="outline" className="h-12 rounded-xl border-slate-200">
+                    <Button variant="outline" className="h-12 rounded-xl border-slate-200 dark:border-slate-700">
                         <CalendarIcon className="w-4 h-4 mr-2" /> Últimos 30 días
                     </Button>
                     <Button 
@@ -88,10 +88,10 @@ const ReportsPage = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Gráfico de Ingresos */}
                 <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                    <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle className="text-lg font-black text-slate-800">Ingresos Diarios</CardTitle>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Flujo de caja</p>
+                            <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-200">Ingresos Diarios</CardTitle>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Flujo de caja</p>
                         </div>
                         <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
                             <TrendingUp className="w-5 h-5" />
@@ -100,7 +100,7 @@ const ReportsPage = () => {
                     <CardContent className="p-6">
                         <div className="h-[300px] w-full">
                             {loading ? (
-                                <div className="h-full w-full bg-slate-50 animate-pulse rounded-2xl" />
+                                <div className="h-full w-full bg-slate-50 dark:bg-slate-800/70 animate-pulse rounded-2xl" />
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={revenueData}>
@@ -146,10 +146,10 @@ const ReportsPage = () => {
 
                 {/* Gráfico de Ocupación */}
                 <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-                    <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center justify-between">
+                    <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
                         <div>
-                            <CardTitle className="text-lg font-black text-slate-800">Tasa de Ocupación</CardTitle>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Eficiencia de inventario</p>
+                            <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-200">Tasa de Ocupación</CardTitle>
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Eficiencia de inventario</p>
                         </div>
                         <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
                             <BarChart3 className="w-5 h-5" />
@@ -158,7 +158,7 @@ const ReportsPage = () => {
                     <CardContent className="p-6">
                         <div className="h-[300px] w-full">
                             {loading ? (
-                                <div className="h-full w-full bg-slate-50 animate-pulse rounded-2xl" />
+                                <div className="h-full w-full bg-slate-50 dark:bg-slate-800/70 animate-pulse rounded-2xl" />
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={occupancyData}>

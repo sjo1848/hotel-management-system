@@ -23,16 +23,16 @@ const KpiCard = ({ title, value, subtext, trend, accent, loading, icon: Icon }: 
   <Card className="group overflow-hidden border-none shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-1">
     <div className={cn("h-1 w-full", accent.replace("-50", "-500"))} />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400">{title}</CardTitle>
+      <CardTitle className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{title}</CardTitle>
       <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-110", accent)}>
-        <Icon className="h-5 w-5 text-slate-700" />
+        <Icon className="h-5 w-5 text-slate-700 dark:text-slate-300" />
       </div>
     </CardHeader>
     <CardContent>
       {loading ? (
         <Skeleton className="mb-2 h-8 w-24" />
       ) : (
-        <div className="text-3xl font-black tracking-tight text-slate-900">{value}</div>
+        <div className="text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">{value}</div>
       )}
       <div className="mt-2 flex items-center gap-2">
         {loading ? (
@@ -48,7 +48,7 @@ const KpiCard = ({ title, value, subtext, trend, accent, loading, icon: Icon }: 
               {trend === "up" ? <ArrowUpRight className="mr-0.5 h-3 w-3" /> : <ArrowDownRight className="mr-0.5 h-3 w-3" />}
               {trend === "up" ? "12%" : "4%"}
             </div>
-            <span className="text-[10px] font-bold uppercase tracking-tight text-slate-400">{subtext}</span>
+            <span className="text-[10px] font-bold uppercase tracking-tight text-slate-400 dark:text-slate-500">{subtext}</span>
           </>
         )}
       </div>

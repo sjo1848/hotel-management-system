@@ -54,12 +54,12 @@ const UsersPage = () => {
       header: "Usuario",
       cell: (item) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-600">
+          <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300">
             <Fingerprint className="w-5 h-5" />
           </div>
           <div>
-            <div className="font-bold text-slate-900">{item.username}</div>
-            <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-0.5">ID: {item.id.slice(0, 8)}</div>
+            <div className="font-bold text-slate-900 dark:text-slate-100">{item.username}</div>
+            <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-black tracking-widest mt-0.5">ID: {item.id.slice(0, 8)}</div>
           </div>
         </div>
       ),
@@ -81,7 +81,7 @@ const UsersPage = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreHorizontal className="h-4 w-4 text-slate-400" />
+              <MoreHorizontal className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -109,11 +109,11 @@ const UsersPage = () => {
             <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">
               Control de Acceso
             </h2>
           </div>
-          <p className="text-slate-500 font-medium mt-2">
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
             Gestión de operadores y niveles de seguridad (RBAC).
           </p>
         </div>
@@ -127,7 +127,7 @@ const UsersPage = () => {
         </Button>
       </div>
 
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-2xl shadow-slate-200/50 overflow-hidden">
         {usersError && (
           <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
             {getErrorMessage(usersError, "No tienes permisos para gestionar usuarios.")}

@@ -26,8 +26,8 @@ export const buildBookingsColumns = ({
     header: "Huésped",
     cell: (item) => (
       <div>
-        <div className="font-bold text-slate-900">{item.guest_name}</div>
-        <div className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400">ID: {item.id.slice(0, 8)}</div>
+        <div className="font-bold text-slate-900 dark:text-slate-100">{item.guest_name}</div>
+        <div className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">ID: {item.id.slice(0, 8)}</div>
       </div>
     ),
   },
@@ -51,7 +51,7 @@ export const buildBookingsColumns = ({
   {
     header: "Total",
     cell: (item) => (
-      <span className="font-mono font-bold text-slate-700">${(item.total_price_cents / 100).toLocaleString()}</span>
+      <span className="font-mono font-bold text-slate-700 dark:text-slate-300">${(item.total_price_cents / 100).toLocaleString()}</span>
     ),
   },
   {
@@ -69,7 +69,7 @@ export const buildBookingsColumns = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8">
-              <MoreVertical className="h-4 w-4 text-slate-400" />
+              <MoreVertical className="h-4 w-4 text-slate-400 dark:text-slate-500" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

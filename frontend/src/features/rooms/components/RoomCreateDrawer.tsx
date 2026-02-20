@@ -74,7 +74,7 @@ const RoomCreateDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl">
+      <SheetContent className="sm:max-w-[440px] bg-white dark:bg-slate-900 border-l shadow-2xl">
         <SheetHeader className="pb-6 border-b">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             <DoorOpen className="w-6 h-6 text-indigo-600" />
@@ -89,38 +89,38 @@ const RoomCreateDrawer = ({
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="room_number" className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-slate-400" /> Número de Habitación
+                <Type className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Número de Habitación
               </Label>
               <Input
                 id="room_number"
                 placeholder="Ej: 101, A-202..."
                 value={formData.room_number}
                 onChange={(e) => setFormData({ ...formData, room_number: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="room_type" className="flex items-center gap-2">
-                <DoorOpen className="w-4 h-4 text-slate-400" /> Tipo de Habitación
+                <DoorOpen className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Tipo de Habitación
               </Label>
               <Input
                 id="room_type"
                 placeholder="Ej: Standard, Suite, Deluxe..."
                 value={formData.room_type}
                 onChange={(e) => setFormData({ ...formData, room_type: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="price" className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-slate-400" /> Precio por Noche
+                <DollarSign className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Precio por Noche
               </Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">$</span>
                 <Input
                   id="price"
                   type="number"
@@ -128,7 +128,7 @@ const RoomCreateDrawer = ({
                   placeholder="0.00"
                   value={formData.price_cents || ""}
                   onChange={(e) => setFormData({ ...formData, price_cents: parseFloat(e.target.value) || 0 })}
-                  className="bg-slate-50 border-slate-200 focus:bg-white transition-colors pl-7"
+                  className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors pl-7"
                   required
                 />
               </div>

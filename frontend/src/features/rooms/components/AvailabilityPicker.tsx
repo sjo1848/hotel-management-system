@@ -48,9 +48,9 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
       : 0;
 
   return (
-    <div className="flex flex-col md:flex-row items-end gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-10 transition-all hover:shadow-md">
+    <div className="flex flex-col md:flex-row items-end gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm mb-10 transition-all hover:shadow-md">
       <div className="grid gap-2 flex-1">
-        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 ml-1">
+        <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
           Rango de Estancia
         </label>
         <Popover>
@@ -59,11 +59,11 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
               id="date"
               variant={"outline"}
               className={cn(
-                "w-full md:w-[400px] justify-start text-left font-medium h-12 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white transition-colors",
+                "w-full md:w-[400px] justify-start text-left font-medium h-12 rounded-xl border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 hover:bg-white dark:hover:bg-slate-800 transition-colors",
                 !date?.from && "text-muted-foreground",
               )}
             >
-              <CalendarIcon className="mr-3 h-5 w-5 text-slate-400" />
+              <CalendarIcon className="mr-3 h-5 w-5 text-slate-400 dark:text-slate-500" />
               {date?.from ? (
                 date.to ? (
                   <>
@@ -74,12 +74,12 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
                   format(date.from, "dd LLL, y", { locale: es })
                 )
               ) : (
-                <span className="text-slate-400">¿Cuándo vienes?</span>
+                <span className="text-slate-400 dark:text-slate-500">¿Cuándo vienes?</span>
               )}
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 rounded-2xl shadow-2xl border-slate-200"
+            className="w-auto p-0 rounded-2xl shadow-2xl border-slate-200 dark:border-slate-700"
             align="start"
           >
             <Calendar
@@ -108,7 +108,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
             </div>
           )
         ) : (
-          <div className="text-xs text-slate-400">
+          <div className="text-xs text-slate-400 dark:text-slate-500">
             Seleccioná entrada y salida para ver disponibilidad.
           </div>
         )}
@@ -119,7 +119,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
           onClick={handleClear}
           disabled={!date?.from && !date?.to}
           variant="outline"
-          className="h-12 px-4 rounded-xl border-slate-200"
+          className="h-12 px-4 rounded-xl border-slate-200 dark:border-slate-700"
         >
           <X className="w-4 h-4 mr-2" />
           Limpiar

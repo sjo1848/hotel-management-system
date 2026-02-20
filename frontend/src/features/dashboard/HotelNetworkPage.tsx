@@ -74,11 +74,11 @@ const HotelNetworkPage = () => {
             <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
               <Globe className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">
               Red de Propiedades
             </h2>
           </div>
-          <p className="text-slate-500 font-medium mt-2">
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
             Gestión centralizada de la cadena hotelera (SuperAdmin).
           </p>
         </div>
@@ -93,7 +93,7 @@ const HotelNetworkPage = () => {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-400">
+        <div className="flex items-center justify-center py-20 text-slate-400 dark:text-slate-500">
           <Loader2 className="w-8 h-8 animate-spin mr-3" />
           Cargando red...
         </div>
@@ -101,24 +101,24 @@ const HotelNetworkPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {hotels.map((hotel) => (
             <Card key={hotel.id} className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden group hover:-translate-y-1 transition-all duration-300">
-              <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-6">
+              <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 p-6">
                 <div className="flex justify-between items-start">
-                  <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center text-slate-900">
+                  <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-2xl shadow-sm flex items-center justify-center text-slate-900 dark:text-slate-100">
                     <Building2 className="w-6 h-6" />
                   </div>
                   <Badge variant={hotel.id === '00000000-0000-0000-0000-000000000001' ? "info" : "outline"}>
                     {hotel.id === '00000000-0000-0000-0000-000000000001' ? "Sede Central" : "Sucursal"}
                   </Badge>
                 </div>
-                <CardTitle className="text-xl font-black text-slate-900 mt-4">{hotel.name}</CardTitle>
+                <CardTitle className="text-xl font-black text-slate-900 dark:text-slate-100 mt-4">{hotel.name}</CardTitle>
               </CardHeader>
               <CardContent className="p-6 space-y-6">
-                <div className="flex items-center gap-3 text-slate-500">
+                <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400">
                   <MapPin className="w-4 h-4 shrink-0" />
                   <span className="text-sm font-medium">{hotel.address || "Sin dirección registrada"}</span>
                 </div>
                 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <div className="flex items-center gap-2 text-emerald-600">
                     <ShieldCheck className="w-4 h-4" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Activo</span>
@@ -135,7 +135,7 @@ const HotelNetworkPage = () => {
 
       {/* Drawer para Nuevo Hotel */}
       <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <SheetContent className="bg-white">
+        <SheetContent className="bg-white dark:bg-slate-900">
           <SheetHeader className="border-b pb-6">
             <SheetTitle className="text-2xl font-black">Nueva Propiedad</SheetTitle>
             <SheetDescription>Registra un nuevo hotel en la red global.</SheetDescription>
@@ -180,7 +180,7 @@ const HotelNetworkPage = () => {
 const Badge = ({ children, variant = "outline" }: { children: React.ReactNode, variant?: "info" | "outline" }) => (
   <span className={cn(
     "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border",
-    variant === "info" ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-slate-50 text-slate-500 border-slate-200"
+    variant === "info" ? "bg-indigo-50 text-indigo-600 border-indigo-100" : "bg-slate-50 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700"
   )}>
     {children}
   </span>

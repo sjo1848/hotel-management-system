@@ -109,7 +109,7 @@ const BookingEditDrawer = ({
   if (!booking && !loading && isOpen && bookingId) {
       return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="bg-white">
+            <SheetContent className="bg-white dark:bg-slate-900">
                 <div className="p-10 text-center">No se encontró la reserva</div>
             </SheetContent>
         </Sheet>
@@ -189,17 +189,17 @@ const BookingEditDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl overflow-y-auto">
+      <SheetContent className="sm:max-w-[440px] bg-white dark:bg-slate-900 border-l shadow-2xl overflow-y-auto">
         {showSuccess ? (
           <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6 animate-in zoom-in fade-in duration-500">
             <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-emerald-100' : 'bg-blue-100'}`}>
               <CheckCircle2 className={`w-12 h-12 ${showSuccess === 'CheckedIn' ? 'text-emerald-600' : 'text-blue-600'}`} />
             </div>
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-slate-900">
+              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">
                 {showSuccess === 'CheckedIn' ? 'Check-in Exitoso' : 'Check-out Exitoso'}
               </h2>
-              <p className="text-slate-500 text-sm max-w-xs mx-auto">
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-xs mx-auto">
                 {showSuccess === 'CheckedIn' 
                   ? 'El huésped ha sido registrado correctamente y la habitación está ocupada.' 
                   : 'La estancia ha finalizado. Se ha generado la factura correspondiente.'}
@@ -250,7 +250,7 @@ const BookingEditDrawer = ({
 
               {/* Quick Actions */}
               <div className="space-y-3">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Acciones Rápidas</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Acciones Rápidas</Label>
                 <div className="grid grid-cols-2 gap-3">
                   {booking.status === 'Confirmed' && (
                     <Button 
@@ -286,7 +286,7 @@ const BookingEditDrawer = ({
               {/* Extra Charges Section */}
               <div className="space-y-4 pt-6 border-t">
                 <div className="flex justify-between items-center">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Cargos Extras / Consumos</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Cargos Extras / Consumos</Label>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -316,13 +316,13 @@ const BookingEditDrawer = ({
 
                 <div className="space-y-2">
                   {extraCharges.length === 0 ? (
-                    <p className="text-[10px] text-slate-400 italic text-center py-2">Sin consumos registrados</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 italic text-center py-2">Sin consumos registrados</p>
                   ) : (
                     extraCharges.map(charge => (
-                      <div key={charge.id} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg text-xs">
+                      <div key={charge.id} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-800/70 rounded-lg text-xs">
                         <div className="flex items-center gap-2">
-                          <Tag className="w-3 h-3 text-slate-400" />
-                          <span className="font-medium text-slate-700">{charge.description}</span>
+                          <Tag className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                          <span className="font-medium text-slate-700 dark:text-slate-300">{charge.description}</span>
                         </div>
                         <span className="font-mono font-bold">${charge.amount_cents / 100}</span>
                       </div>
@@ -332,7 +332,7 @@ const BookingEditDrawer = ({
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6 pt-6 border-t">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Datos de la Estancia</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Datos de la Estancia</Label>
                 <div className="grid gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-name">Nombre del Huésped</Label>
@@ -343,7 +343,7 @@ const BookingEditDrawer = ({
                         setFormData({ ...formData, guest_name: e.target.value })
                       }
                       required
-                      className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                      className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                     />
                   </div>
 
@@ -358,7 +358,7 @@ const BookingEditDrawer = ({
                           setFormData({ ...formData, check_in: e.target.value })
                         }
                         required
-                        className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                       />
                     </div>
 
@@ -372,7 +372,7 @@ const BookingEditDrawer = ({
                           setFormData({ ...formData, check_out: e.target.value })
                         }
                         required
-                        className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                        className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                       />
                     </div>
                   </div>

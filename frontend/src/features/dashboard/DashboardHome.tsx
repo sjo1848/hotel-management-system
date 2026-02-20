@@ -129,8 +129,8 @@ const DashboardHome = () => {
   return (
     <div className="animate-in space-y-10 fade-in duration-700">
       <div className="flex flex-col">
-        <h2 className="text-3xl font-black leading-none tracking-tight text-slate-900">Vista General</h2>
-        <p className="mt-2 font-medium text-slate-500">Estado operativo del hotel en tiempo real.</p>
+        <h2 className="text-3xl font-black leading-none tracking-tight text-slate-900 dark:text-slate-100">Vista General</h2>
+        <p className="mt-2 font-medium text-slate-500 dark:text-slate-400">Estado operativo del hotel en tiempo real.</p>
       </div>
 
       {loadError ? (
@@ -140,7 +140,7 @@ const DashboardHome = () => {
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-lg border-rose-200 bg-white text-rose-700 hover:bg-rose-100"
+            className="rounded-lg border-rose-200 bg-white dark:bg-slate-900 text-rose-700 hover:bg-rose-100"
             onClick={() => {
               trackUiEvent("dashboard_retry_clicked");
               void refetchDashboard();

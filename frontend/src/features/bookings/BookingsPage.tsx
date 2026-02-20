@@ -48,8 +48,8 @@ const BookingsPage = () => {
     <div className="animate-in space-y-6 fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div>
-          <h2 className="text-3xl font-black leading-none tracking-tight text-slate-900">Reservas</h2>
-          <p className="mt-2 font-medium text-slate-500">Gestión de estancias y disponibilidad.</p>
+          <h2 className="text-3xl font-black leading-none tracking-tight text-slate-900 dark:text-slate-100">Reservas</h2>
+          <p className="mt-2 font-medium text-slate-500 dark:text-slate-400">Gestión de estancias y disponibilidad.</p>
         </div>
 
         <BookingsFiltersToolbar
@@ -60,7 +60,7 @@ const BookingsPage = () => {
         />
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-slate-200/50">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200/50">
         {error ? <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
         <DataTable
           columns={columns}

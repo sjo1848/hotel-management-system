@@ -38,20 +38,20 @@ const CalendarPage = () => {
             <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
               <CalendarDays className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+            <h2 className="text-3xl font-black text-slate-900 dark:text-slate-100 tracking-tight leading-none">
               Calendario Maestro
             </h2>
           </div>
-          <p className="text-slate-500 font-medium mt-2">
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">
             Vista de ocupación y disponibilidad en formato de cinta.
           </p>
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
+          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 dark:border-slate-700">
             <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
           </Button>
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
+          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 dark:border-slate-700">
             Siguiente <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </div>
@@ -61,19 +61,19 @@ const CalendarPage = () => {
         {/* Sidebar Informativa */}
         <div className="xl:col-span-1 space-y-6">
           <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Estadísticas</CardTitle>
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Estadísticas</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <BedDouble className="w-4 h-4" />
                   <span className="text-sm font-bold">Total Habitaciones</span>
                 </div>
-                <span className="text-lg font-black text-slate-900">{rooms.length}</span>
+                <span className="text-lg font-black text-slate-900 dark:text-slate-100">{rooms.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <CalendarDays className="w-4 h-4" />
                   <span className="text-sm font-bold">Reservas Activas</span>
                 </div>
@@ -83,21 +83,21 @@ const CalendarPage = () => {
           </Card>
 
           <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Leyenda</CardTitle>
+            <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Leyenda</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-indigo-500 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase">Confirmada</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Confirmada</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-emerald-500 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase">Check-in</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase">Check-in</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-rose-200 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase text-rose-700">Cancelada</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase text-rose-700">Cancelada</span>
               </div>
             </CardContent>
           </Card>

@@ -82,7 +82,7 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
   if (loading)
     return (
       <div className="flex justify-center p-20">
-        <Loader2 className="w-10 h-10 animate-spin text-slate-400" />
+        <Loader2 className="w-10 h-10 animate-spin text-slate-400 dark:text-slate-500" />
       </div>
     );
 
@@ -98,11 +98,11 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
       ) : null}
 
       {rooms.length === 0 ? (
-        <div className="border border-dashed border-slate-200 rounded-xl p-10 text-center bg-white">
-          <p className="text-slate-600 font-medium">
+        <div className="border border-dashed border-slate-200 dark:border-slate-700 rounded-xl p-10 text-center bg-white dark:bg-slate-900">
+          <p className="text-slate-600 dark:text-slate-300 font-medium">
             No hay habitaciones disponibles para ese rango.
           </p>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Probá con otras fechas.
           </p>
         </div>

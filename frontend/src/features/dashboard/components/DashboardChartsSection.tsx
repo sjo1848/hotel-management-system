@@ -31,10 +31,10 @@ type DashboardChartsSectionProps = {
 
 const DashboardChartsSection = ({ loading, revenueData, occupancyData }: DashboardChartsSectionProps) => (
   <div className="grid gap-8 md:grid-cols-2">
-    <Card className="overflow-hidden rounded-3xl border-none bg-white p-6 shadow-2xl shadow-slate-200/60">
+    <Card className="overflow-hidden rounded-3xl border-none bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60">
       <div className="mb-6 flex flex-col">
-        <h3 className="text-lg font-black tracking-tight text-slate-900">Tendencia de Ingresos</h3>
-        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Últimos 30 días</p>
+        <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">Tendencia de Ingresos</h3>
+        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Últimos 30 días</p>
       </div>
       <div className="h-[250px] w-full">
         {loading ? (
@@ -73,10 +73,10 @@ const DashboardChartsSection = ({ loading, revenueData, occupancyData }: Dashboa
       </div>
     </Card>
 
-    <Card className="overflow-hidden rounded-3xl border-none bg-white p-6 shadow-2xl shadow-slate-200/60">
+    <Card className="overflow-hidden rounded-3xl border-none bg-white dark:bg-slate-900 p-6 shadow-2xl shadow-slate-200/60">
       <div className="mb-6 flex flex-col">
-        <h3 className="text-lg font-black tracking-tight text-slate-900">Tasa de Ocupación</h3>
-        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">Ocupación diaria (%)</p>
+        <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-slate-100">Tasa de Ocupación</h3>
+        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Ocupación diaria (%)</p>
       </div>
       <div className="h-[250px] w-full">
         {loading ? (

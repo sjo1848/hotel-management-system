@@ -75,7 +75,7 @@ const GuestCreateDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl">
+      <SheetContent className="sm:max-w-[440px] bg-white dark:bg-slate-900 border-l shadow-2xl">
         <SheetHeader className="pb-6 border-b">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             <UserPlus className="w-6 h-6 text-indigo-600" />
@@ -90,21 +90,21 @@ const GuestCreateDrawer = ({
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="full_name" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-slate-400" /> Nombre Completo
+                <User className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Nombre Completo
               </Label>
               <Input
                 id="full_name"
                 placeholder="Ej: John Doe"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-400" /> Correo Electrónico
+                <Mail className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Correo Electrónico
               </Label>
               <Input
                 id="email"
@@ -112,21 +112,21 @@ const GuestCreateDrawer = ({
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-400" /> Teléfono (Opcional)
+                <Phone className="w-4 h-4 text-slate-400 dark:text-slate-500" /> Teléfono (Opcional)
               </Label>
               <Input
                 id="phone"
                 placeholder="+1 (555) 000-0000"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-slate-50 dark:bg-slate-800/70 border-slate-200 dark:border-slate-700 focus:bg-white dark:focus:bg-slate-900 transition-colors"
               />
             </div>
           </div>
