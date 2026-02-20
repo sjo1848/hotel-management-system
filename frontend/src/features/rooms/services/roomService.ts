@@ -1,16 +1,20 @@
 import { apiGet, apiPatch, apiPost } from "@/api/sdk";
-import { Room, RoomStatus } from "@/types/domain";
+import { RoomStatus } from "@/types/domain";
 import { toRoom, toRooms } from "@/types/contractMappers";
+import type { components } from "@/api/generated/openapi";
+
+type RoomContract = components["schemas"]["Room"];
+type CreateRoomRequest = components["schemas"]["CreateRoomRequest"];
 
 export const getAllRooms = async (startDate?: string | null, endDate?: string | null) => {
   const endpoint = (startDate && endDate) ? "/rooms/available" : "/rooms";
   const params = (startDate && endDate) ? { start: startDate, end: endDate } : undefined;
-  const response = await apiGet<Room[]>(endpoint, params);
+  const response = await apiGet<RoomContract[]>(endpoint, params);
   return toRooms(response);
 };
 
 export const getRoomById = async (id: string) => {
-  const response = await apiGet<Room>(`/rooms/${id}`);
+  const response = await apiGet<RoomContract>(`/rooms/${id}`);
   return toRoom(response);
 };
 
@@ -32,8 +36,8 @@ export const updateRoomStatus = async (id: string, status: RoomStatus | string) 
   return apiPatch<{ status: string }, { status: string }>(`/rooms/${id}/status`, { status: backendStatus });
 };
 
-export const createRoom = async (roomData: { room_number: string, room_type: string, price_cents: number }) => {
-  const response = await apiPost<typeof roomData, Room>("/rooms", roomData);
+export const createRoom = async (roomData: CreateRoomRequest) => {
+  const response = await apiPost<CreateRoomRequest, RoomContract>("/rooms", roomData);
   return toRoom(response);
 };
 

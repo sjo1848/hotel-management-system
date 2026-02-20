@@ -95,6 +95,28 @@
     --input: 217 22% 24%;
     --ring: 40 40% 52%;
   }
+
+  .theme-mid {
+    --background: 217 31% 14%;
+    --foreground: 210 36% 95%;
+    --card: 217 29% 18%;
+    --card-foreground: 210 36% 95%;
+    --popover: 217 29% 18%;
+    --popover-foreground: 210 36% 95%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222 47% 11%;
+    --secondary: 40 42% 52%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 217 24% 22%;
+    --muted-foreground: 215 20% 78%;
+    --accent: 217 24% 22%;
+    --accent-foreground: 210 36% 95%;
+    --destructive: 0 67% 52%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 216 18% 40%;
+    --input: 216 18% 40%;
+    --ring: 40 42% 52%;
+  }
   * {
     @apply border-border;
   }
@@ -115,4 +137,123 @@
 
 @utility input-premium {
   @apply h-11 px-4 w-full bg-white/70 dark:bg-slate-900/70 border border-neutral-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all duration-300 backdrop-blur-sm;
+}
+
+/*
+  Tema intermedio:
+  Se apoya en las variantes `dark:*` para mantener consistencia visual,
+  pero aclara superficies y bordes para que no quede tan profundo como `dark`.
+*/
+@layer utilities {
+  .theme-mid .dark\:bg-slate-950 {
+    background-color: rgb(15 23 42 / 0.82) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-950\/70 {
+    background-color: rgb(15 23 42 / 0.7) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-900 {
+    background-color: rgb(30 41 59 / 1) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-900\/50 {
+    background-color: rgb(30 41 59 / 0.55) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-800 {
+    background-color: rgb(51 65 85 / 1) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-800\/70 {
+    background-color: rgb(51 65 85 / 0.72) !important;
+  }
+
+  .theme-mid .dark\:bg-slate-800\/80 {
+    background-color: rgb(51 65 85 / 0.82) !important;
+  }
+
+  .theme-mid .dark\:bg-white\/5 {
+    background-color: rgb(148 163 184 / 0.12) !important;
+  }
+
+  .theme-mid .dark\:bg-white\/10 {
+    background-color: rgb(148 163 184 / 0.18) !important;
+  }
+
+  .theme-mid .dark\:border-slate-800 {
+    border-color: rgb(71 85 105 / 1) !important;
+  }
+
+  .theme-mid .dark\:border-slate-700 {
+    border-color: rgb(100 116 139 / 1) !important;
+  }
+
+  .theme-mid .dark\:border-slate-700\/50 {
+    border-color: rgb(100 116 139 / 0.6) !important;
+  }
+
+  .theme-mid .dark\:border-slate-600 {
+    border-color: rgb(125 142 166 / 1) !important;
+  }
+
+  .theme-mid .dark\:border-white\/5 {
+    border-color: rgb(148 163 184 / 0.28) !important;
+  }
+
+  .theme-mid .dark\:text-white {
+    color: rgb(248 250 252 / 1) !important;
+  }
+
+  .theme-mid .dark\:text-slate-100 {
+    color: rgb(241 245 249 / 1) !important;
+  }
+
+  .theme-mid .dark\:text-slate-200 {
+    color: rgb(226 232 240 / 1) !important;
+  }
+
+  .theme-mid .dark\:text-slate-300 {
+    color: rgb(203 213 225 / 1) !important;
+  }
+
+  .theme-mid .dark\:text-slate-400 {
+    color: rgb(156 173 192 / 1) !important;
+  }
+
+  .theme-mid .dark\:text-slate-500 {
+    color: rgb(136 154 175 / 1) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-900:hover {
+    background-color: rgb(30 41 59 / 0.9) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-800:hover {
+    background-color: rgb(51 65 85 / 0.9) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-800\/80:hover {
+    background-color: rgb(51 65 85 / 0.78) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-800\/50:hover {
+    background-color: rgb(51 65 85 / 0.55) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-700:hover {
+    background-color: rgb(71 85 105 / 0.85) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-slate-700\/80:hover {
+    background-color: rgb(71 85 105 / 0.8) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-white\/5:hover {
+    background-color: rgb(148 163 184 / 0.18) !important;
+  }
+
+  .theme-mid .dark\:hover\:bg-white\/10:hover {
+    background-color: rgb(148 163 184 / 0.24) !important;
+  }
 }

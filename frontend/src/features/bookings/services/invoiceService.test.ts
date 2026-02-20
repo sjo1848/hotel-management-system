@@ -30,7 +30,7 @@ describe("invoiceService contract mapping", () => {
 
     const invoices = await getInvoices();
 
-    expect(client.get).toHaveBeenCalledWith("/invoices");
+    expect(client.get).toHaveBeenCalledWith("/invoices", { params: undefined });
     expect(invoices[0]).toMatchObject({
       status: "PAID",
       payment_method: "CARD",
@@ -52,7 +52,7 @@ describe("invoiceService contract mapping", () => {
 
     const invoice = await getInvoiceByBooking("booking-2");
 
-    expect(client.get).toHaveBeenCalledWith("/bookings/booking-2/invoice");
+    expect(client.get).toHaveBeenCalledWith("/bookings/booking-2/invoice", { params: undefined });
     expect(invoice.status).toBe("PAID");
     expect(invoice.payment_method).toBe("CASH");
   });

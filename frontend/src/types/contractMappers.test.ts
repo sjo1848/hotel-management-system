@@ -12,7 +12,7 @@ describe("contractMappers", () => {
       check_in: "2026-02-20",
       check_out: "2026-02-21",
       total_price_cents: 1000,
-      status: "CHECKED_IN",
+      status: "CHECKED_IN" as any,
     });
     expect(booking.status).toBe("CheckedIn");
     expect(booking.guest_id).toBeNull();
@@ -28,7 +28,7 @@ describe("contractMappers", () => {
       check_in: "2026-02-20",
       check_out: "2026-02-21",
       total_price_cents: 1000,
-      status: "something_else",
+      status: "something_else" as any,
     });
     expect(booking.status).toBe("Confirmed");
   });
@@ -40,7 +40,7 @@ describe("contractMappers", () => {
       room_number: "101",
       room_type: "SINGLE",
       price_cents: 5000,
-      status: "available",
+      status: "available" as any,
     });
     expect(room.status).toBe("Available");
   });
@@ -52,7 +52,7 @@ describe("contractMappers", () => {
       room_number: "102",
       room_type: "SINGLE",
       price_cents: 5000,
-      status: "non-existent-status",
+      status: "non-existent-status" as any,
     });
     expect(room.status).toBe("Maintenance");
   });

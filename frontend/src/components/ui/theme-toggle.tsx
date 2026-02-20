@@ -1,4 +1,4 @@
-import { Check, Monitor, Moon, Sun } from "lucide-react";
+import { Check, Contrast, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,13 +11,14 @@ import { cn } from "@/lib/utils";
 
 const themeOptions: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: "light", label: "Claro", icon: Sun },
+  { value: "mid", label: "Intermedio", icon: Contrast },
   { value: "dark", label: "Oscuro", icon: Moon },
-  { value: "system", label: "Sistema", icon: Monitor },
 ];
 
 export const ThemeToggle = ({ className }: { className?: string }) => {
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const ActiveIcon = resolvedTheme === "dark" ? Moon : Sun;
+  const ActiveIcon =
+    resolvedTheme === "dark" ? Moon : resolvedTheme === "mid" ? Contrast : Sun;
 
   return (
     <DropdownMenu>
@@ -52,4 +53,3 @@ export const ThemeToggle = ({ className }: { className?: string }) => {
     </DropdownMenu>
   );
 };
-

@@ -1,15 +1,8 @@
-import client from '@/api/client';
-import { Invoice } from '@/types/domain';
+import { apiGet } from "@/api/sdk";
+import { Invoice } from "@/types/domain";
+import type { components } from "@/api/generated/openapi";
 
-type InvoiceRaw = {
-    id: string;
-    hotel_id: string;
-    booking_id: string;
-    amount_cents: number;
-    status?: string;
-    payment_method?: string;
-    created_at: string;
-};
+type InvoiceRaw = components["schemas"]["Invoice"];
 
 const normalizeInvoiceStatus = (status: string | undefined): Invoice["status"] => {
     const normalized = status?.toUpperCase();
@@ -26,23 +19,23 @@ const normalizePaymentMethod = (method: string | undefined): Invoice["payment_me
 };
 
 const toInvoice = (raw: InvoiceRaw): Invoice => ({
-    id: raw.id,
-    hotel_id: raw.hotel_id,
-    booking_id: raw.booking_id,
-    amount_cents: raw.amount_cents,
+    id: raw.id ?? "",
+    hotel_id: raw.hotel_id ?? "",
+    booking_id: raw.booking_id ?? "",
+    amount_cents: raw.amount_cents ?? 0,
     status: normalizeInvoiceStatus(raw.status),
     payment_method: normalizePaymentMethod(raw.payment_method),
-    created_at: raw.created_at,
+    created_at: raw.created_at ?? "",
 });
 
 export const getInvoices = async (): Promise<Invoice[]> => {
-    const response = await client.get<InvoiceRaw[]>('/invoices');
-    return (response.data ?? []).map(toInvoice);
+    const response = await apiGet<InvoiceRaw[]>("/invoices");
+    return (response ?? []).map(toInvoice);
 };
 
 export const getInvoiceByBooking = async (bookingId: string): Promise<Invoice> => {
-    const response = await client.get<InvoiceRaw>(`/bookings/${bookingId}/invoice`);
-    return toInvoice(response.data);
+    const response = await apiGet<InvoiceRaw>(`/bookings/${bookingId}/invoice`);
+    return toInvoice(response);
 };
 
 const invoiceService = {

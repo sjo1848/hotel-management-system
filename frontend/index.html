@@ -8,15 +8,21 @@
             (() => {
                 const key = "hms-theme";
                 const stored = localStorage.getItem(key);
-                const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-                const resolved = stored === "dark" || stored === "light"
+                const resolved = stored === "light" || stored === "mid" || stored === "dark"
                     ? stored
-                    : stored === "system"
-                      ? (prefersDark ? "dark" : "light")
-                      : (prefersDark ? "dark" : "light");
+                    : "light";
                 const root = document.documentElement;
-                root.classList.toggle("dark", resolved === "dark");
-                root.style.colorScheme = resolved;
+                root.classList.remove("dark", "theme-mid");
+
+                if (resolved === "dark") {
+                    root.classList.add("dark");
+                }
+
+                if (resolved === "mid") {
+                    root.classList.add("dark", "theme-mid");
+                }
+
+                root.style.colorScheme = resolved === "light" ? "light" : "dark";
             })();
         </script>
     </head>
