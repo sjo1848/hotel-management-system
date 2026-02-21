@@ -59,8 +59,8 @@ const TapeChart = () => {
       
       let statusColor = 'bg-indigo-500 text-white border-indigo-600'; // Default Confirmed
       if (booking.status === 'CheckedIn') statusColor = 'bg-emerald-500 text-white border-emerald-600';
-      if (booking.status === 'CheckedOut') statusColor = 'bg-slate-400 text-white border-slate-500';
-      if (booking.status === 'Cancelled') statusColor = 'bg-rose-200 text-rose-700 border-rose-300 line-through';
+      if (booking.status === 'CheckedOut') statusColor = 'bg-slate-500 dark:bg-slate-600 text-white border-slate-600 dark:border-slate-500';
+      if (booking.status === 'Cancelled') statusColor = 'bg-rose-200 dark:bg-rose-900/35 text-rose-700 dark:text-rose-200 border-rose-300 dark:border-rose-700 line-through';
 
       return { 
         isBooked: true, 
@@ -78,11 +78,11 @@ const TapeChart = () => {
     setStartDate(prev => addDays(prev, days));
   };
 
-  if (loading) return <div className='p-20 flex justify-center bg-white dark:bg-slate-900 h-full w-full items-center rounded-xl border shadow-sm'><Loader2 className='animate-spin w-8 h-8 text-primary' /></div>;
+  if (loading) return <div className='p-20 flex justify-center bg-white dark:bg-slate-900 h-full w-full items-center rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm'><Loader2 className='animate-spin w-8 h-8 text-primary' /></div>;
 
   return (
     <div className='flex flex-col h-full space-y-4'>
-      <div className='flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl border shadow-sm'>
+      <div className='flex justify-between items-center bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm'>
         <h2 className='text-xl font-bold text-slate-800 dark:text-slate-200 capitalize'>
           {format(startDate, 'MMMM yyyy', { locale: es })}
         </h2>
@@ -93,7 +93,7 @@ const TapeChart = () => {
         </div>
       </div>
 
-      <Card className='overflow-x-auto border-none rounded-xl shadow-xl bg-white dark:bg-slate-900'>
+      <Card className='overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40 bg-white dark:bg-slate-900'>
         <table className='w-full border-collapse min-w-[800px]'>
           <thead>
             <tr>
@@ -101,28 +101,28 @@ const TapeChart = () => {
                 Habitación
               </th>
               {dateRange.map((date, i) => (
-                <th key={i} className={`p-2 border-b min-w-[65px] text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${isSameDay(date, startOfToday()) ? 'bg-orange-50' : 'bg-slate-50 dark:bg-slate-800/70'}`}>
-                  <div className={`text-[10px] font-black uppercase ${isSameDay(date, startOfToday()) ? 'text-orange-600' : 'text-slate-400 dark:text-slate-500'}`}>{format(date, 'EEE', { locale: es })}</div>
-                  <div className={`text-sm font-bold ${isSameDay(date, startOfToday()) ? 'text-orange-700' : 'text-slate-600 dark:text-slate-300'}`}>{format(date, 'd')}</div>
+                <th key={i} className={`p-2 border-b min-w-[65px] text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${isSameDay(date, startOfToday()) ? 'bg-orange-50 dark:bg-orange-950/25' : 'bg-slate-50 dark:bg-slate-800/70'}`}>
+                  <div className={`text-[10px] font-black uppercase ${isSameDay(date, startOfToday()) ? 'text-orange-600 dark:text-orange-300' : 'text-slate-500 dark:text-slate-400'}`}>{format(date, 'EEE', { locale: es })}</div>
+                  <div className={`text-sm font-bold ${isSameDay(date, startOfToday()) ? 'text-orange-700 dark:text-orange-200' : 'text-slate-600 dark:text-slate-300'}`}>{format(date, 'd')}</div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody className='bg-white dark:bg-slate-900'>
             {rooms.map((room) => (
-              <tr key={room.id} className='hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group'>
-                <td className='p-4 border-b border-r font-bold text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-900 z-20 shadow-[2px_0_10px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 transition-colors'>
+              <tr key={room.id} className='hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors group'>
+                <td className='p-4 border-b border-r font-bold text-slate-700 dark:text-slate-300 sticky left-0 bg-white dark:bg-slate-900 z-20 shadow-[2px_0_10px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/80 transition-colors'>
                   <div className='flex items-center justify-between'>
                     <div className='flex flex-col'>
                       <span>{room.room_number}</span>
-                      <span className='text-[10px] text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wider'>{room.room_type}</span>
+                      <span className='text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider'>{room.room_type}</span>
                     </div>
                     <div className="flex gap-1">
                       {room.status === 'Dirty' && (
-                        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 dark:text-rose-200 animate-pulse" />
                       )}
                       {room.status === 'Maintenance' && (
-                        <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                        <Wrench className="w-3.5 h-3.5 text-amber-500 dark:text-amber-200" />
                       )}
                     </div>
                   </div>
@@ -131,7 +131,7 @@ const TapeChart = () => {
                 {dateRange.map((date, i) => {
                   const status = getBookingStatus(room.id, date);
                   return (
-                    <td key={i} className={`p-0 border-b border-r border-slate-100 dark:border-slate-800 relative h-16 text-center align-middle ${isSameDay(date, startOfToday()) ? 'bg-orange-50/20' : ''}`}>
+                    <td key={i} className={`p-0 border-b border-r border-slate-100 dark:border-slate-800 relative h-16 text-center align-middle ${isSameDay(date, startOfToday()) ? 'bg-orange-50/20 dark:bg-orange-950/20' : ''}`}>
                       {status && (
                         <div 
                           className={`

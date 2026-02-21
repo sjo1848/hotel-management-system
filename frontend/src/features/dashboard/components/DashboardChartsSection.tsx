@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -12,7 +13,6 @@ import {
 } from "recharts";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTheme } from "@/features/theme/ThemeProvider";
 
 type RevenuePoint = {
   dateLabel: string;
@@ -31,20 +31,36 @@ type DashboardChartsSectionProps = {
 };
 
 const DashboardChartsSection = ({ loading, revenueData, occupancyData }: DashboardChartsSectionProps) => {
-  const { resolvedTheme } = useTheme();
-  const axisTickColor = resolvedTheme === "light" ? "#64748b" : "#cbd5e1";
-  const gridColor = resolvedTheme === "light" ? "#cbd5e1" : "#334155";
-  const occupancyLowColor = resolvedTheme === "light" ? "#94a3b8" : "#64748b";
+  const [isDarkSurface, setIsDarkSurface] = useState(() => {
+    if (typeof document === "undefined") return false;
+    return document.documentElement.classList.contains("dark");
+  });
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const syncTheme = () => setIsDarkSurface(root.classList.contains("dark"));
+    syncTheme();
+
+    if (typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  const axisTickColor = isDarkSurface ? "#cbd5e1" : "#64748b";
+  const gridColor = isDarkSurface ? "#334155" : "#cbd5e1";
+  const occupancyLowColor = isDarkSurface ? "#64748b" : "#94a3b8";
   const tooltipStyle =
-    resolvedTheme === "light"
-      ? { borderRadius: "16px", border: "none", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" }
-      : {
+    isDarkSurface
+      ? {
           borderRadius: "16px",
           border: "1px solid rgb(51 65 85 / 0.8)",
           boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.45)",
           backgroundColor: "rgb(15 23 42 / 0.95)",
           color: "rgb(226 232 240)",
-        };
+        }
+      : { borderRadius: "16px", border: "none", boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1)" };
 
   return (
     <div className="grid gap-8 md:grid-cols-2">

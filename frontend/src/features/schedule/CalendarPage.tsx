@@ -60,9 +60,9 @@ const CalendarPage = () => {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Sidebar Informativa */}
         <div className="xl:col-span-1 space-y-6">
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+          <Card className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40">
             <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Estadísticas</CardTitle>
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Estadísticas</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
@@ -77,14 +77,14 @@ const CalendarPage = () => {
                   <CalendarDays className="w-4 h-4" />
                   <span className="text-sm font-bold">Reservas Activas</span>
                 </div>
-                <span className="text-lg font-black text-indigo-600">{bookings.length}</span>
+                <span className="text-lg font-black text-indigo-600 dark:text-indigo-200">{bookings.length}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+          <Card className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-xl shadow-slate-200/50 dark:shadow-slate-950/40">
             <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Leyenda</CardTitle>
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Leyenda</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3">
               <div className="flex items-center gap-3">
@@ -97,7 +97,7 @@ const CalendarPage = () => {
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-rose-200 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase text-rose-700">Cancelada</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase text-rose-700 dark:text-rose-200">Cancelada</span>
               </div>
             </CardContent>
           </Card>

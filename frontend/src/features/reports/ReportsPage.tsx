@@ -14,12 +14,27 @@ import { getRevenueReport, getOccupancyReport, RevenueData, OccupancyData } from
 import { useToast } from "@/components/ui/toast";
 import { format, subDays } from "date-fns";
 import { downloadCSV } from "@/lib/utils";
+import { useTheme } from "@/features/theme/ThemeProvider";
 
 const ReportsPage = () => {
     const { toast } = useToast();
+    const { resolvedTheme } = useTheme();
     const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
     const [occupancyData, setOccupancyData] = useState<OccupancyData[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const axisTickColor = resolvedTheme === "light" ? "#64748b" : "#cbd5e1";
+    const gridColor = resolvedTheme === "light" ? "#cbd5e1" : "#334155";
+    const tooltipStyle =
+        resolvedTheme === "light"
+            ? { borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }
+            : {
+                  borderRadius: "12px",
+                  border: "1px solid rgb(51 65 85 / 0.8)",
+                  boxShadow: "0 12px 20px -4px rgba(0,0,0,0.45)",
+                  backgroundColor: "rgb(15 23 42 / 0.95)",
+                  color: "rgb(226 232 240)",
+              };
 
     const fetchData = async () => {
         setLoading(true);
@@ -87,13 +102,13 @@ const ReportsPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Gráfico de Ingresos */}
-                <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+                <Card className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl shadow-slate-200/50 dark:shadow-slate-950/40">
                     <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-200">Ingresos Diarios</CardTitle>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Flujo de caja</p>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Flujo de caja</p>
                         </div>
-                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg text-emerald-600 dark:text-emerald-200">
                             <TrendingUp className="w-5 h-5" />
                         </div>
                     </CardHeader>
@@ -110,22 +125,22 @@ const ReportsPage = () => {
                                                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
                                         <XAxis 
                                             dataKey="date" 
                                             tickFormatter={formatDate}
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                            tick={{fill: axisTickColor, fontSize: 10}}
                                         />
                                         <YAxis 
                                             tickFormatter={(val) => `$${val/100}`}
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                            tick={{fill: axisTickColor, fontSize: 10}}
                                         />
                                         <Tooltip 
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                            contentStyle={tooltipStyle}
                                             formatter={(val: any) => [formatCurrency(Number(val)), "Ingresos"]}
                                             labelFormatter={(label: any) => formatDate(String(label))}
                                         />
@@ -145,13 +160,13 @@ const ReportsPage = () => {
                 </Card>
 
                 {/* Gráfico de Ocupación */}
-                <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-3xl overflow-hidden">
+                <Card className="rounded-3xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-2xl shadow-slate-200/50 dark:shadow-slate-950/40">
                     <CardHeader className="bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="text-lg font-black text-slate-800 dark:text-slate-200">Tasa de Ocupación</CardTitle>
-                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1">Eficiencia de inventario</p>
+                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Eficiencia de inventario</p>
                         </div>
-                        <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/40 rounded-lg text-indigo-600 dark:text-indigo-200">
                             <BarChart3 className="w-5 h-5" />
                         </div>
                     </CardHeader>
@@ -168,22 +183,22 @@ const ReportsPage = () => {
                                                 <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
                                         <XAxis 
                                             dataKey="date" 
                                             tickFormatter={formatDate}
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                            tick={{fill: axisTickColor, fontSize: 10}}
                                         />
                                         <YAxis 
                                             axisLine={false}
                                             tickLine={false}
-                                            tick={{fill: '#94a3b8', fontSize: 10}}
+                                            tick={{fill: axisTickColor, fontSize: 10}}
                                             unit="%"
                                         />
                                         <Tooltip 
-                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                            contentStyle={tooltipStyle}
                                             formatter={(val: any) => [`${Number(val).toFixed(1)}%`, "Ocupación"]}
                                             labelFormatter={(label: any) => formatDate(String(label))}
                                         />
