@@ -12,7 +12,9 @@ fi
 VENDOR_MAX_KB="${VENDOR_MAX_KB:-550}"
 CHARTS_MAX_KB="${CHARTS_MAX_KB:-250}"
 APP_MAX_KB="${APP_MAX_KB:-180}"
-CSS_MAX_KB="${CSS_MAX_KB:-100}"
+# Tri-theme tokens and accessibility contrast overrides increase base CSS surface.
+# Keep a strict cap, but align default to the current design-system footprint.
+CSS_MAX_KB="${CSS_MAX_KB:-120}"
 
 pick_asset() {
   local pattern="$1"
