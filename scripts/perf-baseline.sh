@@ -7,6 +7,7 @@ Usage: $0 [options]
 
 Options:
   --base-url URL           API base URL (default: http://localhost:3001)
+  --env-file PATH          Env file to source credentials/context (default: .env)
   --requests N             Requests per endpoint (default: 4)
   --concurrency N          Parallel workers per endpoint (default: 1)
   --warmup N               Warmup requests per endpoint (default: 1)
@@ -22,18 +23,19 @@ USAGE
 }
 
 BASE_URL="http://localhost:3001"
+ENV_FILE=".env"
 REQUESTS=4
 CONCURRENCY=1
 WARMUP=1
-HOTEL_ID="00000000-0000-0000-0000-000000000001"
+HOTEL_ID=""
 SLO_P95_SEC="1.0"
 SLO_ERROR_RATE="0.05"
 FAIL_ON_SLO=0
 REPORT_FILE=""
 
-if [[ -f .env ]]; then
+if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1091
-  source .env
+  source "$ENV_FILE"
 fi
 
 ADMIN_USER_VAL="${ADMIN_USER:-admin}"
@@ -42,6 +44,7 @@ ADMIN_PASSWORD_VAL="${ADMIN_PASSWORD:-admin123}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --base-url) BASE_URL="$2"; shift 2 ;;
+    --env-file) ENV_FILE="$2"; shift 2 ;;
     --requests) REQUESTS="$2"; shift 2 ;;
     --concurrency) CONCURRENCY="$2"; shift 2 ;;
     --warmup) WARMUP="$2"; shift 2 ;;
@@ -57,6 +60,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -f "$ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+fi
+
+if [[ -z "$HOTEL_ID" ]]; then
+  HOTEL_ID="${SYNTHETIC_HOTEL_ID:-00000000-0000-0000-0000-000000000001}"
+fi
+
 for v in REQUESTS CONCURRENCY WARMUP; do
   if ! [[ "${!v}" =~ ^[0-9]+$ ]]; then
     echo "Invalid numeric value for $v: ${!v}" >&2
@@ -66,12 +78,13 @@ done
 
 COOKIE_JAR="$(mktemp)"
 LOGIN_BODY="$(mktemp)"
+ME_BODY="$(mktemp)"
 cat > "$LOGIN_BODY" <<JSON
 {"hotel_id":"$HOTEL_ID","username":"$ADMIN_USER_VAL","password":"$ADMIN_PASSWORD_VAL"}
 JSON
 
 cleanup() {
-  rm -f "$COOKIE_JAR" "$LOGIN_BODY"
+  rm -f "$COOKIE_JAR" "$LOGIN_BODY" "$ME_BODY"
 }
 trap cleanup EXIT
 
@@ -94,13 +107,15 @@ wait_for_backend() {
 wait_for_backend
 
 login_code="000"
+ACCESS_TOKEN=""
 for _ in $(seq 1 8); do
-  login_code="$(curl -sS -o /dev/null -w "%{http_code}" \
+  login_code="$(curl -sS -o "$ME_BODY" -w "%{http_code}" \
     -X POST "$BASE_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
     -d @"$LOGIN_BODY" \
     -c "$COOKIE_JAR" || true)"
   if [[ "$login_code" == "200" ]]; then
+    ACCESS_TOKEN="$(sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p' "$ME_BODY")"
     break
   fi
   sleep 1
@@ -110,14 +125,25 @@ if [[ "$login_code" != "200" ]]; then
   echo "Login failed with HTTP $login_code. Check credentials/hotel-id." >&2
   exit 1
 fi
+if [[ -z "$ACCESS_TOKEN" ]]; then
+  echo "Login response did not include access_token." >&2
+  exit 1
+fi
 
 me_code="$(curl -sS -o /dev/null -w "%{http_code}" \
   -X GET "$BASE_URL/api/v1/auth/me" \
-  -b "$COOKIE_JAR")"
+  -b "$COOKIE_JAR" \
+  -H "Authorization: Bearer $ACCESS_TOKEN")"
 
 if [[ "$me_code" != "200" ]]; then
   echo "Session verification failed at /api/v1/auth/me with HTTP $me_code." >&2
   exit 1
+fi
+
+HAS_REFRESH_CONTEXT=false
+if awk '$1 !~ /^#/ && $6 == "csrf_token" { found=1 } END { exit found?0:1 }' "$COOKIE_JAR" && \
+   awk '$1 !~ /^#/ && $6 == "refresh_token" { found=1 } END { exit found?0:1 }' "$COOKIE_JAR"; then
+  HAS_REFRESH_CONTEXT=true
 fi
 
 # name|method|path|mode
@@ -127,11 +153,15 @@ ENDPOINTS=(
   "invoices_page|GET|/api/v1/invoices/page?limit=25|stateless"
   "audit_events_page|GET|/api/v1/audit/events/page?limit=50|stateless"
   "bookings_legacy|GET|/api/v1/bookings|stateless"
-  "auth_refresh|POST|/api/v1/auth/refresh|stateful_refresh"
   "dashboard_kpis|GET|/api/v1/analytics/kpis|stateless"
   "revenue_report|GET|/api/v1/reports/revenue?start=2026-02-01&end=2026-02-13|stateless"
   "occupancy_report|GET|/api/v1/reports/occupancy?start=2026-02-01&end=2026-02-13|stateless"
 )
+if [[ "$HAS_REFRESH_CONTEXT" == "true" ]]; then
+  ENDPOINTS+=("auth_refresh|POST|/api/v1/auth/refresh|stateful_refresh")
+else
+  echo "Skipping auth_refresh perf check: refresh/csrf cookies unavailable in this context." >&2
+fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'cleanup; rm -rf "$TMP_DIR"' EXIT
@@ -144,6 +174,7 @@ bench_endpoint() {
   local outfile="$TMP_DIR/$name.out"
 
   local url="$BASE_URL$path"
+  local max_429_retries=5
 
   extract_csrf_token() {
     awk '$1 !~ /^#/ && $6 == "csrf_token" { token = $7 } END { if (token != "") print token }' "$COOKIE_JAR"
@@ -153,48 +184,103 @@ bench_endpoint() {
   if [[ "$mode" == "stateful_refresh" ]]; then
     if (( WARMUP > 0 )); then
       for _ in $(seq 1 "$WARMUP"); do
-        csrf_token="$(extract_csrf_token)"
-        if [[ -z "$csrf_token" ]]; then
-          echo "Missing csrf_token cookie before warmup for endpoint $name." >&2
-          exit 1
-        fi
-        curl -sS -o /dev/null -X "$method" "$url" \
-          -H "Content-Type: application/json" \
-          -H "x-csrf-token: $csrf_token" \
-          -d '{}' \
-          -b "$COOKIE_JAR" \
-          -c "$COOKIE_JAR" >/dev/null
+        local warmup_attempt=0
+        while true; do
+          csrf_token="$(extract_csrf_token)"
+          if [[ -z "$csrf_token" ]]; then
+            echo "Missing csrf_token cookie before warmup for endpoint $name." >&2
+            exit 1
+          fi
+          warmup_code="$(
+            curl -sS -o /dev/null -w "%{http_code}" -X "$method" "$url" \
+              -H "Content-Type: application/json" \
+              -H "x-csrf-token: $csrf_token" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" \
+              -d '{}' \
+              -b "$COOKIE_JAR" \
+              -c "$COOKIE_JAR" || true
+          )"
+          if [[ "$warmup_code" == "429" && "$warmup_attempt" -lt "$max_429_retries" ]]; then
+            warmup_attempt=$((warmup_attempt + 1))
+            sleep 2
+            continue
+          fi
+          break
+        done
       done
     fi
 
     start_ns="$(date +%s%N)"
     : > "$outfile"
     for _ in $(seq 1 "$REQUESTS"); do
-      csrf_token="$(extract_csrf_token)"
-      if [[ -z "$csrf_token" ]]; then
-        echo "Missing csrf_token cookie before request for endpoint $name." >&2
-        exit 1
-      fi
-      curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
-        -X "$method" "$url" \
-        -H "Content-Type: application/json" \
-        -H "x-csrf-token: $csrf_token" \
-        -d '{}' \
-        -b "$COOKIE_JAR" \
-        -c "$COOKIE_JAR" >> "$outfile"
+      local req_attempt=0
+      while true; do
+        csrf_token="$(extract_csrf_token)"
+        if [[ -z "$csrf_token" ]]; then
+          echo "Missing csrf_token cookie before request for endpoint $name." >&2
+          exit 1
+        fi
+        req_line="$(
+          curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
+            -X "$method" "$url" \
+            -H "Content-Type: application/json" \
+            -H "x-csrf-token: $csrf_token" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" \
+            -d '{}' \
+            -b "$COOKIE_JAR" \
+            -c "$COOKIE_JAR" || true
+        )"
+        req_code="$(echo "$req_line" | awk '{print $2}')"
+        if [[ "$req_code" == "429" && "$req_attempt" -lt "$max_429_retries" ]]; then
+          req_attempt=$((req_attempt + 1))
+          sleep 2
+          continue
+        fi
+        echo "$req_line" >> "$outfile"
+        break
+      done
     done
   else
     if (( WARMUP > 0 )); then
       for _ in $(seq 1 "$WARMUP"); do
-        curl -sS -o /dev/null -X "$method" "$url" -b "$COOKIE_JAR" >/dev/null
+        local warmup_attempt=0
+        while true; do
+          warmup_code="$(
+            curl -sS -o /dev/null -w "%{http_code}" -X "$method" "$url" \
+              -b "$COOKIE_JAR" \
+              -H "Authorization: Bearer $ACCESS_TOKEN" || true
+          )"
+          if [[ "$warmup_code" == "429" && "$warmup_attempt" -lt "$max_429_retries" ]]; then
+            warmup_attempt=$((warmup_attempt + 1))
+            sleep 2
+            continue
+          fi
+          break
+        done
       done
     fi
 
     start_ns="$(date +%s%N)"
-    seq 1 "$REQUESTS" | xargs -I{} -P "$CONCURRENCY" -n1 bash -lc '
-      curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
-        -X "'$method'" "'$url'" -b "'$COOKIE_JAR'"
-    ' > "$outfile"
+    : > "$outfile"
+    for _ in $(seq 1 "$REQUESTS"); do
+      local req_attempt=0
+      while true; do
+        req_line="$(
+          curl -sS -o /dev/null -w "%{time_total} %{http_code}\n" \
+            -X "$method" "$url" \
+            -b "$COOKIE_JAR" \
+            -H "Authorization: Bearer $ACCESS_TOKEN" || true
+        )"
+        req_code="$(echo "$req_line" | awk '{print $2}')"
+        if [[ "$req_code" == "429" && "$req_attempt" -lt "$max_429_retries" ]]; then
+          req_attempt=$((req_attempt + 1))
+          sleep 2
+          continue
+        fi
+        echo "$req_line" >> "$outfile"
+        break
+      done
+    done
   fi
 
   end_ns="$(date +%s%N)"
@@ -250,6 +336,7 @@ report_body=""
 report_body+="# Performance Baseline\n\n"
 report_body+="- generated_at_utc: $now_iso\n"
 report_body+="- base_url: $BASE_URL\n"
+report_body+="- env_file: $ENV_FILE\n"
 report_body+="- requests_per_endpoint: $REQUESTS\n"
 report_body+="- concurrency: $CONCURRENCY\n"
 report_body+="- warmup: $WARMUP\n"

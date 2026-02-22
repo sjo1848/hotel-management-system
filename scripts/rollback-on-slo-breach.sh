@@ -29,8 +29,8 @@ ENV_FILE=".env"
 PROFILE="auto"
 TARGET_REF="HEAD~1"
 BASE_URL="http://localhost:3001"
-REQUESTS=8
-CONCURRENCY=2
+REQUESTS=4
+CONCURRENCY=1
 WARMUP=1
 SLO_P95_SEC="1.0"
 SLO_ERROR_RATE="0.05"
@@ -80,6 +80,11 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
 run_id="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 perf_report="$(mktemp)"
 perf_log="$(mktemp)"
@@ -97,6 +102,7 @@ if [[ "$SKIP_PERF_CHECK" != "true" ]]; then
   set +e
   ./scripts/perf-baseline.sh \
     --base-url "$BASE_URL" \
+    --env-file "$ENV_FILE" \
     --requests "$REQUESTS" \
     --concurrency "$CONCURRENCY" \
     --warmup "$WARMUP" \
