@@ -23,14 +23,16 @@ use crate::infrastructure::web::handlers::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
     finish_cleaning_handler, get_audit_events_handler, get_audit_events_page_handler,
-    get_current_balance_handler, get_dashboard_kpis_handler, get_invoice_by_booking_handler,
+    get_automation_insights_handler, get_current_balance_handler, get_dashboard_kpis_handler,
+    get_hotel_network_summary_handler, get_invoice_by_booking_handler,
     get_occupancy_report_handler, get_revenue_report_handler, get_room_by_id_handler,
     get_rooms_handler, health_check, list_bookings_handler, list_bookings_page_handler,
     list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler,
     list_guests_page_handler, list_hotels_handler, list_invoices_handler,
     list_invoices_page_handler, list_users_handler, login_handler, logout_handler, me_handler,
     readiness_check, refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
-    track_ui_telemetry_handler, update_booking_handler, update_room_status_handler,
+    track_ui_telemetry_handler, update_booking_handler, update_hotel_plan_tier_handler,
+    update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
     api_contract::api_contract_headers_middleware,
@@ -123,6 +125,14 @@ pub fn create_router(state: Arc<AppState>) -> Router {
                 .merge(post(create_hotel_handler).layer(middleware::from_fn(hotels_write))),
         )
         .route(
+            "/api/v1/hotels/network/summary",
+            get(get_hotel_network_summary_handler).layer(middleware::from_fn(hotels_read)),
+        )
+        .route(
+            "/api/v1/hotels/:id/plan",
+            patch(update_hotel_plan_tier_handler).layer(middleware::from_fn(hotels_write)),
+        )
+        .route(
             "/api/v1/rooms",
             get(get_rooms_handler)
                 .layer(middleware::from_fn(rooms_read))
@@ -186,6 +196,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/analytics/kpis",
             get(get_dashboard_kpis_handler).layer(middleware::from_fn(analytics_read)),
+        )
+        .route(
+            "/api/v1/automations/insights",
+            get(get_automation_insights_handler).layer(middleware::from_fn(analytics_read)),
         )
         .route(
             "/api/v1/audit/events",

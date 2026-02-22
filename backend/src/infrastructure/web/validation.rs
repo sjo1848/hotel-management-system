@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::BookingStatus;
+use crate::domain::models::{BookingStatus, PlanTier};
 use chrono::NaiveDate;
 
 pub fn validate_non_empty_trimmed(field: &str, value: &str) -> Result<(), DomainError> {
@@ -92,6 +92,14 @@ pub fn validate_role(role: &str) -> Result<(), DomainError> {
     }
 }
 
+pub fn parse_plan_tier_input(value: &str) -> Result<PlanTier, DomainError> {
+    PlanTier::parse_input(value).ok_or_else(|| {
+        DomainError::InvalidInput(
+            "Plan inválido. Valores permitidos: BASIC, PRO, ENTERPRISE".to_string(),
+        )
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -113,6 +121,12 @@ mod tests {
         let start = chrono::NaiveDate::from_ymd_opt(2026, 2, 15).unwrap();
         let end = chrono::NaiveDate::from_ymd_opt(2026, 2, 14).unwrap();
         let result = validate_date_range(start, end);
+        assert!(matches!(result, Err(DomainError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn parse_plan_tier_input_rejects_unknown_value() {
+        let result = parse_plan_tier_input("premium");
         assert!(matches!(result, Err(DomainError::InvalidInput(_))));
     }
 }

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock, XCircle } from "lucide-react";
 import type { BookingStatus } from "@/types/domain";
+import { getBookingStatusMeta } from "@/features/bookings/domain/bookingWorkflow";
 
 export type BookingStatusFilter = "all" | BookingStatus;
 
@@ -14,7 +15,7 @@ export const BOOKING_STATUS_FILTER_OPTIONS: Array<{ value: BookingStatusFilter; 
 
 export const getStatusBadgeLabel = (status: BookingStatusFilter) => {
   if (status === "all") return "Filtros";
-  return `Estado: ${status}`;
+  return `Estado: ${getBookingStatusMeta(status).label}`;
 };
 
 export const renderBookingStatusBadge = (status: BookingStatus) => {

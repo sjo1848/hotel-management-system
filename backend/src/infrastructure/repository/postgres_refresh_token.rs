@@ -1,6 +1,8 @@
 use crate::domain::models::RefreshToken;
 use crate::domain::repositories::RefreshTokenRepository;
-use crate::infrastructure::repository::tenant_context::{begin_bypass_tx, begin_tenant_tx};
+use crate::infrastructure::repository::tenant_context::{
+    begin_refresh_token_lookup_tx, begin_tenant_tx,
+};
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use sqlx::{PgPool, Row};
@@ -42,8 +44,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     }
 
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String> {
-        // Controlled bypass for pre-auth token exchange; tenant context is derived from token row.
-        let mut tx = begin_bypass_tx(&self.pool, "refresh_token_lookup_pre_auth").await?;
+        let mut tx = begin_refresh_token_lookup_tx(&self.pool, token_hash).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, user_id, session_id, device_id, token_hash, expires_at, revoked_at
              FROM refresh_tokens

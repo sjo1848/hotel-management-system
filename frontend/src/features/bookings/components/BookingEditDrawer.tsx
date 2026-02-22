@@ -17,6 +17,13 @@ import extraChargeService from "../services/extraChargeService";
 import { useToast } from "@/components/ui/toast";
 import { Booking, Room, BookingStatus, ExtraCharge } from "@/types/domain";
 import { Plus, Coffee, Beer, WashingMachine, Utensils, Tag } from "lucide-react";
+import { getErrorMessage } from "@/api/errors";
+import { withRetry } from "@/lib/retry";
+import { emitDomainEvent } from "@/lib/domainEvents";
+import {
+  getTransitionFallbackError,
+  getTransitionSuccessMessage,
+} from "@/features/bookings/domain/bookingWorkflow";
 
 type BookingEditDrawerProps = {
   booking: Booking | null;
@@ -91,18 +98,31 @@ const BookingEditDrawer = ({
   const handleAddExtra = async (desc: string, amount: number, cat: string) => {
     if (!booking) return;
     try {
-      await extraChargeService.addExtraCharge(booking.id, { 
-        description: desc, 
-        amount_cents: amount, 
-        category: cat 
+      await withRetry(
+        () =>
+          extraChargeService.addExtraCharge(booking.id, {
+            description: desc,
+            amount_cents: amount,
+            category: cat,
+          }),
+        { retries: 1 },
+      );
+      emitDomainEvent("extra_charge_added", {
+        booking_id: booking.id,
+        amount_cents: amount,
+        category: cat,
       });
       toast({ title: "Cargo añadido", variant: "success" });
       const updated = await extraChargeService.getExtraCharges(booking.id);
       setExtraCharges(updated);
       setIsAddingExtra(false);
       onSuccess(); // Refresh list to update total price
-    } catch (e) {
-      toast({ title: "Error", description: "No se pudo añadir el cargo", variant: "error" });
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo añadir el cargo."),
+        variant: "error",
+      });
     }
   };
 
@@ -139,22 +159,41 @@ const BookingEditDrawer = ({
 
     setLoading(true);
     try {
-      await updateBooking(booking.id, { status: newStatus });
+      await withRetry(
+        () => updateBooking(booking.id, { status: newStatus }),
+        { retries: 2 },
+      );
+      emitDomainEvent(
+        newStatus === "CheckedOut"
+          ? "booking_checked_out"
+          : newStatus === "Cancelled"
+            ? "booking_cancelled"
+            : "booking_updated",
+        {
+          booking_id: booking.id,
+          status: newStatus,
+        },
+      );
+
       toast({
         title: "Estado actualizado",
-        description: `La reserva ahora está ${newStatus.toLowerCase()}.`,
+        description: getTransitionSuccessMessage(newStatus),
         variant: "success",
       });
       
       if (newStatus === 'CheckedIn' || newStatus === 'CheckedOut') {
-        setShowSuccess(newStatus as any);
+        setShowSuccess(newStatus);
         onSuccess();
       } else {
         onSuccess();
         onClose();
       }
-    } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "error" });
+    } catch (error: unknown) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, getTransitionFallbackError(newStatus)),
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -164,10 +203,17 @@ const BookingEditDrawer = ({
     event.preventDefault();
     setLoading(true);
     try {
-      await updateBooking(booking.id, {
-        guest_name: formData.guest_name,
-        check_in: formData.check_in,
-        check_out: formData.check_out,
+      await withRetry(
+        () =>
+          updateBooking(booking.id, {
+            guest_name: formData.guest_name,
+            check_in: formData.check_in,
+            check_out: formData.check_out,
+          }),
+        { retries: 1 },
+      );
+      emitDomainEvent("booking_updated", {
+        booking_id: booking.id,
       });
       toast({
         title: "Reserva actualizada",
@@ -176,10 +222,10 @@ const BookingEditDrawer = ({
       });
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: unknown) {
       toast({
         title: "No se pudo actualizar",
-        description: String(error),
+        description: getErrorMessage(error, "No se pudieron guardar los cambios."),
         variant: "error",
       });
     } finally {

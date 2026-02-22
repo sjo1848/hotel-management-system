@@ -426,6 +426,66 @@ paths:
                 $ref: "#/components/schemas/Hotel"
         "400":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/hotels/{id}/plan:
+    patch:
+      summary: Actualizar plan comercial de hotel (SaaS)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHotelPlanTierRequest"
+      responses:
+        "200":
+          description: Plan comercial actualizado y flags efectivas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateHotelPlanTierResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/hotels/network/summary:
+    get:
+      summary: Resumen consolidado de red multi-hotel (HQ)
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: hotel_id
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Resumen consolidado por red y propiedad
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HotelNetworkSummaryResponse"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/rooms/{id}/status:
     patch:
       summary: Actualizar estado de habitación
@@ -514,6 +574,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DashboardKpis"
+  /api/v1/automations/insights:
+    get:
+      summary: Insights de automatización por plan y operación actual
+      responses:
+        "200":
+          description: Señales de automatización y excepciones accionables
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutomationInsightsResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/audit/events:
     get:
       summary: Eventos de auditoría recientes del tenant
@@ -837,6 +909,9 @@ components:
           type: string
         expires_in:
           type: integer
+        hotel_id:
+          type: string
+          format: uuid
         role:
           type: string
     Room:
@@ -885,8 +960,18 @@ components:
             - CheckedIn
             - CheckedOut
             - Cancelled
+    PlanTier:
+      type: string
+      enum:
+        - BASIC
+        - PRO
+        - ENTERPRISE
     Hotel:
       type: object
+      required:
+        - id
+        - name
+        - plan_tier
       properties:
         id:
           type: string
@@ -896,6 +981,127 @@ components:
         address:
           type: string
           nullable: true
+        plan_tier:
+          $ref: "#/components/schemas/PlanTier"
+    HotelNetworkTotals:
+      type: object
+      additionalProperties: false
+      required:
+        - hotels_count
+        - revenue_cents
+        - bookings_count
+        - active_bookings_count
+        - today_check_ins
+        - avg_occupancy_rate
+        - avg_adr_cents
+        - avg_rev_par_cents
+      properties:
+        hotels_count:
+          type: integer
+        revenue_cents:
+          type: integer
+        bookings_count:
+          type: integer
+        active_bookings_count:
+          type: integer
+        today_check_ins:
+          type: integer
+        avg_occupancy_rate:
+          type: number
+          format: double
+        avg_adr_cents:
+          type: integer
+        avg_rev_par_cents:
+          type: integer
+    HotelNetworkHotelSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - hotel_id
+        - hotel_name
+        - plan_tier
+        - revenue_cents
+        - bookings_count
+        - active_bookings_count
+        - today_check_ins
+        - occupancy_rate
+        - adr_cents
+        - rev_par_cents
+      properties:
+        hotel_id:
+          type: string
+          format: uuid
+        hotel_name:
+          type: string
+        hotel_address:
+          type: string
+          nullable: true
+        plan_tier:
+          $ref: "#/components/schemas/PlanTier"
+        revenue_cents:
+          type: integer
+        bookings_count:
+          type: integer
+        active_bookings_count:
+          type: integer
+        today_check_ins:
+          type: integer
+        occupancy_rate:
+          type: number
+          format: double
+        adr_cents:
+          type: integer
+        rev_par_cents:
+          type: integer
+    HotelNetworkBenchmarks:
+      type: object
+      additionalProperties: false
+      required:
+        - top_revenue_hotel_id
+        - top_occupancy_hotel_id
+        - top_rev_par_hotel_id
+      properties:
+        top_revenue_hotel_id:
+          type: string
+          format: uuid
+          nullable: true
+        top_occupancy_hotel_id:
+          type: string
+          format: uuid
+          nullable: true
+        top_rev_par_hotel_id:
+          type: string
+          format: uuid
+          nullable: true
+    HotelNetworkSummaryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - start
+        - end
+        - selected_hotel_id
+        - totals
+        - benchmarks
+        - hotels
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+        selected_hotel_id:
+          type: string
+          format: uuid
+          nullable: true
+        totals:
+          $ref: "#/components/schemas/HotelNetworkTotals"
+        benchmarks:
+          $ref: "#/components/schemas/HotelNetworkBenchmarks"
+        hotels:
+          type: array
+          items:
+            $ref: "#/components/schemas/HotelNetworkHotelSummary"
     ExtraCharge:
       type: object
       properties:
@@ -1209,6 +1415,9 @@ components:
         id:
           type: string
           format: uuid
+        hotel_id:
+          type: string
+          format: uuid
         username:
           type: string
         role:
@@ -1232,6 +1441,142 @@ components:
         address:
           type: string
           nullable: true
+    UpdateHotelPlanTierRequest:
+      type: object
+      required: [plan_tier]
+      properties:
+        plan_tier:
+          $ref: "#/components/schemas/PlanTier"
+    PlanFeatureFlags:
+      type: object
+      additionalProperties: false
+      required:
+        - revenue_cockpit
+        - housekeeping_sla_alerts
+        - pricing_assistant
+        - exception_notifications
+        - hq_multi_property
+        - benchmarking_exports
+        - pricing_rules_automation
+      properties:
+        revenue_cockpit:
+          type: boolean
+        housekeeping_sla_alerts:
+          type: boolean
+        pricing_assistant:
+          type: boolean
+        exception_notifications:
+          type: boolean
+        hq_multi_property:
+          type: boolean
+        benchmarking_exports:
+          type: boolean
+        pricing_rules_automation:
+          type: boolean
+    UpdateHotelPlanTierResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - hotel
+        - feature_flags
+      properties:
+        hotel:
+          $ref: "#/components/schemas/Hotel"
+        feature_flags:
+          $ref: "#/components/schemas/PlanFeatureFlags"
+    HousekeepingSlaInsight:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - dirty_rooms_count
+        - cleaning_rooms_count
+        - overdue_rooms_count
+        - recommendation
+      properties:
+        enabled:
+          type: boolean
+        dirty_rooms_count:
+          type: integer
+        cleaning_rooms_count:
+          type: integer
+        overdue_rooms_count:
+          type: integer
+        recommendation:
+          type: string
+    PricingAssistantInsight:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - occupancy_rate
+        - adr_cents
+        - rev_par_cents
+        - urgency
+        - recommendation
+      properties:
+        enabled:
+          type: boolean
+        occupancy_rate:
+          type: number
+          format: double
+        adr_cents:
+          type: integer
+        rev_par_cents:
+          type: integer
+        urgency:
+          type: string
+          enum:
+            - low
+            - medium
+            - high
+            - upgrade_required
+        recommendation:
+          type: string
+    AutomationNotification:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - severity
+        - message
+        - action_route
+      properties:
+        code:
+          type: string
+        severity:
+          type: string
+          enum:
+            - info
+            - low
+            - medium
+            - high
+        message:
+          type: string
+        action_route:
+          type: string
+    AutomationInsightsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - plan_tier
+        - feature_flags
+        - housekeeping_sla
+        - pricing_assistant
+        - exception_notifications
+      properties:
+        plan_tier:
+          $ref: "#/components/schemas/PlanTier"
+        feature_flags:
+          $ref: "#/components/schemas/PlanFeatureFlags"
+        housekeeping_sla:
+          $ref: "#/components/schemas/HousekeepingSlaInsight"
+        pricing_assistant:
+          $ref: "#/components/schemas/PricingAssistantInsight"
+        exception_notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/AutomationNotification"
     AddExtraChargeRequest:
       type: object
       required: [description, amount_cents, category]
@@ -1253,6 +1598,8 @@ components:
             - dashboard_retry_clicked
             - close_cash_success
             - close_cash_failure
+            - revenue_cockpit_viewed
+            - revenue_cockpit_cta_clicked
         payload:
           type: object
           additionalProperties: true

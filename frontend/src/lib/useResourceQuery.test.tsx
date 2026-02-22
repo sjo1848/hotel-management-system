@@ -1,4 +1,4 @@
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   RESOURCE_QUERY_CACHE_EVENT,
@@ -97,5 +97,29 @@ describe("useResourceQuery cache events", () => {
 
     expect(events).toHaveLength(1);
     expect(events[0]).toMatchObject({ type: "invalidate", queryKey });
+  });
+
+  it("triggers active refetch when invalidating an active query", async () => {
+    const queryKey = `test:cache:${Date.now()}:active-refetch`;
+    const queryFn = vi
+      .fn()
+      .mockResolvedValueOnce("first")
+      .mockResolvedValueOnce("second");
+
+    render(<QueryProbe queryKey={queryKey} queryFn={queryFn} />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data").textContent).toBe("first");
+    });
+
+    act(() => {
+      invalidateResource(queryKey);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("data").textContent).toBe("second");
+    });
+
+    expect(queryFn).toHaveBeenCalledTimes(2);
   });
 });

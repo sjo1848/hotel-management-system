@@ -2,7 +2,9 @@ export type UiTelemetryEventName =
   | "dashboard_load_failed"
   | "dashboard_retry_clicked"
   | "close_cash_success"
-  | "close_cash_failure";
+  | "close_cash_failure"
+  | "revenue_cockpit_viewed"
+  | "revenue_cockpit_cta_clicked";
 
 type UiTelemetryPayload = Record<string, unknown>;
 

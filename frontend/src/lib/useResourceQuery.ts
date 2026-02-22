@@ -6,6 +6,7 @@ type CacheEntry<T> = {
 };
 
 const cacheStore = new Map<string, CacheEntry<unknown>>();
+const activeRefetchers = new Map<string, Set<() => void>>();
 export const RESOURCE_QUERY_CACHE_EVENT = "hms:resource-query-cache";
 
 export type ResourceQueryCacheEventType =
@@ -13,7 +14,8 @@ export type ResourceQueryCacheEventType =
   | "cache_miss"
   | "fetch_success"
   | "fetch_error"
-  | "invalidate";
+  | "invalidate"
+  | "refetch_triggered";
 
 export type ResourceQueryCacheEvent = {
   type: ResourceQueryCacheEventType;
@@ -51,12 +53,67 @@ export type UseResourceQueryResult<T> = {
   invalidate: () => void;
 };
 
-export const invalidateResource = (queryKey: string) => {
+type InvalidateOptions = {
+  refetchActive?: boolean;
+};
+
+const registerRefetcher = (queryKey: string, refetch: () => void) => {
+  const handlers = activeRefetchers.get(queryKey) ?? new Set<() => void>();
+  handlers.add(refetch);
+  activeRefetchers.set(queryKey, handlers);
+};
+
+const unregisterRefetcher = (queryKey: string, refetch: () => void) => {
+  const handlers = activeRefetchers.get(queryKey);
+  if (!handlers) return;
+  handlers.delete(refetch);
+  if (handlers.size === 0) {
+    activeRefetchers.delete(queryKey);
+  }
+};
+
+const triggerActiveRefetch = (queryKey: string) => {
+  const handlers = activeRefetchers.get(queryKey);
+  if (!handlers || handlers.size === 0) return;
+  handlers.forEach((handler) => handler());
+  dispatchCacheEvent({
+    type: "refetch_triggered",
+    queryKey,
+  });
+};
+
+export const invalidateResource = (
+  queryKey: string,
+  options: InvalidateOptions = {},
+) => {
+  const { refetchActive = true } = options;
   cacheStore.delete(queryKey);
   dispatchCacheEvent({
     type: "invalidate",
     queryKey,
   });
+  if (refetchActive) {
+    triggerActiveRefetch(queryKey);
+  }
+};
+
+export const invalidateResourcePrefix = (
+  prefix: string,
+  options: InvalidateOptions = {},
+) => {
+  const keys = new Set<string>();
+  cacheStore.forEach((_, queryKey) => {
+    if (queryKey.startsWith(prefix)) {
+      keys.add(queryKey);
+    }
+  });
+  activeRefetchers.forEach((_, queryKey) => {
+    if (queryKey.startsWith(prefix)) {
+      keys.add(queryKey);
+    }
+  });
+
+  keys.forEach((queryKey) => invalidateResource(queryKey, options));
 };
 
 export function useResourceQuery<T>({
@@ -125,12 +182,19 @@ export function useResourceQuery<T>({
   }, [enabled, fetchFresh, queryKey, staleTimeMs]);
 
   const invalidate = useCallback(() => {
-    cacheStore.delete(queryKey);
-    dispatchCacheEvent({
-      type: "invalidate",
-      queryKey,
-    });
+    invalidateResource(queryKey);
   }, [queryKey]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    const runRefetch = () => {
+      void fetchFresh();
+    };
+    registerRefetcher(queryKey, runRefetch);
+    return () => {
+      unregisterRefetcher(queryKey, runRefetch);
+    };
+  }, [enabled, fetchFresh, queryKey]);
 
   return useMemo(
     () => ({

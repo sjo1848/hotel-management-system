@@ -26,8 +26,10 @@ import BookingDrawer from "@/features/bookings/components/BookingDrawer";
 import RoomCreateDrawer from "./components/RoomCreateDrawer";
 import AvailabilityPicker from "./components/AvailabilityPicker";
 import { useToast } from "@/components/ui/toast";
-import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
+import { emitDomainEvent } from "@/lib/domainEvents";
+import { withRetry } from "@/lib/retry";
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -72,7 +74,6 @@ const RoomsPage = () => {
     data: roomsData,
     isLoading: loading,
     error: roomsError,
-    refetch: refetchRooms,
   } = useResourceQuery<Room[]>({
     queryKey: roomsQueryKey,
     queryFn: () => getAllRooms(bookingDates?.from, bookingDates?.to),
@@ -91,16 +92,17 @@ const RoomsPage = () => {
   };
 
   const handleBookingSuccess = async () => {
-    invalidateResource(roomsQueryKey);
-    await refetchRooms();
+    emitDomainEvent("booking_created");
   };
 
   const handleUpdateStatus = async (roomId: string, status: string) => {
     try {
-      await updateRoomStatus(roomId, status);
+      await withRetry(() => updateRoomStatus(roomId, status), { retries: 1 });
+      emitDomainEvent("room_status_updated", {
+        room_id: roomId,
+        status,
+      });
       toast({ title: "Estado actualizado", variant: "success" });
-      invalidateResource(roomsQueryKey);
-      await refetchRooms();
     } catch (error: unknown) {
       toast({
         title: "Error",
@@ -403,8 +405,7 @@ const RoomsPage = () => {
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
         onSuccess={async () => {
-          invalidateResource(roomsQueryKey);
-          await refetchRooms();
+          emitDomainEvent("room_status_updated");
         }}
       />
     </div>

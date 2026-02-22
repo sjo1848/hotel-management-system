@@ -22,6 +22,33 @@ TENANT_THRESHOLD="${HMS_COVERAGE_TENANT_MIN:-45}"
 LCOV_FILE="${HMS_COVERAGE_LCOV_FILE:-/tmp/hms_backend_coverage.info}"
 export DATABASE_URL="${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core}"
 
+wait_for_postgres() {
+  local attempt
+  for attempt in $(seq 1 15); do
+    if psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'SELECT 1;' >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
+resolve_runner() {
+  if wait_for_postgres; then
+    echo "host"
+    return 0
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
+    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+      echo "docker"
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 require_tooling() {
   if cargo llvm-cov --version >/dev/null 2>&1; then
     return 0
@@ -91,21 +118,55 @@ is_above_threshold() {
   awk -v p="$percent" -v t="$threshold" 'BEGIN { exit ((p + 0) >= (t + 0) ? 0 : 1) }'
 }
 
-require_tooling
-require_llvm_tools
+RUNNER="$(resolve_runner || true)"
+if [ -z "${RUNNER:-}" ]; then
+  echo "Postgres is not ready for DATABASE_URL=$DATABASE_URL and docker backend runner is unavailable." >&2
+  exit 1
+fi
+
+if [ "$RUNNER" = "host" ]; then
+  require_tooling
+  require_llvm_tools
+fi
 
 echo "==> backend coverage thresholds (auth=${AUTH_THRESHOLD} booking=${BOOKING_THRESHOLD} tenant=${TENANT_THRESHOLD})"
-(
-  cd backend
-  cargo llvm-cov \
-    --all-features \
-    --lcov \
-    --output-path "$LCOV_FILE" \
-    --test csrf_authn_security \
-    --test rbac_authorization \
-    --test booking_flow \
-    --test operational_flow
-)
+if [ "$RUNNER" = "host" ]; then
+  (
+    cd backend
+    cargo llvm-cov \
+      --all-features \
+      --lcov \
+      --output-path "$LCOV_FILE" \
+      --test csrf_authn_security \
+      --test rbac_authorization \
+      --test booking_flow \
+      --test booking_transactional_integrity \
+      --test operational_flow
+  )
+else
+  echo "Host DATABASE_URL is unreachable; running coverage in docker backend runner."
+  CONTAINER_LCOV_FILE="/app/backend/target/llvm-cov-target/hms_backend_coverage.info"
+  LCOV_FILE="backend/target/llvm-cov-target/hms_backend_coverage.info"
+  docker compose exec -T backend env PATH=/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin sh -c "
+    set -euo pipefail
+    mkdir -p /app/backend/target/llvm-cov-target
+    if ! cargo llvm-cov --version >/dev/null 2>&1; then
+      cargo install cargo-llvm-cov --locked >/dev/null
+    fi
+    rustup component add llvm-tools-preview >/dev/null 2>&1 || true
+    cargo llvm-cov \
+      --all-features \
+      --lcov \
+      --output-path \"$CONTAINER_LCOV_FILE\" \
+      --test csrf_authn_security \
+      --test rbac_authorization \
+      --test booking_flow \
+      --test booking_transactional_integrity \
+      --test operational_flow
+  "
+  mkdir -p "$(dirname "$LCOV_FILE")"
+  docker compose exec -T backend cat "$CONTAINER_LCOV_FILE" > "$LCOV_FILE"
+fi
 
 if [ ! -s "$LCOV_FILE" ]; then
   echo "Coverage report not generated: $LCOV_FILE" >&2

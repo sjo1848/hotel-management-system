@@ -38,7 +38,7 @@ wait_for_postgres() {
 
 is_transient_sqlx_failure() {
   local output_file="$1"
-  grep -qE 'database "_sqlx_test_[^"]+" does not exist|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
+  grep -qE 'database "_sqlx_test_[^"]+" does not exist|database "_sqlx_test_[^"]+" already exists|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
 }
 
 run_sqlx_test_with_retry() {

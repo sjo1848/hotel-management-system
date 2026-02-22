@@ -30,6 +30,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Booking, BookingStatus, Invoice } from "@/types/domain";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/api/errors";
+import { withRetry } from "@/lib/retry";
+import { getBookingStatusMeta } from "@/features/bookings/domain/bookingWorkflow";
 
 interface BookingDetailsSheetProps {
     booking: Booking | null;
@@ -46,31 +49,41 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
 }) => {
     const [invoice, setInvoice] = React.useState<Invoice | null>(null);
     const [loadingInvoice, setLoadingInvoice] = React.useState(false);
+    const [invoiceError, setInvoiceError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         if (isOpen && booking?.status === "CheckedOut") {
             setLoadingInvoice(true);
-            getInvoiceByBooking(booking.id)
-                .then(setInvoice)
-                .catch(console.error)
+            setInvoiceError(null);
+            withRetry(() => getInvoiceByBooking(booking.id), { retries: 2, initialDelayMs: 300 })
+                .then((data) => {
+                    setInvoice(data);
+                    setInvoiceError(null);
+                })
+                .catch((error: unknown) => {
+                    setInvoice(null);
+                    setInvoiceError(getErrorMessage(error, "No se pudo cargar la factura de la reserva."));
+                })
                 .finally(() => setLoadingInvoice(false));
         } else if (!isOpen) {
             setInvoice(null);
+            setInvoiceError(null);
         }
     }, [isOpen, booking?.id, booking?.status]);
 
     if (!booking) return null;
 
     const getStatusInfo = (status: BookingStatus) => {
+        const statusMeta = getBookingStatusMeta(status);
         switch (status) {
             case "Confirmed":
-                return { label: "Confirmada", color: "text-blue-600 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-700", icon: Clock };
+                return { label: statusMeta.label, color: "text-blue-600 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-700", icon: Clock };
             case "CheckedIn":
-                return { label: "En el Hotel", color: "text-emerald-600 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-700", icon: CheckCircle };
+                return { label: statusMeta.label, color: "text-emerald-600 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-100 dark:border-emerald-700", icon: CheckCircle };
             case "CheckedOut":
-                return { label: "Finalizada", color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 border-slate-100 dark:border-slate-800", icon: CheckCircle };
+                return { label: statusMeta.label, color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 border-slate-100 dark:border-slate-800", icon: CheckCircle };
             case "Cancelled":
-                return { label: "Cancelada", color: "text-red-600 dark:text-red-200 bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-700", icon: XCircle };
+                return { label: statusMeta.label, color: "text-red-600 dark:text-red-200 bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-700", icon: XCircle };
             default:
                 return { label: status, color: "text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/70 border-slate-100 dark:border-slate-800", icon: Clock };
         }
@@ -223,6 +236,29 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                                 <p className="text-2xl font-black text-emerald-700">${invoice.amount_cents / 100}</p>
                                             </div>
                                         </div>
+                                    </div>
+                                ) : invoiceError ? (
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-rose-700 dark:text-rose-200">{invoiceError}</p>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-9 rounded-lg border-rose-300 dark:border-rose-700 text-rose-700 dark:text-rose-200 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                                            onClick={() => {
+                                                setLoadingInvoice(true);
+                                                withRetry(() => getInvoiceByBooking(booking.id), { retries: 2, initialDelayMs: 300 })
+                                                    .then((data) => {
+                                                        setInvoice(data);
+                                                        setInvoiceError(null);
+                                                    })
+                                                    .catch((error: unknown) => {
+                                                        setInvoiceError(getErrorMessage(error, "No se pudo cargar la factura de la reserva."));
+                                                    })
+                                                    .finally(() => setLoadingInvoice(false));
+                                            }}
+                                        >
+                                            Reintentar factura
+                                        </Button>
                                     </div>
                                 ) : (
                                     <p className="text-sm text-slate-500 dark:text-slate-400 italic">No se pudo cargar la información de la factura.</p>

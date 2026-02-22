@@ -20,6 +20,9 @@ import { createBooking } from "../services/bookingService";
 import { getGuests, createGuest } from "@/features/guests/services/guestService";
 import { useToast } from "@/components/ui/toast";
 import { Room, Guest } from "@/types/domain";
+import { getErrorMessage } from "@/api/errors";
+import { withRetry } from "@/lib/retry";
+import { emitDomainEvent } from "@/lib/domainEvents";
 
 type SearchDates = {
   from: string;
@@ -122,12 +125,17 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
       // Si no hay guest_id, intentamos crear el huésped al vuelo
       if (!guestId && formData.guest_name && formData.guest_email) {
         try {
-          const newGuest = await createGuest({
-            full_name: formData.guest_name,
-            email: formData.guest_email,
-            created_at: new Date().toISOString()
-          });
+          const newGuest = await withRetry(
+            () =>
+              createGuest({
+                full_name: formData.guest_name,
+                email: formData.guest_email,
+                created_at: new Date().toISOString(),
+              }),
+            { retries: 1 },
+          );
           guestId = newGuest.id;
+          emitDomainEvent("guest_created", { guest_id: newGuest.id });
         } catch (err) {
           console.warn("No se pudo crear el huésped, se guardará solo el nombre", err);
         }
@@ -141,13 +149,21 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
         check_out: dates.to,
       };
 
-      await createBooking(payload);
+      const createdBooking = await withRetry(() => createBooking(payload), { retries: 2 });
+      emitDomainEvent("booking_created", {
+        booking_id: createdBooking.id,
+        room_id: room.id,
+      });
 
       toast({ title: "Reserva confirmada", description: "La habitación quedó reservada.", variant: "success" });
       onSuccess();
       onClose();
-    } catch (error) {
-      toast({ title: "No se pudo reservar", description: String(error), variant: "error" });
+    } catch (error: unknown) {
+      toast({
+        title: "No se pudo reservar",
+        description: getErrorMessage(error, "No se pudo completar la reserva."),
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

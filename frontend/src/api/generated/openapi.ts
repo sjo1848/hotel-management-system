@@ -736,6 +736,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hotels/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualizar plan comercial de hotel (SaaS) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateHotelPlanTierRequest"];
+                };
+            };
+            responses: {
+                /** @description Plan comercial actualizado y flags efectivas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UpdateHotelPlanTierResponse"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/hotels/network/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resumen consolidado de red multi-hotel (HQ) */
+        get: {
+            parameters: {
+                query?: {
+                    start?: string;
+                    end?: string;
+                    hotel_id?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resumen consolidado por red y propiedad */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HotelNetworkSummaryResponse"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rooms/{id}/status": {
         parameters: {
             query?: never;
@@ -874,6 +960,43 @@ export interface paths {
                         "application/json": components["schemas"]["DashboardKpis"];
                     };
                 };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/automations/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Insights de automatización por plan y operación actual */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Señales de automatización y excepciones accionables */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AutomationInsightsResponse"];
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
             };
         };
         put?: never;
@@ -1419,6 +1542,8 @@ export interface components {
         LoginResponse: {
             access_token?: string;
             expires_in?: number;
+            /** Format: uuid */
+            hotel_id?: string;
             role?: string;
         };
         Room: {
@@ -1444,11 +1569,59 @@ export interface components {
             /** @enum {string} */
             status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled";
         };
+        /** @enum {string} */
+        PlanTier: "BASIC" | "PRO" | "ENTERPRISE";
         Hotel: {
             /** Format: uuid */
-            id?: string;
-            name?: string;
+            id: string;
+            name: string;
             address?: string | null;
+            plan_tier: components["schemas"]["PlanTier"];
+        };
+        HotelNetworkTotals: {
+            hotels_count: number;
+            revenue_cents: number;
+            bookings_count: number;
+            active_bookings_count: number;
+            today_check_ins: number;
+            /** Format: double */
+            avg_occupancy_rate: number;
+            avg_adr_cents: number;
+            avg_rev_par_cents: number;
+        };
+        HotelNetworkHotelSummary: {
+            /** Format: uuid */
+            hotel_id: string;
+            hotel_name: string;
+            hotel_address?: string | null;
+            plan_tier: components["schemas"]["PlanTier"];
+            revenue_cents: number;
+            bookings_count: number;
+            active_bookings_count: number;
+            today_check_ins: number;
+            /** Format: double */
+            occupancy_rate: number;
+            adr_cents: number;
+            rev_par_cents: number;
+        };
+        HotelNetworkBenchmarks: {
+            /** Format: uuid */
+            top_revenue_hotel_id: string | null;
+            /** Format: uuid */
+            top_occupancy_hotel_id: string | null;
+            /** Format: uuid */
+            top_rev_par_hotel_id: string | null;
+        };
+        HotelNetworkSummaryResponse: {
+            /** Format: date */
+            start: string;
+            /** Format: date */
+            end: string;
+            /** Format: uuid */
+            selected_hotel_id: string | null;
+            totals: components["schemas"]["HotelNetworkTotals"];
+            benchmarks: components["schemas"]["HotelNetworkBenchmarks"];
+            hotels: components["schemas"]["HotelNetworkHotelSummary"][];
         };
         ExtraCharge: {
             /** Format: uuid */
@@ -1600,6 +1773,8 @@ export interface components {
         UserView: {
             /** Format: uuid */
             id?: string;
+            /** Format: uuid */
+            hotel_id?: string;
             username?: string;
             role?: string;
         };
@@ -1612,6 +1787,53 @@ export interface components {
             name: string;
             address?: string | null;
         };
+        UpdateHotelPlanTierRequest: {
+            plan_tier: components["schemas"]["PlanTier"];
+        };
+        PlanFeatureFlags: {
+            revenue_cockpit: boolean;
+            housekeeping_sla_alerts: boolean;
+            pricing_assistant: boolean;
+            exception_notifications: boolean;
+            hq_multi_property: boolean;
+            benchmarking_exports: boolean;
+            pricing_rules_automation: boolean;
+        };
+        UpdateHotelPlanTierResponse: {
+            hotel: components["schemas"]["Hotel"];
+            feature_flags: components["schemas"]["PlanFeatureFlags"];
+        };
+        HousekeepingSlaInsight: {
+            enabled: boolean;
+            dirty_rooms_count: number;
+            cleaning_rooms_count: number;
+            overdue_rooms_count: number;
+            recommendation: string;
+        };
+        PricingAssistantInsight: {
+            enabled: boolean;
+            /** Format: double */
+            occupancy_rate: number;
+            adr_cents: number;
+            rev_par_cents: number;
+            /** @enum {string} */
+            urgency: "low" | "medium" | "high" | "upgrade_required";
+            recommendation: string;
+        };
+        AutomationNotification: {
+            code: string;
+            /** @enum {string} */
+            severity: "info" | "low" | "medium" | "high";
+            message: string;
+            action_route: string;
+        };
+        AutomationInsightsResponse: {
+            plan_tier: components["schemas"]["PlanTier"];
+            feature_flags: components["schemas"]["PlanFeatureFlags"];
+            housekeeping_sla: components["schemas"]["HousekeepingSlaInsight"];
+            pricing_assistant: components["schemas"]["PricingAssistantInsight"];
+            exception_notifications: components["schemas"]["AutomationNotification"][];
+        };
         AddExtraChargeRequest: {
             description: string;
             amount_cents: number;
@@ -1619,7 +1841,7 @@ export interface components {
         };
         UiTelemetryEventRequest: {
             /** @enum {string} */
-            event: "dashboard_load_failed" | "dashboard_retry_clicked" | "close_cash_success" | "close_cash_failure";
+            event: "dashboard_load_failed" | "dashboard_retry_clicked" | "close_cash_success" | "close_cash_failure" | "revenue_cockpit_viewed" | "revenue_cockpit_cta_clicked";
             payload?: {
                 [key: string]: unknown;
             };

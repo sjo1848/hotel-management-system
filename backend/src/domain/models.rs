@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -256,11 +256,41 @@ pub enum InvoiceStatus {
     Voided,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+pub enum PlanTier {
+    #[serde(rename = "BASIC")]
+    Basic,
+    #[serde(rename = "PRO")]
+    Pro,
+    #[serde(rename = "ENTERPRISE")]
+    Enterprise,
+}
+
+impl PlanTier {
+    pub fn as_db_value(&self) -> &'static str {
+        match self {
+            Self::Basic => "BASIC",
+            Self::Pro => "PRO",
+            Self::Enterprise => "ENTERPRISE",
+        }
+    }
+
+    pub fn parse_input(value: &str) -> Option<Self> {
+        match value.trim().to_uppercase().as_str() {
+            "BASIC" => Some(Self::Basic),
+            "PRO" => Some(Self::Pro),
+            "ENTERPRISE" => Some(Self::Enterprise),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct Hotel {
     pub id: Uuid,
     pub name: String,
     pub address: Option<String>,
+    pub plan_tier: PlanTier,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

@@ -26,3 +26,22 @@ pub async fn create_hotel_handler(
         .await?;
     Ok(Json(json!(hotel)))
 }
+
+pub async fn update_hotel_plan_tier_handler(
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<UpdateHotelPlanTierRequest>,
+) -> Result<Json<Value>, DomainError> {
+    let _ = claims;
+    let plan_tier = parse_plan_tier_input(&payload.plan_tier)?;
+    let hotel = state
+        .hotel_service
+        .update_hotel_plan_tier(id, plan_tier)
+        .await?;
+
+    Ok(Json(json!(UpdateHotelPlanTierResponse {
+        hotel,
+        feature_flags: resolve_plan_feature_flags(plan_tier),
+    })))
+}

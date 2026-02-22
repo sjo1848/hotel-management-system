@@ -9,8 +9,7 @@ import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
 import UsersPage from "./features/users/UsersPage";
 import ReportsPage from "./features/reports/ReportsPage";
-import HotelNetworkPage from "./features/dashboard/HotelNetworkPage";
-import { ReactNode } from "react";
+import { ReactNode, Suspense, lazy } from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
 import { ToastProvider } from "./components/ui/toast";
@@ -20,6 +19,8 @@ import GeneralErrorPage from "./features/errors/GeneralErrorPage";
 import AccessDeniedPage from "./features/errors/AccessDeniedPage";
 import { Capability, roleHasCapability } from "./features/auth/capabilities";
 import { ThemeProvider } from "./features/theme/ThemeProvider";
+
+const HotelNetworkPage = lazy(() => import("./features/dashboard/HotelNetworkPage"));
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -135,7 +136,15 @@ const router = createBrowserRouter([
         path: "/network",
         element: (
           <RequireCapability capability="saas.hotels.read">
-            <HotelNetworkPage />
+            <Suspense
+              fallback={
+                <div className="min-h-[240px] flex items-center justify-center text-slate-500 dark:text-slate-400">
+                  Cargando módulo HQ...
+                </div>
+              }
+            >
+              <HotelNetworkPage />
+            </Suspense>
           </RequireCapability>
         ),
       },

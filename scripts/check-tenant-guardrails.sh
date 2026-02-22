@@ -30,18 +30,10 @@ if ! grep -q "apply_tenant_context(&mut tx" backend/src/infrastructure/repositor
   exit 1
 fi
 
-bypass_usages="$(grep -R --line-number "begin_bypass_tx" backend/src/infrastructure/repository | grep -v "tenant_context.rs" || true)"
+bypass_usages="$(grep -R --line-number "begin_bypass_tx" backend/src/infrastructure/repository || true)"
 if [[ -n "$bypass_usages" ]]; then
-  unexpected="$(echo "$bypass_usages" | grep -v "postgres_refresh_token.rs" || true)"
-  if [[ -n "$unexpected" ]]; then
-    echo "Unexpected begin_bypass_tx usage detected:" >&2
-    echo "$unexpected" >&2
-    exit 1
-  fi
-fi
-
-if ! grep -q "begin_bypass_tx(&self.pool, \"refresh_token_lookup_pre_auth\")" backend/src/infrastructure/repository/postgres_refresh_token.rs; then
-  echo "Refresh token bypass must declare explicit reason refresh_token_lookup_pre_auth." >&2
+  echo "Unexpected begin_bypass_tx usage detected (RLS bypass must remain disabled):" >&2
+  echo "$bypass_usages" >&2
   exit 1
 fi
 

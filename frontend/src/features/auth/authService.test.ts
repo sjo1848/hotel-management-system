@@ -17,9 +17,11 @@ describe('authService', () => {
 
   describe('login', () => {
     it('should call client.post with correct params and return token', async () => {
-      const mockResponse = { data: { access_token: 'fake-token', expires_in: 3600, role: 'admin' } };
-      (client.post as any).mockResolvedValue(mockResponse);
       const hotelId = '8f01bf7e-f0d2-4353-82e6-44e9c3379bcf';
+      const mockResponse = {
+        data: { access_token: 'fake-token', expires_in: 3600, hotel_id: hotelId, role: 'admin' },
+      };
+      (client.post as any).mockResolvedValue(mockResponse);
 
       const result = await authService.login('user', 'pass', hotelId);
 
@@ -43,7 +45,14 @@ describe('authService', () => {
 
   describe('me', () => {
     it('should call client.get and return user info', async () => {
-        const mockResponse = { data: { id: 'u1', username: 'user', role: 'admin' } };
+        const mockResponse = {
+          data: {
+            id: 'u1',
+            hotel_id: '8f01bf7e-f0d2-4353-82e6-44e9c3379bcf',
+            username: 'user',
+            role: 'admin',
+          },
+        };
         (client.get as any).mockResolvedValue(mockResponse);
 
         const result = await authService.me();
@@ -55,7 +64,14 @@ describe('authService', () => {
 
   describe('refresh', () => {
       it('should call client.post and return new token', async () => {
-        const mockResponse = { data: { access_token: 'new-token', expires_in: 3600, role: 'admin' } };
+        const mockResponse = {
+          data: {
+            access_token: 'new-token',
+            expires_in: 3600,
+            hotel_id: '8f01bf7e-f0d2-4353-82e6-44e9c3379bcf',
+            role: 'admin',
+          },
+        };
         (client.post as any).mockResolvedValue(mockResponse);
 
         const result = await authService.refresh();

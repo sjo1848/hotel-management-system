@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { MoreVertical, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useMemo, useState } from "react";
+import { MoreVertical, CheckCircle2, AlertCircle } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -7,78 +7,75 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { getBookings, updateBooking } from '../services/bookingService';
-import { Booking } from '@/types/domain';
-import { useToast } from '@/components/ui/toast';
-import BookingEditDrawer from './BookingEditDrawer';
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { getBookings, updateBooking } from "../services/bookingService";
+import { Booking } from "@/types/domain";
+import { useToast } from "@/components/ui/toast";
+import BookingEditDrawer from "./BookingEditDrawer";
+import { getErrorMessage } from "@/api/errors";
+import { useResourceQuery } from "@/lib/useResourceQuery";
+import { withRetry } from "@/lib/retry";
+import { emitDomainEvent } from "@/lib/domainEvents";
+
+const RECENT_BOOKINGS_QUERY_KEY = "bookings:list:recent";
 
 const BookingList = () => {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Estado para edición
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  const fetchBookings = async () => {
-    setLoading(true);
-    try {
-      const data = await getBookings();
-      setBookings(data.slice(0, 10)); // Solo las últimas 10 para el dashboard
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-      toast({
-        title: 'Error al cargar reservas',
-        description: 'Hubo un problema al conectar con el servidor.',
-        variant: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: recentBookingsData,
+    isLoading: loading,
+    error,
+  } = useResourceQuery<Booking[]>({
+    queryKey: RECENT_BOOKINGS_QUERY_KEY,
+    queryFn: getBookings,
+    staleTimeMs: 8_000,
+  });
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
+  const bookings = useMemo(
+    () => (recentBookingsData ?? []).slice(0, 10),
+    [recentBookingsData],
+  );
 
   const handleCancel = async (booking: Booking) => {
-    if (booking.status === 'Cancelled') return;
+    if (booking.status === "Cancelled") return;
 
     try {
-      await updateBooking(booking.id, { status: 'Cancelled' });
+      await withRetry(() => updateBooking(booking.id, { status: "Cancelled" }), { retries: 2 });
+      emitDomainEvent("booking_cancelled", { booking_id: booking.id });
       toast({
-        title: 'Reserva cancelada',
-        variant: 'success',
+        title: "Reserva cancelada",
+        variant: "success",
       });
-      fetchBookings();
-    } catch (error) {
+    } catch (err: unknown) {
       toast({
-        title: 'Error',
-        description: String(error),
-        variant: 'error',
+        title: "Error",
+        description: getErrorMessage(err, "No se pudo cancelar la reserva."),
+        variant: "error",
       });
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Confirmed':
+      case "Confirmed":
         return <Badge variant="info">Confirmada</Badge>;
-      case 'CheckedIn':
+      case "CheckedIn":
         return <Badge variant="success">Check-in</Badge>;
-      case 'CheckedOut':
+      case "CheckedOut":
         return <Badge variant="neutral">Finalizada</Badge>;
-      case 'Cancelled':
+      case "Cancelled":
         return <Badge variant="destructive">Cancelada</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -87,17 +84,28 @@ const BookingList = () => {
 
   if (loading) {
     return (
-      <div className="p-10 flex flex-col items-center justify-center space-y-4">
-        <CheckCircle2 className="w-8 h-8 text-slate-300 dark:text-slate-500 animate-pulse" />
-        <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Actualizando reservas...</span>
+      <div className="flex flex-col items-center justify-center space-y-4 p-10">
+        <CheckCircle2 className="h-8 w-8 animate-pulse text-slate-300 dark:text-slate-500" />
+        <span className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          Actualizando reservas...
+        </span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-10 text-center">
+        <AlertCircle className="mb-2 h-10 w-10 text-rose-400 dark:text-rose-300" />
+        <p className="text-sm font-bold text-rose-700 dark:text-rose-200">No se pudo cargar la actividad reciente</p>
       </div>
     );
   }
 
   if (bookings.length === 0) {
     return (
-      <div className="p-10 flex flex-col items-center justify-center text-center">
-        <AlertCircle className="w-10 h-10 text-slate-300 dark:text-slate-500 mb-2" />
+      <div className="flex flex-col items-center justify-center p-10 text-center">
+        <AlertCircle className="mb-2 h-10 w-10 text-slate-300 dark:text-slate-500" />
         <p className="text-sm font-bold text-slate-500 dark:text-slate-400">No hay actividad reciente</p>
       </div>
     );
@@ -108,40 +116,57 @@ const BookingList = () => {
       <div className="overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Huésped</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Estado</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Fechas</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 text-right">Monto</TableHead>
-              <TableHead className="py-4 px-6"></TableHead>
+            <TableRow className="border-slate-100 bg-slate-50/50 hover:bg-transparent dark:border-slate-800 dark:bg-slate-900/50">
+              <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Huésped
+              </TableHead>
+              <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Estado
+              </TableHead>
+              <TableHead className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Fechas
+              </TableHead>
+              <TableHead className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Monto
+              </TableHead>
+              <TableHead className="px-6 py-4" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {bookings.map((booking) => (
-              <TableRow key={booking.id} className="border-slate-50 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
-                <TableCell className="py-4 px-6">
+              <TableRow
+                key={booking.id}
+                className="group border-slate-50 transition-colors hover:bg-slate-50/50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+              >
+                <TableCell className="px-6 py-4">
                   <div className="font-bold text-slate-900 dark:text-slate-100">{booking.guest_name}</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-tighter text-slate-500 dark:text-slate-400">
+                    Hab {booking.room_id.slice(0, 4)}
+                  </div>
                 </TableCell>
-                <TableCell className="py-4 px-6">
-                  {getStatusBadge(booking.status)}
-                </TableCell>
-                <TableCell className="py-4 px-6">
+                <TableCell className="px-6 py-4">{getStatusBadge(booking.status)}</TableCell>
+                <TableCell className="px-6 py-4">
                   <div className="text-xs font-bold text-slate-600 dark:text-slate-300">{booking.check_in}</div>
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">al {booking.check_out}</div>
+                  <div className="text-[10px] font-medium text-slate-500 dark:text-slate-400">al {booking.check_out}</div>
                 </TableCell>
-                <TableCell className="py-4 px-6 text-right">
-                  <div className="font-mono font-bold text-slate-900 dark:text-slate-100">${(booking.total_price_cents / 100).toLocaleString()}</div>
+                <TableCell className="px-6 py-4 text-right">
+                  <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                    ${(booking.total_price_cents / 100).toLocaleString()}
+                  </div>
                 </TableCell>
-                <TableCell className="py-4 px-6 text-right">
+                <TableCell className="px-6 py-4 text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all text-slate-500 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 hover:shadow-md">
-                        <MoreVertical className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-slate-500 opacity-0 transition-all hover:bg-slate-100 hover:shadow-md group-hover:opacity-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                      >
+                        <MoreVertical className="h-4 w-4 text-slate-500 dark:text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl border-slate-100 dark:border-slate-800 shadow-xl">
-                      <DropdownMenuItem 
+                    <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl dark:border-slate-800">
+                      <DropdownMenuItem
                         className="text-xs font-bold"
                         onClick={() => {
                           setSelectedBooking(booking);
@@ -150,10 +175,10 @@ const BookingList = () => {
                       >
                         Gestionar
                       </DropdownMenuItem>
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         className="text-xs font-bold text-rose-600 dark:text-rose-200"
-                        disabled={booking.status === 'Cancelled' || booking.status === 'CheckedOut'}
-                        onClick={() => handleCancel(booking)}
+                        disabled={booking.status === "Cancelled" || booking.status === "CheckedOut"}
+                        onClick={() => void handleCancel(booking)}
                       >
                         Cancelar
                       </DropdownMenuItem>
@@ -170,7 +195,7 @@ const BookingList = () => {
         booking={selectedBooking}
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
-        onSuccess={fetchBookings}
+        onSuccess={() => emitDomainEvent("booking_updated")}
       />
     </>
   );

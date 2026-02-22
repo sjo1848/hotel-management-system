@@ -49,6 +49,7 @@ export type Guest = {
 
 export type InvoiceStatus = "PENDING" | "PAID" | "VOIDED";
 export type InvoicePaymentMethod = "CASH" | "CARD" | "TRANSFER";
+export type PlanTier = "BASIC" | "PRO" | "ENTERPRISE";
 
 export type Invoice = {
   id: string;
@@ -74,4 +75,5 @@ export type Hotel = {
   id: string;
   name: string;
   address?: string;
+  plan_tier: PlanTier;
 };

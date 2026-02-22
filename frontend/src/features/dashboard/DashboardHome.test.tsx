@@ -13,6 +13,7 @@ const mockGetDashboardKpis = vi.fn();
 const mockGetRevenueReport = vi.fn();
 const mockGetOccupancyReport = vi.fn();
 const mockGetCashBalance = vi.fn();
+const mockGetAutomationInsights = vi.fn();
 
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
@@ -34,6 +35,10 @@ vi.mock("./services/analyticsService", () => ({
   getDashboardKpis: (...args: unknown[]) => mockGetDashboardKpis(...args),
   getRevenueReport: (...args: unknown[]) => mockGetRevenueReport(...args),
   getOccupancyReport: (...args: unknown[]) => mockGetOccupancyReport(...args),
+}));
+
+vi.mock("./services/automationService", () => ({
+  getAutomationInsights: (...args: unknown[]) => mockGetAutomationInsights(...args),
 }));
 
 vi.mock("./services/billingService", () => ({
@@ -67,6 +72,12 @@ const renderDashboard = () =>
 describe("DashboardHome", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetDashboardKpis.mockReset();
+    mockGetRevenueReport.mockReset();
+    mockGetOccupancyReport.mockReset();
+    mockGetCashBalance.mockReset();
+    mockGetAutomationInsights.mockReset();
+    mockCloseCash.mockReset();
     invalidateResource("dashboard:home");
     vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -79,6 +90,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 1,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 4500,
+        adr_cents: 9000,
       })
       .mockResolvedValueOnce({
         revenue_month_cents: 50000,
@@ -87,6 +100,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 3,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 12000,
+        adr_cents: 16000,
       });
     mockGetRevenueReport.mockResolvedValue([]);
     mockGetOccupancyReport.mockResolvedValue([]);
@@ -94,6 +109,34 @@ describe("DashboardHome", () => {
       total_amount_cents: 15000,
       cash_amount_cents: 10000,
       card_amount_cents: 5000,
+    });
+    mockGetAutomationInsights.mockResolvedValue({
+      plan_tier: "PRO",
+      feature_flags: {
+        revenue_cockpit: true,
+        housekeeping_sla_alerts: true,
+        pricing_assistant: true,
+        exception_notifications: true,
+        hq_multi_property: true,
+        benchmarking_exports: false,
+        pricing_rules_automation: false,
+      },
+      housekeeping_sla: {
+        enabled: true,
+        dirty_rooms_count: 0,
+        cleaning_rooms_count: 0,
+        overdue_rooms_count: 0,
+        recommendation: "OK",
+      },
+      pricing_assistant: {
+        enabled: true,
+        occupancy_rate: 70,
+        adr_cents: 12000,
+        rev_par_cents: 8400,
+        urgency: "low",
+        recommendation: "OK",
+      },
+      exception_notifications: [],
     });
     mockCloseCash.mockResolvedValue({});
   });
@@ -132,6 +175,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 2,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 7000,
+        adr_cents: 11000,
       });
 
     renderDashboard();
@@ -167,6 +212,30 @@ describe("DashboardHome", () => {
     });
     expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_failure", {
       message: "cash close failed",
+    });
+  });
+
+  it("tracks revenue cockpit adoption and CTA action", async () => {
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(mockGetDashboardKpis).toHaveBeenCalledTimes(1);
+    });
+
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("revenue_cockpit_viewed", {
+      occupancy_rate: 10,
+      adr_cents: 9000,
+      rev_par_cents: 4500,
+      active_bookings_count: 1,
+    });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /ver reporte de revenue/i }),
+    );
+
+    expect(mockTrackUiEvent).toHaveBeenCalledWith("revenue_cockpit_cta_clicked", {
+      action_id: "raise_occupancy_72h",
+      route: "/reports",
     });
   });
 });

@@ -7,11 +7,17 @@ import BookingEditDrawer from "@/features/bookings/components/BookingEditDrawer"
 import { getErrorMessage } from "@/api/errors";
 import { useResourceQuery } from "@/lib/useResourceQuery";
 import { trackUiEvent } from "@/lib/telemetry";
+import { emitDomainEvent } from "@/lib/domainEvents";
+import { withRetry } from "@/lib/retry";
 import DashboardAlertsPanel from "@/features/dashboard/components/DashboardAlertsPanel";
 import DashboardCashClosureCard from "@/features/dashboard/components/DashboardCashClosureCard";
 import DashboardChartsSection from "@/features/dashboard/components/DashboardChartsSection";
 import DashboardKpiGrid from "@/features/dashboard/components/DashboardKpiGrid";
 import DashboardRecentBookingsCard from "@/features/dashboard/components/DashboardRecentBookingsCard";
+import DashboardRevenueActionPanel, {
+  type RevenueActionId,
+} from "@/features/dashboard/components/DashboardRevenueActionPanel";
+import DashboardAutomationPanel from "@/features/dashboard/components/DashboardAutomationPanel";
 import {
   getDashboardKpis,
   getOccupancyReport,
@@ -21,12 +27,17 @@ import {
   type RevenueReportItem,
 } from "./services/analyticsService";
 import { closeCash, getCashBalance, type CashBalance } from "./services/billingService";
+import {
+  getAutomationInsights,
+  type AutomationInsights,
+} from "./services/automationService";
 
 type DashboardData = {
   kpis: DashboardKpis;
   revenueData: RevenueReportItem[];
   occupancyData: OccupancyReportItem[];
   balance: CashBalance;
+  automationInsights: AutomationInsights;
 };
 
 const DASHBOARD_QUERY_KEY = "dashboard:home";
@@ -38,23 +49,25 @@ const DashboardHome = () => {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const hasTrackedLoadFailureRef = useRef(false);
+  const hasTrackedRevenueCockpitViewRef = useRef(false);
 
   const {
     data: dashboardData,
     isLoading: loading,
     error: dashboardError,
     refetch: refetchDashboard,
-    invalidate: invalidateDashboard,
   } = useResourceQuery<DashboardData>({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: async () => {
-      const [kpis, revenueData, occupancyData, balance] = await Promise.all([
+      const [kpis, revenueData, occupancyData, balance, automationInsights] =
+        await Promise.all([
         getDashboardKpis(),
         getRevenueReport(),
         getOccupancyReport(),
         getCashBalance(),
+        getAutomationInsights(),
       ]);
-      return { kpis, revenueData, occupancyData, balance };
+      return { kpis, revenueData, occupancyData, balance, automationInsights };
     },
     staleTimeMs: 10_000,
   });
@@ -63,6 +76,7 @@ const DashboardHome = () => {
   const revenueData = dashboardData?.revenueData ?? [];
   const occupancyData = dashboardData?.occupancyData ?? [];
   const balance = dashboardData?.balance ?? null;
+  const automationInsights = dashboardData?.automationInsights ?? null;
   const loadError = dashboardError ? "No se pudo cargar el dashboard. Reintentá." : null;
 
   useEffect(() => {
@@ -79,6 +93,18 @@ const DashboardHome = () => {
     }
   }, [dashboardError]);
 
+  useEffect(() => {
+    if (!kpis || hasTrackedRevenueCockpitViewRef.current) return;
+
+    trackUiEvent("revenue_cockpit_viewed", {
+      occupancy_rate: kpis.occupancy_rate,
+      adr_cents: kpis.adr_cents,
+      rev_par_cents: kpis.rev_par_cents,
+      active_bookings_count: kpis.active_bookings_count,
+    });
+    hasTrackedRevenueCockpitViewRef.current = true;
+  }, [kpis]);
+
   const handleCloseCash = useCallback(async () => {
     if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) {
       return;
@@ -86,27 +112,42 @@ const DashboardHome = () => {
 
     setIsClosing(true);
     try {
-      await closeCash("Cierre manual desde dashboard");
+      await withRetry(() => closeCash("Cierre manual desde dashboard"), { retries: 1 });
+      emitDomainEvent("cash_closed", {
+        total_amount_cents: balance?.total_amount_cents ?? 0,
+      });
       trackUiEvent("close_cash_success", {
         total_amount_cents: balance?.total_amount_cents ?? 0,
       });
       toast({ title: "Caja cerrada", description: "El reporte ha sido generado correctamente", variant: "success" });
-      invalidateDashboard();
-      await refetchDashboard();
     } catch (error: unknown) {
       trackUiEvent("close_cash_failure", {
         message: getErrorMessage(error, "No se pudo cerrar la caja"),
       });
-      toast({ title: "Error", description: "No se pudo cerrar la caja", variant: "error" });
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo cerrar la caja"),
+        variant: "error",
+      });
     } finally {
       setIsClosing(false);
     }
-  }, [balance?.total_amount_cents, invalidateDashboard, refetchDashboard, toast]);
+  }, [balance?.total_amount_cents, toast]);
 
   const handleDrawerSuccess = useCallback(async () => {
-    invalidateDashboard();
-    await refetchDashboard();
-  }, [invalidateDashboard, refetchDashboard]);
+    emitDomainEvent("booking_updated");
+  }, []);
+
+  const handleRevenueAction = useCallback(
+    (actionId: RevenueActionId, route: string) => {
+      trackUiEvent("revenue_cockpit_cta_clicked", {
+        action_id: actionId,
+        route,
+      });
+      navigate(route);
+    },
+    [navigate],
+  );
 
   const formattedRevenueData = useMemo(
     () =>
@@ -152,6 +193,18 @@ const DashboardHome = () => {
       ) : null}
 
       <DashboardKpiGrid kpis={kpis} loading={loading} />
+
+      <DashboardRevenueActionPanel
+        loading={loading}
+        kpis={kpis}
+        onAction={handleRevenueAction}
+      />
+
+      <DashboardAutomationPanel
+        loading={loading}
+        insights={automationInsights}
+        onNavigate={(route) => navigate(route)}
+      />
 
       <DashboardChartsSection
         loading={loading}

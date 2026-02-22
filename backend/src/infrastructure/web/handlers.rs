@@ -1,7 +1,8 @@
 use crate::domain::errors::DomainError;
 use crate::infrastructure::web::validation::{
-    parse_booking_status_input, validate_booking_dates, validate_date_range, validate_email,
-    validate_len_range, validate_non_empty_trimmed, validate_positive_amount, validate_role,
+    parse_booking_status_input, parse_plan_tier_input, validate_booking_dates, validate_date_range,
+    validate_email, validate_len_range, validate_non_empty_trimmed, validate_positive_amount,
+    validate_role,
 };
 use crate::AppState;
 use axum::{
@@ -40,14 +41,15 @@ pub use ops::{
     list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler,
     list_guests_page_handler, list_hotels_handler, list_invoices_handler,
     list_invoices_page_handler, list_users_handler, search_rooms_handler, start_cleaning_handler,
-    update_booking_handler, update_room_status_handler,
+    update_booking_handler, update_hotel_plan_tier_handler, update_room_status_handler,
 };
 #[path = "handlers/reporting.rs"]
 mod reporting;
 pub use reporting::{
-    get_audit_events_handler, get_audit_events_page_handler, get_dashboard_kpis_handler,
-    get_occupancy_report_handler, get_revenue_report_handler, health_check, readiness_check,
-    root_handler, track_ui_telemetry_handler,
+    get_audit_events_handler, get_audit_events_page_handler, get_automation_insights_handler,
+    get_dashboard_kpis_handler, get_hotel_network_summary_handler, get_occupancy_report_handler,
+    get_revenue_report_handler, health_check, readiness_check, root_handler,
+    track_ui_telemetry_handler,
 };
 
 impl IntoResponse for DomainError {
@@ -148,6 +150,57 @@ pub struct UpdateBookingRequest {
 pub struct DateRangeParams {
     pub start: Option<chrono::NaiveDate>,
     pub end: Option<chrono::NaiveDate>,
+}
+
+#[derive(Deserialize)]
+pub struct HotelNetworkSummaryParams {
+    pub start: Option<chrono::NaiveDate>,
+    pub end: Option<chrono::NaiveDate>,
+    pub hotel_id: Option<Uuid>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct HotelNetworkTotals {
+    pub hotels_count: i64,
+    pub revenue_cents: i64,
+    pub bookings_count: i64,
+    pub active_bookings_count: i64,
+    pub today_check_ins: i64,
+    pub avg_occupancy_rate: f64,
+    pub avg_adr_cents: i64,
+    pub avg_rev_par_cents: i64,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct HotelNetworkHotelSummary {
+    pub hotel_id: Uuid,
+    pub hotel_name: String,
+    pub hotel_address: Option<String>,
+    pub plan_tier: crate::domain::models::PlanTier,
+    pub revenue_cents: i64,
+    pub bookings_count: i64,
+    pub active_bookings_count: i64,
+    pub today_check_ins: i64,
+    pub occupancy_rate: f64,
+    pub adr_cents: i64,
+    pub rev_par_cents: i64,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct HotelNetworkBenchmarks {
+    pub top_revenue_hotel_id: Option<Uuid>,
+    pub top_occupancy_hotel_id: Option<Uuid>,
+    pub top_rev_par_hotel_id: Option<Uuid>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct HotelNetworkSummaryResponse {
+    pub start: chrono::NaiveDate,
+    pub end: chrono::NaiveDate,
+    pub selected_hotel_id: Option<Uuid>,
+    pub totals: HotelNetworkTotals,
+    pub benchmarks: HotelNetworkBenchmarks,
+    pub hotels: Vec<HotelNetworkHotelSummary>,
 }
 
 #[derive(Deserialize)]
@@ -377,6 +430,96 @@ fn clear_csrf_cookie(config: &crate::config::AppConfig) -> String {
 pub struct CreateHotelRequest {
     pub name: String,
     pub address: Option<String>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UpdateHotelPlanTierRequest {
+    pub plan_tier: String,
+}
+
+#[derive(Serialize, Clone, ToSchema)]
+pub struct PlanFeatureFlags {
+    pub revenue_cockpit: bool,
+    pub housekeeping_sla_alerts: bool,
+    pub pricing_assistant: bool,
+    pub exception_notifications: bool,
+    pub hq_multi_property: bool,
+    pub benchmarking_exports: bool,
+    pub pricing_rules_automation: bool,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct UpdateHotelPlanTierResponse {
+    pub hotel: crate::domain::models::Hotel,
+    pub feature_flags: PlanFeatureFlags,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct HousekeepingSlaInsight {
+    pub enabled: bool,
+    pub dirty_rooms_count: usize,
+    pub cleaning_rooms_count: usize,
+    pub overdue_rooms_count: usize,
+    pub recommendation: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct PricingAssistantInsight {
+    pub enabled: bool,
+    pub occupancy_rate: f64,
+    pub adr_cents: i64,
+    pub rev_par_cents: i64,
+    pub urgency: String,
+    pub recommendation: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AutomationNotification {
+    pub code: String,
+    pub severity: String,
+    pub message: String,
+    pub action_route: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AutomationInsightsResponse {
+    pub plan_tier: crate::domain::models::PlanTier,
+    pub feature_flags: PlanFeatureFlags,
+    pub housekeeping_sla: HousekeepingSlaInsight,
+    pub pricing_assistant: PricingAssistantInsight,
+    pub exception_notifications: Vec<AutomationNotification>,
+}
+
+pub fn resolve_plan_feature_flags(plan_tier: crate::domain::models::PlanTier) -> PlanFeatureFlags {
+    match plan_tier {
+        crate::domain::models::PlanTier::Basic => PlanFeatureFlags {
+            revenue_cockpit: true,
+            housekeeping_sla_alerts: true,
+            pricing_assistant: false,
+            exception_notifications: false,
+            hq_multi_property: false,
+            benchmarking_exports: false,
+            pricing_rules_automation: false,
+        },
+        crate::domain::models::PlanTier::Pro => PlanFeatureFlags {
+            revenue_cockpit: true,
+            housekeeping_sla_alerts: true,
+            pricing_assistant: true,
+            exception_notifications: true,
+            hq_multi_property: true,
+            benchmarking_exports: false,
+            pricing_rules_automation: false,
+        },
+        crate::domain::models::PlanTier::Enterprise => PlanFeatureFlags {
+            revenue_cockpit: true,
+            housekeeping_sla_alerts: true,
+            pricing_assistant: true,
+            exception_notifications: true,
+            hq_multi_property: true,
+            benchmarking_exports: true,
+            pricing_rules_automation: true,
+        },
+    }
 }
 
 #[derive(Deserialize, ToSchema)]

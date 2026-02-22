@@ -1,8 +1,8 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{
     AuditEvent, AuditEventPage, Booking, BookingPage, BookingPageCursor, BookingStatus,
-    CashClosure, ExtraCharge, Guest, GuestPage, Hotel, Invoice, InvoicePage, RefreshToken, Room,
-    User,
+    CashClosure, ExtraCharge, Guest, GuestPage, Hotel, Invoice, InvoicePage, PlanTier,
+    RefreshToken, Room, User,
 };
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -15,6 +15,7 @@ pub trait HotelRepository: Send + Sync {
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Hotel>, String>;
     async fn find_by_name_ci(&self, name: &str) -> Result<Option<Hotel>, String>;
     async fn update(&self, hotel: Hotel) -> Result<Hotel, String>;
+    async fn update_plan_tier(&self, id: Uuid, plan_tier: PlanTier) -> Result<Hotel, String>;
 }
 
 #[async_trait]

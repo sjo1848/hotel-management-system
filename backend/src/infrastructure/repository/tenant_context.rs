@@ -1,8 +1,5 @@
-use metrics::counter;
 use sqlx::{PgPool, Postgres, Transaction};
 use uuid::Uuid;
-
-const ALLOWED_BYPASS_REASONS: &[&str] = &["refresh_token_lookup_pre_auth"];
 
 fn ensure_tenant_id(hotel_id: Uuid) -> Result<String, String> {
     if hotel_id.is_nil() {
@@ -11,8 +8,12 @@ fn ensure_tenant_id(hotel_id: Uuid) -> Result<String, String> {
     Ok(hotel_id.to_string())
 }
 
-fn bypass_reason_allowed(reason: &str) -> bool {
-    ALLOWED_BYPASS_REASONS.contains(&reason)
+fn ensure_token_hash(token_hash: &str) -> Result<String, String> {
+    let normalized = token_hash.trim();
+    if normalized.is_empty() {
+        return Err("REFRESH_TOKEN_HASH_REQUIRED".to_string());
+    }
+    Ok(normalized.to_string())
 }
 
 pub async fn begin_tenant_tx<'a>(
@@ -32,6 +33,7 @@ pub async fn apply_tenant_context(
     sqlx::query(
         "SELECT
             set_config('app.rls_bypass', 'false', true),
+            set_config('app.refresh_token_hash', '', true),
             set_config('app.current_hotel_id', $1, true),
             set_config('app.hotel_id', $1, true)",
     )
@@ -42,45 +44,21 @@ pub async fn apply_tenant_context(
     Ok(())
 }
 
-pub async fn begin_bypass_tx<'a>(
+pub async fn begin_refresh_token_lookup_tx<'a>(
     pool: &'a PgPool,
-    reason: &'static str,
+    token_hash: &str,
 ) -> Result<Transaction<'a, Postgres>, String> {
-    let normalized_reason = reason.trim();
-    if normalized_reason.is_empty() {
-        return Err("TENANT_BYPASS_REASON_REQUIRED".to_string());
-    }
-
-    if !bypass_reason_allowed(normalized_reason) {
-        counter!(
-            "tenant_rls_bypass_denied_total",
-            &[("reason", normalized_reason.to_string())]
-        )
-        .increment(1);
-        tracing::error!(
-            reason = normalized_reason,
-            "Denied RLS bypass for unknown reason"
-        );
-        return Err("TENANT_BYPASS_REASON_NOT_ALLOWED".to_string());
-    }
-
-    counter!(
-        "tenant_rls_bypass_total",
-        &[("reason", normalized_reason.to_string())]
-    )
-    .increment(1);
-    tracing::warn!(
-        reason = normalized_reason,
-        "Starting RLS bypass transaction for controlled flow"
-    );
+    let normalized_hash = ensure_token_hash(token_hash)?;
 
     let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
     sqlx::query(
         "SELECT
-            set_config('app.rls_bypass', 'true', true),
-            set_config('app.rls_bypass_reason', $1, true)",
+            set_config('app.rls_bypass', 'false', true),
+            set_config('app.current_hotel_id', '', true),
+            set_config('app.hotel_id', '', true),
+            set_config('app.refresh_token_hash', $1, true)",
     )
-    .bind(normalized_reason)
+    .bind(normalized_hash)
     .execute(&mut *tx)
     .await
     .map_err(|e| e.to_string())?;
@@ -92,8 +70,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn bypass_reason_allowlist_is_strict() {
-        assert!(bypass_reason_allowed("refresh_token_lookup_pre_auth"));
-        assert!(!bypass_reason_allowed("any_other_reason"));
+    fn refresh_lookup_rejects_empty_hash() {
+        let err = ensure_token_hash("   ").expect_err("empty hash must fail");
+        assert_eq!(err, "REFRESH_TOKEN_HASH_REQUIRED");
+    }
+
+    #[test]
+    fn refresh_lookup_accepts_non_empty_hash() {
+        let normalized = ensure_token_hash("hash-value").expect("hash should be accepted");
+        assert_eq!(normalized, "hash-value");
     }
 }

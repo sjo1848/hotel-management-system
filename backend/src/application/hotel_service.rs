@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::Hotel;
+use crate::domain::models::{Hotel, PlanTier};
 use crate::domain::repositories::HotelRepository;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -22,6 +22,7 @@ impl HotelService {
             id: Uuid::new_v4(),
             name,
             address,
+            plan_tier: PlanTier::Basic,
         };
 
         let result: Result<Hotel, String> = self.hotel_repo.create(hotel).await;
@@ -47,11 +48,24 @@ impl HotelService {
             .map_err(DomainError::InfrastructureError)
             .map(|hotel| hotel.map(|value| value.id))
     }
+
+    pub async fn update_hotel_plan_tier(
+        &self,
+        id: Uuid,
+        plan_tier: PlanTier,
+    ) -> Result<Hotel, DomainError> {
+        self.hotel_repo
+            .update_plan_tier(id, plan_tier)
+            .await
+            .map_err(map_hotel_repo_error)
+    }
 }
 
 fn map_hotel_repo_error(message: String) -> DomainError {
     match message.as_str() {
         "HOTEL_ALREADY_EXISTS" => DomainError::HotelAlreadyExists,
+        "HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        "INVALID_PLAN_TIER" => DomainError::InvalidInput("Plan de hotel inválido".to_string()),
         _ => DomainError::InfrastructureError(message),
     }
 }
@@ -65,6 +79,14 @@ mod tests {
         assert!(matches!(
             map_hotel_repo_error("HOTEL_ALREADY_EXISTS".to_string()),
             DomainError::HotelAlreadyExists
+        ));
+    }
+
+    #[test]
+    fn map_hotel_repo_error_maps_hotel_not_found_marker() {
+        assert!(matches!(
+            map_hotel_repo_error("HOTEL_NOT_FOUND".to_string()),
+            DomainError::HotelNotFound
         ));
     }
 }

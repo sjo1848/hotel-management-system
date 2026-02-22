@@ -15,6 +15,8 @@ export type DashboardKpis = {
   active_bookings_count: number;
   arrivals_today: BookingAlert[];
   departures_today: BookingAlert[];
+  rev_par_cents: number;
+  adr_cents: number;
 };
 
 export type RevenueReportItem = {
@@ -48,6 +50,8 @@ const toDashboardKpis = (raw: DashboardKpisRaw): DashboardKpis => ({
   active_bookings_count: raw.active_bookings_count ?? 0,
   arrivals_today: (raw.arrivals_today ?? []).map(toBookingAlert),
   departures_today: (raw.departures_today ?? []).map(toBookingAlert),
+  rev_par_cents: raw.rev_par_cents ?? 0,
+  adr_cents: raw.adr_cents ?? 0,
 });
 
 export type OccupancyReportItem = {

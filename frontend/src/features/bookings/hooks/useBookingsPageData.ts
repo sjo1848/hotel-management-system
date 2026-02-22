@@ -3,6 +3,8 @@ import { getErrorMessage } from "@/api/errors";
 import { useToast } from "@/components/ui/toast";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { downloadCSV } from "@/lib/utils";
+import { emitDomainEvent } from "@/lib/domainEvents";
+import { withRetry } from "@/lib/retry";
 import type { Booking } from "@/types/domain";
 import { getBookings, updateBooking } from "@/features/bookings/services/bookingService";
 import type { BookingStatusFilter } from "@/features/bookings/components/bookingStatus";
@@ -46,9 +48,9 @@ export const useBookingsPageData = () => {
 
   const cancelBooking = async (bookingId: string) => {
     try {
-      await updateBooking(bookingId, { status: "Cancelled" });
+      await withRetry(() => updateBooking(bookingId, { status: "Cancelled" }), { retries: 2 });
+      emitDomainEvent("booking_cancelled", { booking_id: bookingId });
       toast({ title: "Reserva cancelada", variant: "success" });
-      await refreshBookings();
     } catch (error: unknown) {
       toast({
         title: "Error",
