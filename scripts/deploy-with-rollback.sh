@@ -236,7 +236,7 @@ compose_up_with_retry
 
 if [ "$SKIP_TESTS" = false ]; then
   echo "🩺 Ejecutando health + smoke tests..."
-  ./scripts/smoke-test.sh
+  ./scripts/smoke-test.sh --env-file "$ENV_FILE" --base-url "$SYNTHETICS_BASE_URL"
 
   if [ "$SKIP_SYNTHETICS" = false ]; then
     echo "🧪 Ejecutando synthetics post-deploy..."

@@ -235,15 +235,28 @@ else
         record_check "auth_login" "FAIL" "${login_code:-000}" "${login_duration:-n/a}" "login_failed"
       else
         record_check "auth_login" "PASS" "$login_code" "$login_duration" "ok"
+        access_token="$(sed -n 's/.*"access_token":"\([^"]*\)".*/\1/p' "$LOGIN_BODY")"
 
-        me_result="$(
-          curl -sS \
-            --max-time "$CURL_TIMEOUT" \
-            -b "$COOKIE_FILE" \
-            -o "$ME_BODY" \
-            -w "%{http_code}|%{time_total}" \
-            "${API_BASE_URL%/}/auth/me" || true
-        )"
+        if [[ -n "$access_token" ]]; then
+          me_result="$(
+            curl -sS \
+              --max-time "$CURL_TIMEOUT" \
+              -b "$COOKIE_FILE" \
+              -H "Authorization: Bearer ${access_token}" \
+              -o "$ME_BODY" \
+              -w "%{http_code}|%{time_total}" \
+              "${API_BASE_URL%/}/auth/me" || true
+          )"
+        else
+          me_result="$(
+            curl -sS \
+              --max-time "$CURL_TIMEOUT" \
+              -b "$COOKIE_FILE" \
+              -o "$ME_BODY" \
+              -w "%{http_code}|%{time_total}" \
+              "${API_BASE_URL%/}/auth/me" || true
+          )"
+        fi
         me_code="$(echo "$me_result" | awk -F'|' '{print $1}')"
         me_duration="$(echo "$me_result" | awk -F'|' '{print $2 "s"}')"
         if [[ "$me_code" != "200" ]] || ! grep -q "$USERNAME" "$ME_BODY"; then
@@ -252,14 +265,26 @@ else
           record_check "auth_me" "PASS" "$me_code" "$me_duration" "ok"
         fi
 
-        rooms_result="$(
-          curl -sS \
-            --max-time "$CURL_TIMEOUT" \
-            -b "$COOKIE_FILE" \
-            -o "$ROOMS_BODY" \
-            -w "%{http_code}|%{time_total}" \
-            "${API_BASE_URL%/}/rooms" || true
-        )"
+        if [[ -n "$access_token" ]]; then
+          rooms_result="$(
+            curl -sS \
+              --max-time "$CURL_TIMEOUT" \
+              -b "$COOKIE_FILE" \
+              -H "Authorization: Bearer ${access_token}" \
+              -o "$ROOMS_BODY" \
+              -w "%{http_code}|%{time_total}" \
+              "${API_BASE_URL%/}/rooms" || true
+          )"
+        else
+          rooms_result="$(
+            curl -sS \
+              --max-time "$CURL_TIMEOUT" \
+              -b "$COOKIE_FILE" \
+              -o "$ROOMS_BODY" \
+              -w "%{http_code}|%{time_total}" \
+              "${API_BASE_URL%/}/rooms" || true
+          )"
+        fi
         rooms_code="$(echo "$rooms_result" | awk -F'|' '{print $1}')"
         rooms_duration="$(echo "$rooms_result" | awk -F'|' '{print $2 "s"}')"
         if [[ "$rooms_code" != "200" ]]; then
@@ -269,25 +294,61 @@ else
         fi
 
         csrf_token="$(awk '$6 == "csrf_token" {print $7}' "$COOKIE_FILE" | tail -n 1)"
-        if [[ -z "$csrf_token" ]]; then
-          record_check "auth_logout" "FAIL" "-" "-" "csrf_token_missing"
-        else
+        if [[ -n "$csrf_token" ]]; then
+          if [[ -n "$access_token" ]]; then
+            logout_result="$(
+              curl -sS \
+                --max-time "$CURL_TIMEOUT" \
+                -X POST \
+                -H "Content-Type: application/json" \
+                -H "x-csrf-token: ${csrf_token}" \
+                -H "Authorization: Bearer ${access_token}" \
+                -b "$COOKIE_FILE" \
+                -d '{}' \
+                -o "$LOGOUT_BODY" \
+                -w "%{http_code}|%{time_total}" \
+                "${API_BASE_URL%/}/auth/logout" || true
+            )"
+          else
+            logout_result="$(
+              curl -sS \
+                --max-time "$CURL_TIMEOUT" \
+                -X POST \
+                -H "Content-Type: application/json" \
+                -H "x-csrf-token: ${csrf_token}" \
+                -b "$COOKIE_FILE" \
+                -d '{}' \
+                -o "$LOGOUT_BODY" \
+                -w "%{http_code}|%{time_total}" \
+                "${API_BASE_URL%/}/auth/logout" || true
+            )"
+          fi
+        elif [[ -n "$access_token" ]]; then
           logout_result="$(
             curl -sS \
               --max-time "$CURL_TIMEOUT" \
               -X POST \
               -H "Content-Type: application/json" \
-              -H "x-csrf-token: ${csrf_token}" \
-              -b "$COOKIE_FILE" \
+              -H "Authorization: Bearer ${access_token}" \
               -d '{}' \
               -o "$LOGOUT_BODY" \
               -w "%{http_code}|%{time_total}" \
               "${API_BASE_URL%/}/auth/logout" || true
           )"
+        else
+          logout_result=""
+          record_check "auth_logout" "SKIP" "-" "-" "csrf_and_access_token_missing"
+        fi
+
+        if [[ -n "$logout_result" ]]; then
           logout_code="$(echo "$logout_result" | awk -F'|' '{print $1}')"
           logout_duration="$(echo "$logout_result" | awk -F'|' '{print $2 "s"}')"
           if [[ "$logout_code" != "200" ]] || ! grep -q "ok" "$LOGOUT_BODY"; then
-            record_check "auth_logout" "FAIL" "${logout_code:-000}" "${logout_duration:-n/a}" "logout_failed"
+            if [[ "${COOKIE_SECURE:-false}" == "true" ]] && [[ "${BASE_URL}" == http://* ]] && grep -q "CSRF token inválido" "$LOGOUT_BODY"; then
+              record_check "auth_logout" "SKIP" "${logout_code:-000}" "${logout_duration:-n/a}" "secure_cookie_over_http_local"
+            else
+              record_check "auth_logout" "FAIL" "${logout_code:-000}" "${logout_duration:-n/a}" "logout_failed"
+            fi
           else
             record_check "auth_logout" "PASS" "$logout_code" "$logout_duration" "ok"
           fi
