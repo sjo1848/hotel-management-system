@@ -1,5 +1,8 @@
 use crate::domain::models::RefreshToken;
 use crate::domain::repositories::RefreshTokenRepository;
+use crate::infrastructure::repository::tenant_context::{
+    begin_refresh_token_lookup_tx, begin_tenant_tx,
+};
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use sqlx::{PgPool, Row};
@@ -18,6 +21,7 @@ impl PostgresRefreshTokenRepository {
 #[async_trait]
 impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn create(&self, token: RefreshToken) -> Result<RefreshToken, String> {
+        let mut tx = begin_tenant_tx(&self.pool, token.hotel_id).await?;
         sqlx::query(
             "INSERT INTO refresh_tokens
                 (id, hotel_id, user_id, session_id, device_id, token_hash, expires_at, revoked_at)
@@ -31,23 +35,26 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(&token.token_hash)
         .bind(token.expires_at)
         .bind(token.revoked_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(token)
     }
 
     async fn find_valid(&self, token_hash: &str) -> Result<Option<RefreshToken>, String> {
+        let mut tx = begin_refresh_token_lookup_tx(&self.pool, token_hash).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, user_id, session_id, device_id, token_hash, expires_at, revoked_at
              FROM refresh_tokens
              WHERE token_hash = $1 AND revoked_at IS NULL",
         )
         .bind(token_hash)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| RefreshToken {
             id: row.try_get("id").unwrap(),
@@ -61,23 +68,29 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         }))
     }
 
-    async fn revoke(&self, token_id: Uuid) -> Result<(), String> {
+    async fn revoke_for_hotel(&self, hotel_id: Uuid, token_id: Uuid) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let now: NaiveDateTime = chrono::Utc::now().naive_utc();
-        let result = sqlx::query("UPDATE refresh_tokens SET revoked_at = $1 WHERE id = $2")
-            .bind(now)
-            .bind(token_id)
-            .execute(&self.pool)
-            .await
-            .map_err(map_db_error)?;
+        let result = sqlx::query(
+            "UPDATE refresh_tokens SET revoked_at = $1 WHERE hotel_id = $2 AND id = $3",
+        )
+        .bind(now)
+        .bind(hotel_id)
+        .bind(token_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(map_db_error)?;
 
         if result.rows_affected() == 0 {
             return Err("REFRESH_TOKEN_NOT_FOUND".to_string());
         }
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
 
     async fn revoke_all_for_user(&self, hotel_id: Uuid, user_id: Uuid) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let now: NaiveDateTime = chrono::Utc::now().naive_utc();
         sqlx::query(
             "UPDATE refresh_tokens SET revoked_at = $1 WHERE hotel_id = $2 AND user_id = $3 AND revoked_at IS NULL",
@@ -85,9 +98,10 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(now)
         .bind(hotel_id)
         .bind(user_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -98,6 +112,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         user_id: Uuid,
         device_id: &str,
     ) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let now: NaiveDateTime = chrono::Utc::now().naive_utc();
         sqlx::query(
             "UPDATE refresh_tokens
@@ -111,9 +126,10 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(hotel_id)
         .bind(user_id)
         .bind(device_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -124,6 +140,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         user_id: Uuid,
         session_id: Uuid,
     ) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let now: NaiveDateTime = chrono::Utc::now().naive_utc();
         sqlx::query(
             "UPDATE refresh_tokens
@@ -137,9 +154,10 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         .bind(hotel_id)
         .bind(user_id)
         .bind(session_id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }

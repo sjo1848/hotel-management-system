@@ -1,5 +1,6 @@
 use crate::domain::models::{Booking, BookingStatus};
 use crate::domain::repositories::BookingRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDate};
 use sqlx::{PgPool, Row};
@@ -18,6 +19,7 @@ impl PostgresBookingRepository {
 #[async_trait]
 impl BookingRepository for PostgresBookingRepository {
     async fn save(&self, booking: Booking) -> Result<Booking, String> {
+        let mut tx = begin_tenant_tx(&self.pool, booking.hotel_id).await?;
         let status = match booking.status {
             BookingStatus::Confirmed => "CONFIRMED",
             BookingStatus::CheckedIn => "CHECKED_IN",
@@ -38,21 +40,24 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(booking.check_out)
         .bind(booking.total_price_cents)
         .bind(status)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(booking)
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Booking>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let bookings = records
             .into_iter()
@@ -86,6 +91,7 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Booking>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings 
              WHERE hotel_id = $1 AND (check_in < $3 AND check_out > $2)
@@ -94,9 +100,10 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(hotel_id)
         .bind(start)
         .bind(end)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let bookings = records
             .into_iter()
@@ -125,14 +132,16 @@ impl BookingRepository for PostgresBookingRepository {
     }
 
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Booking>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 AND id = $2",
         )
         .bind(hotel_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| {
             let status: Option<String> = row.try_get("status").ok();
@@ -156,6 +165,7 @@ impl BookingRepository for PostgresBookingRepository {
     }
 
     async fn update(&self, booking: Booking) -> Result<Booking, String> {
+        let mut tx = begin_tenant_tx(&self.pool, booking.hotel_id).await?;
         let status = match booking.status {
             BookingStatus::Confirmed => "CONFIRMED",
             BookingStatus::CheckedIn => "CHECKED_IN",
@@ -176,26 +186,29 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(status)
         .bind(booking.hotel_id)
         .bind(booking.id)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
 
         if result.rows_affected() == 0 {
             return Err("BOOKING_NOT_FOUND".to_string());
         }
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(booking)
     }
 
     async fn find_by_room(&self, hotel_id: Uuid, room_id: Uuid) -> Result<Vec<Booking>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status FROM bookings WHERE hotel_id = $1 AND room_id = $2",
         )
         .bind(hotel_id)
         .bind(room_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let bookings = records
             .into_iter()
@@ -230,6 +243,7 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<bool, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let overlap = sqlx::query(
             r#"
             SELECT EXISTS (
@@ -245,9 +259,10 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(room_id)
         .bind(start)
         .bind(end)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let has_overlap: Option<bool> = overlap.try_get("has_overlap").ok();
         Ok(!has_overlap.unwrap_or(false))
@@ -261,6 +276,7 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<bool, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let overlap = sqlx::query(
             r#"
             SELECT EXISTS (
@@ -278,9 +294,10 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(booking_id)
         .bind(start)
         .bind(end)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let has_overlap: Option<bool> = overlap.try_get("has_overlap").ok();
         Ok(!has_overlap.unwrap_or(false))
@@ -290,6 +307,7 @@ impl BookingRepository for PostgresBookingRepository {
         &self,
         hotel_id: Uuid,
     ) -> Result<crate::domain::models::DashboardKpis, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let now = chrono::Utc::now().naive_utc().date();
         let start_of_month = NaiveDate::from_ymd_opt(now.year(), now.month(), 1).unwrap();
 
@@ -300,7 +318,7 @@ impl BookingRepository for PostgresBookingRepository {
         )
         .bind(hotel_id)
         .bind(start_of_month)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -310,7 +328,7 @@ impl BookingRepository for PostgresBookingRepository {
         )
         .bind(hotel_id)
         .bind(now)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -319,14 +337,14 @@ impl BookingRepository for PostgresBookingRepository {
             "SELECT COUNT(*) FROM bookings WHERE hotel_id = $1 AND status IN ('CONFIRMED', 'CHECKED_IN')"
         )
         .bind(hotel_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
         // 4. Occupancy Rate
         let total_rooms: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM rooms WHERE hotel_id = $1")
             .bind(hotel_id)
-            .fetch_one(&self.pool)
+            .fetch_one(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -337,7 +355,7 @@ impl BookingRepository for PostgresBookingRepository {
         )
         .bind(hotel_id)
         .bind(now)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -356,7 +374,7 @@ impl BookingRepository for PostgresBookingRepository {
         )
         .bind(hotel_id)
         .bind(now)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -387,7 +405,7 @@ impl BookingRepository for PostgresBookingRepository {
         )
         .bind(hotel_id)
         .bind(now)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -408,6 +426,7 @@ impl BookingRepository for PostgresBookingRepository {
                 }
             })
             .collect();
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(crate::domain::models::DashboardKpis {
             revenue_month_cents: revenue.0,
@@ -427,6 +446,7 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<crate::domain::models::RevenueReport>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT check_in as date, SUM(total_price_cents)::BIGINT as revenue_cents 
              FROM bookings 
@@ -437,9 +457,10 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(hotel_id)
         .bind(start)
         .bind(end)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -456,6 +477,7 @@ impl BookingRepository for PostgresBookingRepository {
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<crate::domain::models::OccupancyReport>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             r#"
             WITH dates AS (
@@ -477,9 +499,10 @@ impl BookingRepository for PostgresBookingRepository {
         .bind(hotel_id)
         .bind(start)
         .bind(end)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()

@@ -1,5 +1,6 @@
 use crate::domain::models::{Invoice, InvoiceStatus, PaymentMethod};
 use crate::domain::repositories::InvoiceRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use chrono::Utc;
 use sqlx::{PgPool, Row};
@@ -18,6 +19,7 @@ impl PostgresInvoiceRepository {
 #[async_trait]
 impl InvoiceRepository for PostgresInvoiceRepository {
     async fn save(&self, invoice: Invoice) -> Result<Invoice, String> {
+        let mut tx = begin_tenant_tx(&self.pool, invoice.hotel_id).await?;
         let status = match invoice.status {
             InvoiceStatus::Pending => "PENDING",
             InvoiceStatus::Paid => "PAID",
@@ -41,9 +43,10 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         .bind(status)
         .bind(payment_method)
         .bind(invoice.created_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(invoice)
     }
@@ -53,14 +56,16 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         hotel_id: Uuid,
         booking_id: Uuid,
     ) -> Result<Option<Invoice>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, booking_id, amount_cents, status, created_at FROM invoices WHERE hotel_id = $1 AND booking_id = $2",
         )
         .bind(hotel_id)
         .bind(booking_id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| {
             let status_str: String = row.try_get("status").unwrap();
@@ -88,13 +93,15 @@ impl InvoiceRepository for PostgresInvoiceRepository {
     }
 
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, booking_id, amount_cents, status, payment_method, created_at FROM invoices WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -125,12 +132,13 @@ impl InvoiceRepository for PostgresInvoiceRepository {
     }
 
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         // Use UNIX epoch when there is no prior closure, but do not hide DB failures.
         let start_time = sqlx::query_scalar::<_, Option<chrono::DateTime<Utc>>>(
             "SELECT MAX(closing_time) as last_time FROM cash_closures WHERE hotel_id = $1",
         )
         .bind(hotel_id)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?
         .unwrap_or_else(|| chrono::DateTime::<Utc>::from_timestamp(0, 0).unwrap());
@@ -145,9 +153,11 @@ impl InvoiceRepository for PostgresInvoiceRepository {
         )
         .bind(hotel_id)
         .bind(start_time)
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok((
             result.try_get("total").map_err(|e| e.to_string())?,
