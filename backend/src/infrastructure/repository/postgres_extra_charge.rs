@@ -1,5 +1,6 @@
 use crate::domain::models::ExtraCharge;
 use crate::domain::repositories::ExtraChargeRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -17,6 +18,7 @@ impl PostgresExtraChargeRepository {
 #[async_trait]
 impl ExtraChargeRepository for PostgresExtraChargeRepository {
     async fn add(&self, charge: ExtraCharge) -> Result<ExtraCharge, String> {
+        let mut tx = begin_tenant_tx(&self.pool, charge.hotel_id).await?;
         sqlx::query(
             "INSERT INTO extra_charges (id, hotel_id, booking_id, description, amount_cents, category)
              VALUES ($1, $2, $3, $4, $5, $6)",
@@ -27,9 +29,10 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
         .bind(&charge.description)
         .bind(charge.amount_cents)
         .bind(&charge.category)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(charge)
     }
@@ -39,6 +42,7 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
         hotel_id: Uuid,
         booking_id: Uuid,
     ) -> Result<Vec<ExtraCharge>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, booking_id, description, amount_cents, category, created_at 
              FROM extra_charges 
@@ -47,9 +51,10 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
         )
         .bind(hotel_id)
         .bind(booking_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -68,12 +73,14 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
     }
 
     async fn delete(&self, hotel_id: Uuid, id: Uuid) -> Result<(), String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         sqlx::query("DELETE FROM extra_charges WHERE hotel_id = $1 AND id = $2")
             .bind(hotel_id)
             .bind(id)
-            .execute(&self.pool)
+            .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
     }
 }

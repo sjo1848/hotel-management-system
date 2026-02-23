@@ -1,5 +1,6 @@
 use crate::domain::models::Guest;
 use crate::domain::repositories::GuestRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -17,13 +18,15 @@ impl PostgresGuestRepository {
 #[async_trait]
 impl GuestRepository for PostgresGuestRepository {
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Guest>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
             "SELECT id, hotel_id, full_name, email, phone, created_at FROM guests WHERE hotel_id = $1 ORDER BY created_at DESC",
         )
         .bind(hotel_id)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(records
             .into_iter()
@@ -39,6 +42,7 @@ impl GuestRepository for PostgresGuestRepository {
     }
 
     async fn create(&self, guest: Guest) -> Result<Guest, String> {
+        let mut tx = begin_tenant_tx(&self.pool, guest.hotel_id).await?;
         let phone = guest.phone.clone();
         sqlx::query(
             "INSERT INTO guests (id, hotel_id, full_name, email, phone)
@@ -49,14 +53,16 @@ impl GuestRepository for PostgresGuestRepository {
         .bind(&guest.full_name)
         .bind(&guest.email)
         .bind(phone)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_db_error)?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(guest)
     }
 
     async fn find_by_id(&self, hotel_id: Uuid, id: Uuid) -> Result<Option<Guest>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let record = sqlx::query(
             "SELECT id, hotel_id, full_name, email, phone, created_at
              FROM guests
@@ -64,9 +70,10 @@ impl GuestRepository for PostgresGuestRepository {
         )
         .bind(hotel_id)
         .bind(id)
-        .fetch_optional(&self.pool)
+        .fetch_optional(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(record.map(|row| Guest {
             id: row.try_get("id").unwrap(),

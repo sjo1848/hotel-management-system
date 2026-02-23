@@ -1,5 +1,6 @@
 use crate::domain::models::AuditEvent;
 use crate::domain::repositories::AuditRepository;
+use crate::infrastructure::repository::tenant_context::begin_tenant_tx;
 use async_trait::async_trait;
 use sqlx::{PgPool, Row};
 use uuid::Uuid;
@@ -17,6 +18,11 @@ impl PostgresAuditRepository {
 #[async_trait]
 impl AuditRepository for PostgresAuditRepository {
     async fn record(&self, event: AuditEvent) -> Result<(), String> {
+        let hotel_id = event
+            .hotel_id
+            .ok_or_else(|| "AUDIT_HOTEL_ID_REQUIRED".to_string())?;
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
+
         sqlx::query(
             "INSERT INTO audit_events (id, hotel_id, user_id, action, ip_address, created_at)
              VALUES ($1, $2, $3, $4, $5, $6)",
@@ -27,9 +33,10 @@ impl AuditRepository for PostgresAuditRepository {
         .bind(event.action)
         .bind(event.ip_address)
         .bind(event.created_at)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
     }
@@ -39,6 +46,7 @@ impl AuditRepository for PostgresAuditRepository {
         hotel_id: Uuid,
         limit: i64,
     ) -> Result<Vec<AuditEvent>, String> {
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let safe_limit = limit.clamp(1, 200);
         let records = sqlx::query(
             "SELECT id, hotel_id, user_id, action, ip_address,
@@ -50,9 +58,10 @@ impl AuditRepository for PostgresAuditRepository {
         )
         .bind(hotel_id)
         .bind(safe_limit)
-        .fetch_all(&self.pool)
+        .fetch_all(&mut *tx)
         .await
         .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
 
         let events = records
             .into_iter()

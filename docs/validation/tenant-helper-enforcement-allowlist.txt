@@ -1,8 +1,4 @@
 # Files temporarily exempt from tenant helper enforcement.
 # Each entry must include a reason and planned removal sprint.
 # Format: <path> | <reason> | <target>
-backend/src/infrastructure/repository/postgres_audit.rs | legacy repo uses direct pool with explicit hotel_id filter; migrate to begin_tenant_tx | sprint-2
-backend/src/infrastructure/repository/postgres_cash_closure.rs | legacy repo uses direct pool with explicit hotel_id filter; migrate to begin_tenant_tx | sprint-2
-backend/src/infrastructure/repository/postgres_extra_charge.rs | legacy repo uses direct pool with explicit hotel_id filter; migrate to begin_tenant_tx | sprint-2
-backend/src/infrastructure/repository/postgres_guest.rs | legacy repo uses direct pool with explicit hotel_id filter; migrate to begin_tenant_tx | sprint-2
-backend/src/infrastructure/repository/postgres_booking_transaction.rs | transaction helpers receive tenant-scoped tx from caller; static check cannot infer context | sprint-3
+# Empty allowlist is the target state. Add entries only with explicit expiration sprint.
