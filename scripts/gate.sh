@@ -87,6 +87,15 @@ echo "==> legacy schema convergence"
 echo "==> validation governance docs gate"
 ./scripts/check-validation-governance.sh
 
+echo "==> tenant helper enforcement gate"
+./scripts/check-tenant-helper-enforcement.sh
+
+echo "==> rbac canon gate"
+./scripts/check-rbac-canon.sh
+
+echo "==> auth refresh slo contract gate"
+./scripts/check-auth-refresh-slo.sh
+
 echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh
 
