@@ -1,4 +1,5 @@
 import { apiGet, apiPatch, apiPost } from "@/api/sdk";
+import { emitDomainEvent } from "@/lib/domainEvents";
 import { Room } from "@/types/domain";
 
 export const getAllRooms = async (startDate?: string | null, endDate?: string | null) => {
@@ -12,11 +13,15 @@ export const getRoomById = async (id: string) => {
 };
 
 export const updateRoomStatus = async (id: string, status: string) => {
-  return apiPatch<{ status: string }, { status: string }>(`/rooms/${id}/status`, { status });
+  const response = await apiPatch<{ status: string }, { status: string }>(`/rooms/${id}/status`, { status });
+  emitDomainEvent("rooms.changed", { action: "status_updated", room_id: id });
+  return response;
 };
 
 export const createRoom = async (roomData: { room_number: string, room_type: string, price_cents: number }) => {
-  return apiPost<typeof roomData, Room>("/rooms", roomData);
+  const room = await apiPost<typeof roomData, Room>("/rooms", roomData);
+  emitDomainEvent("rooms.changed", { action: "created", room_id: room.id });
+  return room;
 };
 
 const roomService = {

@@ -1,17 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-type CacheEntry<T> = {
-  value: T;
-  cachedAt: number;
-};
-
-const cacheStore = new Map<string, CacheEntry<unknown>>();
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateResourceKey, toResourceQueryKey } from "@/lib/queryClient";
 
 export type UseResourceQueryOptions<T> = {
   queryKey: string;
   queryFn: () => Promise<T>;
   staleTimeMs?: number;
   enabled?: boolean;
+  retry?: boolean | number;
 };
 
 export type UseResourceQueryResult<T> = {
@@ -22,8 +18,17 @@ export type UseResourceQueryResult<T> = {
   invalidate: () => void;
 };
 
+type QueryErrorLike = {
+  message?: string;
+};
+
+const toErrorMessage = (error: unknown): string | null => {
+  if (!error) return null;
+  return (error as QueryErrorLike).message ?? "Error cargando datos";
+};
+
 export const invalidateResource = (queryKey: string) => {
-  cacheStore.delete(queryKey);
+  void invalidateResourceKey(queryKey);
 };
 
 export function useResourceQuery<T>({
@@ -31,58 +36,35 @@ export function useResourceQuery<T>({
   queryFn,
   staleTimeMs = 15_000,
   enabled = true,
+  retry,
 }: UseResourceQueryOptions<T>): UseResourceQueryResult<T> {
-  const [data, setData] = useState<T | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(enabled);
-  const [error, setError] = useState<string | null>(null);
-  const queryRef = useRef(queryFn);
+  const queryClient = useQueryClient();
+  const query = useQuery<T>({
+    queryKey: toResourceQueryKey(queryKey),
+    queryFn,
+    staleTime: staleTimeMs,
+    enabled,
+    retry,
+  });
 
-  queryRef.current = queryFn;
-
-  const fetchFresh = useCallback(async () => {
-    if (!enabled) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await queryRef.current();
-      cacheStore.set(queryKey, { value: result, cachedAt: Date.now() });
-      setData(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Error cargando datos";
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [enabled, queryKey]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setIsLoading(false);
-      return;
-    }
-
-    const cached = cacheStore.get(queryKey) as CacheEntry<T> | undefined;
-    const isFresh = cached && Date.now() - cached.cachedAt <= staleTimeMs;
-    if (isFresh) {
-      setData(cached.value);
-      setIsLoading(false);
-      return;
-    }
-    void fetchFresh();
-  }, [enabled, fetchFresh, queryKey, staleTimeMs]);
+  const refetch = useCallback(async () => {
+    await query.refetch();
+  }, [query]);
 
   const invalidate = useCallback(() => {
-    cacheStore.delete(queryKey);
-  }, [queryKey]);
+    queryClient.removeQueries({
+      queryKey: toResourceQueryKey(queryKey),
+    });
+  }, [queryClient, queryKey]);
 
   return useMemo(
     () => ({
-      data,
-      isLoading,
-      error,
-      refetch: fetchFresh,
+      data: query.data ?? null,
+      isLoading: query.isLoading,
+      error: toErrorMessage(query.error),
+      refetch,
       invalidate,
     }),
-    [data, error, fetchFresh, invalidate, isLoading],
+    [invalidate, query.data, query.error, query.isLoading, refetch],
   );
 }

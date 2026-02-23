@@ -1,4 +1,5 @@
 import client from "@/api/client";
+import { emitDomainEvent } from "@/lib/domainEvents";
 import { Hotel } from "@/types/domain";
 
 export const getHotels = async () => {
@@ -8,7 +9,9 @@ export const getHotels = async () => {
 
 export const createHotel = async (hotelData: { name: string, address?: string }) => {
   const response = await client.post("/hotels", hotelData);
-  return response.data as Hotel;
+  const hotel = response.data as Hotel;
+  emitDomainEvent("hotels.changed", { action: "created", hotel_id: hotel.id });
+  return hotel;
 };
 
 const hotelService = {

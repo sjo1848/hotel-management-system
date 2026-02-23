@@ -1,4 +1,5 @@
 import { apiGet, apiPost } from "@/api/sdk";
+import { emitDomainEvent } from "@/lib/domainEvents";
 import { Guest } from "@/types/domain";
 
 export const getGuests = async () => {
@@ -13,7 +14,9 @@ export type CreateGuestPayload = {
 };
 
 export const createGuest = async (data: CreateGuestPayload) => {
-  return apiPost<CreateGuestPayload, Guest>("/guests", data);
+  const guest = await apiPost<CreateGuestPayload, Guest>("/guests", data);
+  emitDomainEvent("guests.changed", { action: "created", guest_id: guest.id });
+  return guest;
 };
 
 const guestService = {

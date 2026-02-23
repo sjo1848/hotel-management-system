@@ -1,4 +1,5 @@
 import { apiGet, apiPatch, apiPost } from "@/api/sdk";
+import { emitDomainEvent } from "@/lib/domainEvents";
 import { Booking } from "@/types/domain";
 
 export type CreateBookingPayload = {
@@ -15,7 +16,9 @@ export type BookingFilterParams = {
 };
 
 export const createBooking = async (bookingData: CreateBookingPayload) => {
-  return apiPost<CreateBookingPayload, Booking>("/bookings", bookingData);
+  const booking = await apiPost<CreateBookingPayload, Booking>("/bookings", bookingData);
+  emitDomainEvent("bookings.changed", { action: "created", booking_id: booking.id });
+  return booking;
 };
 
 export const getBookings = async (start?: string, end?: string): Promise<Booking[]> => {
@@ -26,7 +29,9 @@ export const updateBooking = async (
   id: string,
   data: Partial<Pick<Booking, "guest_id" | "guest_name" | "check_in" | "check_out" | "status">>,
 ) => {
-  return apiPatch<typeof data, Booking>(`/bookings/${id}`, data);
+  const booking = await apiPatch<typeof data, Booking>(`/bookings/${id}`, data);
+  emitDomainEvent("bookings.changed", { action: "updated", booking_id: id });
+  return booking;
 };
 
 const bookingService = {

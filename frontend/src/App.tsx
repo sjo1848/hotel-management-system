@@ -19,6 +19,7 @@ import NotFoundPage from "./features/errors/NotFoundPage";
 import GeneralErrorPage from "./features/errors/GeneralErrorPage";
 import AccessDeniedPage from "./features/errors/AccessDeniedPage";
 import { Capability, roleHasCapability } from "./features/auth/capabilities";
+import { HMSQueryProvider } from "./lib/QueryProvider";
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -160,12 +161,14 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <ApiInterceptor />
-        <RouterProvider router={router} />
-      </ToastProvider>
-    </AuthProvider>
+    <HMSQueryProvider>
+      <AuthProvider>
+        <ToastProvider>
+          <ApiInterceptor />
+          <RouterProvider router={router} />
+        </ToastProvider>
+      </AuthProvider>
+    </HMSQueryProvider>
   );
 }
 

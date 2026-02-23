@@ -5,6 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DashboardHome from "./DashboardHome";
 import { invalidateResource } from "@/lib/useResourceQuery";
+import { HMSQueryProvider } from "@/lib/QueryProvider";
 
 const mockTrackUiEvent = vi.fn();
 const mockToast = vi.fn();
@@ -59,9 +60,11 @@ vi.mock("recharts", () => {
 
 const renderDashboard = () =>
   render(
-    <MemoryRouter>
-      <DashboardHome />
-    </MemoryRouter>,
+    <HMSQueryProvider>
+      <MemoryRouter>
+        <DashboardHome />
+      </MemoryRouter>
+    </HMSQueryProvider>,
   );
 
 describe("DashboardHome", () => {
