@@ -47,7 +47,7 @@ export type Guest = {
   created_at?: string;
 };
 
-export type InvoiceStatus = "Pending" | "Paid" | "Cancelled";
+export type InvoiceStatus = "PENDING" | "PAID" | "VOIDED";
 
 export type Invoice = {
   id: string;

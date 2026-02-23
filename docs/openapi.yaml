@@ -319,8 +319,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/Hotel"
     post:
       summary: Crear hotel (SaaS)
       requestBody:
@@ -335,8 +334,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/Hotel"
         "400":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/rooms/{id}/status:
@@ -389,8 +387,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/ExtraCharge"
     post:
       summary: Agregar cargo extra a reserva
       parameters:
@@ -412,8 +409,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/ExtraCharge"
   /api/v1/analytics/kpis:
     get:
       summary: KPI de dashboard
@@ -423,8 +419,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/DashboardKpis"
   /api/v1/audit/events:
     get:
       summary: Eventos de auditoría recientes del tenant
@@ -455,14 +450,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  total_amount_cents:
-                    type: integer
-                  cash_amount_cents:
-                    type: integer
-                  card_amount_cents:
-                    type: integer
+                $ref: "#/components/schemas/BillingBalance"
   /api/v1/billing/close-cash:
     post:
       summary: Cierre de caja
@@ -482,8 +470,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/CashClosure"
   /api/v1/invoices:
     get:
       summary: Listar facturas
@@ -495,8 +482,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/Invoice"
   /api/v1/bookings/{id}/invoice:
     get:
       summary: Obtener factura de una reserva
@@ -513,8 +499,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: "#/components/schemas/Invoice"
         "404":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/housekeeping/dirty:
@@ -593,8 +578,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/RevenueReport"
   /api/v1/reports/occupancy:
     get:
       summary: Reporte de ocupación
@@ -619,8 +603,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  additionalProperties: true
+                  $ref: "#/components/schemas/OccupancyReport"
   /api/v1/telemetry/ui:
     post:
       summary: Ingesta de eventos de telemetría UI
@@ -741,6 +724,47 @@ components:
           type: integer
         status:
           type: string
+    BookingAlert:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        guest_name:
+          type: string
+        room_number:
+          type: string
+        status:
+          type: string
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
+    DashboardKpis:
+      type: object
+      properties:
+        revenue_month_cents:
+          type: integer
+        occupancy_rate:
+          type: number
+          format: double
+        today_check_ins:
+          type: integer
+        active_bookings_count:
+          type: integer
+        arrivals_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingAlert"
+        departures_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingAlert"
+        rev_par_cents:
+          type: integer
+        adr_cents:
+          type: integer
     AuditEvent:
       type: object
       properties:
@@ -835,10 +859,31 @@ components:
           type: string
         role:
           type: string
+    CreateRoomRequest:
+      type: object
+      required: [room_number, room_type, price_cents]
+      properties:
+        room_number:
+          type: string
+        room_type:
+          type: string
+        price_cents:
+          type: integer
     CreateHotelRequest:
       type: object
       required: [name]
       properties:
+        name:
+          type: string
+        address:
+          type: string
+          nullable: true
+    Hotel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
         name:
           type: string
         address:
@@ -854,6 +899,117 @@ components:
           type: integer
         category:
           type: string
+    ExtraCharge:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        amount_cents:
+          type: integer
+        category:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    BillingBalance:
+      type: object
+      properties:
+        total_amount_cents:
+          type: integer
+        cash_amount_cents:
+          type: integer
+        card_amount_cents:
+          type: integer
+    InvoiceStatus:
+      type: string
+      enum:
+        - PENDING
+        - PAID
+        - VOIDED
+    PaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - CARD
+        - TRANSFER
+    Invoice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        status:
+          $ref: "#/components/schemas/InvoiceStatus"
+        payment_method:
+          $ref: "#/components/schemas/PaymentMethod"
+        created_at:
+          type: string
+          format: date-time
+    CashClosure:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        total_amount_cents:
+          type: integer
+        cash_amount_cents:
+          type: integer
+        card_amount_cents:
+          type: integer
+        opening_time:
+          type: string
+          format: date-time
+        closing_time:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+    RevenueReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue_cents:
+          type: integer
+    OccupancyReport:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        occupied_rooms:
+          type: integer
+        total_rooms:
+          type: integer
+        occupancy_rate:
+          type: number
+          format: double
     UiTelemetryEventRequest:
       type: object
       required: [event]

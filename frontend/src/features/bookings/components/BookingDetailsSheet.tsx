@@ -198,11 +198,17 @@ const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
                                             </div>
                                             <Badge className={cn(
                                                 "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                                                invoice.status === 'Paid'
+                                                invoice.status === "PAID"
                                                     ? "bg-emerald-600 text-white"
-                                                    : "bg-amber-100 text-amber-700 border-amber-200"
+                                                    : invoice.status === "VOIDED"
+                                                      ? "bg-rose-100 text-rose-700 border-rose-200"
+                                                      : "bg-amber-100 text-amber-700 border-amber-200"
                                             )}>
-                                                {invoice.status === 'Paid' ? 'Pagada' : 'Pendiente'}
+                                                {invoice.status === "PAID"
+                                                    ? "Pagada"
+                                                    : invoice.status === "VOIDED"
+                                                      ? "Anulada"
+                                                      : "Pendiente"}
                                             </Badge>
                                         </div>
 
