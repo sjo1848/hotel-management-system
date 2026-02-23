@@ -612,6 +612,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hotels/network-kpis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** KPIs consolidados multi-hotel (HQ) */
+        get: {
+            parameters: {
+                query?: {
+                    start?: string;
+                    end?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resumen consolidado HQ */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HotelNetworkSummary"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rooms/{id}/status": {
         parameters: {
             query?: never;
@@ -1320,6 +1360,29 @@ export interface components {
             id?: string;
             name?: string;
             address?: string | null;
+        };
+        HotelNetworkHotelKpi: {
+            /** Format: uuid */
+            hotel_id?: string;
+            hotel_name?: string;
+            /** Format: double */
+            occupancy_rate?: number;
+            active_bookings_count?: number;
+            revenue_cents?: number;
+            adr_cents?: number;
+            rev_par_cents?: number;
+        };
+        HotelNetworkSummary: {
+            /** Format: date */
+            start?: string;
+            /** Format: date */
+            end?: string;
+            total_hotels?: number;
+            total_active_bookings?: number;
+            total_revenue_cents?: number;
+            /** Format: double */
+            average_occupancy_rate?: number;
+            hotels?: components["schemas"]["HotelNetworkHotelKpi"][];
         };
         AddExtraChargeRequest: {
             description: string;

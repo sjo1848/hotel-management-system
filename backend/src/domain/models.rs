@@ -237,6 +237,28 @@ pub struct Hotel {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct HotelNetworkHotelKpi {
+    pub hotel_id: Uuid,
+    pub hotel_name: String,
+    pub occupancy_rate: f64,
+    pub active_bookings_count: i64,
+    pub revenue_cents: i64,
+    pub adr_cents: i64,
+    pub rev_par_cents: i64,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct HotelNetworkSummary {
+    pub start: chrono::NaiveDate,
+    pub end: chrono::NaiveDate,
+    pub total_hotels: i64,
+    pub total_active_bookings: i64,
+    pub total_revenue_cents: i64,
+    pub average_occupancy_rate: f64,
+    pub hotels: Vec<HotelNetworkHotelKpi>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct ExtraCharge {
     pub id: Uuid,
     pub hotel_id: Uuid,

@@ -3,6 +3,14 @@
 ## v1
 
 ### 2026-02-23
+- Se agrega endpoint HQ multi-hotel:
+  - `GET /api/v1/hotels/network-kpis` con filtros opcionales `start`/`end`.
+- Se incorporan nuevos schemas OpenAPI para consolidado de cadena:
+  - `HotelNetworkSummary`
+  - `HotelNetworkHotelKpi`
+- Este cambio habilita benchmark y drill-down por propiedad desde frontend SaaS Admin sin romper contrato v1 existente.
+
+### 2026-02-23
 - Se tipan respuestas críticas que estaban laxas en OpenAPI v1:
   - `GET /api/v1/invoices`
   - `GET /api/v1/bookings/{id}/invoice`

@@ -35,11 +35,11 @@ mod ops;
 pub use ops::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
-    finish_cleaning_handler, get_current_balance_handler, get_invoice_by_booking_handler,
-    get_rooms_handler, list_bookings_handler, list_dirty_rooms_handler, list_extra_charges_handler,
-    list_guests_handler, list_hotels_handler, list_invoices_handler, list_users_handler,
-    search_rooms_handler, start_cleaning_handler, update_booking_handler,
-    update_room_status_handler,
+    finish_cleaning_handler, get_current_balance_handler, get_hotel_network_kpis_handler,
+    get_invoice_by_booking_handler, get_rooms_handler, list_bookings_handler,
+    list_dirty_rooms_handler, list_extra_charges_handler, list_guests_handler, list_hotels_handler,
+    list_invoices_handler, list_users_handler, search_rooms_handler, start_cleaning_handler,
+    update_booking_handler, update_room_status_handler,
 };
 #[path = "handlers/reporting.rs"]
 mod reporting;

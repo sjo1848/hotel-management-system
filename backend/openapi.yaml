@@ -337,6 +337,31 @@ paths:
                 $ref: "#/components/schemas/Hotel"
         "400":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/hotels/network-kpis:
+    get:
+      summary: KPIs consolidados multi-hotel (HQ)
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Resumen consolidado HQ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HotelNetworkSummary"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/rooms/{id}/status:
     patch:
       summary: Actualizar estado de habitación
@@ -889,6 +914,47 @@ components:
         address:
           type: string
           nullable: true
+    HotelNetworkHotelKpi:
+      type: object
+      properties:
+        hotel_id:
+          type: string
+          format: uuid
+        hotel_name:
+          type: string
+        occupancy_rate:
+          type: number
+          format: double
+        active_bookings_count:
+          type: integer
+        revenue_cents:
+          type: integer
+        adr_cents:
+          type: integer
+        rev_par_cents:
+          type: integer
+    HotelNetworkSummary:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+        total_hotels:
+          type: integer
+        total_active_bookings:
+          type: integer
+        total_revenue_cents:
+          type: integer
+        average_occupancy_rate:
+          type: number
+          format: double
+        hotels:
+          type: array
+          items:
+            $ref: "#/components/schemas/HotelNetworkHotelKpi"
     AddExtraChargeRequest:
       type: object
       required: [description, amount_cents, category]
