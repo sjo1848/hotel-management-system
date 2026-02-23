@@ -7,6 +7,55 @@ if [ ! -f "backend/Cargo.toml" ]; then
 fi
 
 export DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core}
+RUNNER="${RUNNER:-auto}"
+
+usage() {
+  cat <<USAGE
+Usage: $0 [--runner auto|host|docker]
+
+Options:
+  --runner MODE   auto (default), host, docker
+USAGE
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --runner)
+      RUNNER="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+resolve_runner() {
+  if [[ "$RUNNER" == "host" || "$RUNNER" == "docker" ]]; then
+    echo "$RUNNER"
+    return
+  fi
+
+  if command -v psql >/dev/null 2>&1; then
+    echo "host"
+    return
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
+    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+      echo "docker"
+      return
+    fi
+  fi
+
+  echo "host"
+}
 
 wait_for_postgres() {
   local attempt
@@ -26,7 +75,8 @@ is_transient_sqlx_failure() {
 }
 
 run_sqlx_test_with_retry() {
-  local test_name="$1"
+  local runner="$1"
+  local test_name="$2"
   local attempt=1
   local max_attempts=3
   local output_file
@@ -37,10 +87,14 @@ run_sqlx_test_with_retry() {
     echo "==> ${test_name} (attempt ${attempt}/${max_attempts})"
 
     set +e
-    (
-      cd backend
-      cargo test --test "${test_name}" -- --test-threads=1 --nocapture
-    ) >"$output_file" 2>&1
+    if [[ "$runner" == "docker" ]]; then
+      docker compose exec -T backend cargo test --test "${test_name}" -- --test-threads=1 --nocapture >"$output_file" 2>&1
+    else
+      (
+        cd backend
+        cargo test --test "${test_name}" -- --test-threads=1 --nocapture
+      ) >"$output_file" 2>&1
+    fi
     local status=$?
     set -e
 
@@ -61,21 +115,34 @@ run_sqlx_test_with_retry() {
   done
 }
 
-wait_for_postgres
+RUNNER_RESOLVED="$(resolve_runner)"
+echo "==> backend integration runner: ${RUNNER_RESOLVED}"
+
+if [[ "$RUNNER_RESOLVED" == "host" ]]; then
+  if ! command -v psql >/dev/null 2>&1; then
+    echo "psql not found for host runner. Use --runner docker or install psql." >&2
+    exit 1
+  fi
+  wait_for_postgres
+fi
 
 # contract test (fast, no sqlx::test)
-(
-  cd backend
-  cargo test --test openapi_contract
-)
+if [[ "$RUNNER_RESOLVED" == "docker" ]]; then
+  docker compose exec -T backend cargo test --test openapi_contract
+else
+  (
+    cd backend
+    cargo test --test openapi_contract
+  )
+fi
 
 # DB integration gates (sqlx::test)
-run_sqlx_test_with_retry "analytics_flow"
-run_sqlx_test_with_retry "operational_flow"
-run_sqlx_test_with_retry "tenant_uniqueness_constraints"
-run_sqlx_test_with_retry "tenant_rls_phase1"
-run_sqlx_test_with_retry "booking_flow"
-run_sqlx_test_with_retry "tenant_fk_integrity"
-run_sqlx_test_with_retry "booking_transactional_integrity"
-run_sqlx_test_with_retry "room_management"
-run_sqlx_test_with_retry "tenant_context_runtime"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "analytics_flow"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "operational_flow"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_uniqueness_constraints"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_rls_phase1"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "booking_flow"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_fk_integrity"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "booking_transactional_integrity"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "room_management"
+run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_context_runtime"

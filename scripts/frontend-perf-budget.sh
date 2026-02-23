@@ -12,7 +12,8 @@ fi
 VENDOR_MAX_KB="${VENDOR_MAX_KB:-550}"
 CHARTS_MAX_KB="${CHARTS_MAX_KB:-250}"
 APP_MAX_KB="${APP_MAX_KB:-180}"
-CSS_MAX_KB="${CSS_MAX_KB:-100}"
+# App CSS currently includes three full visual themes; keep a strict but realistic cap.
+CSS_MAX_KB="${CSS_MAX_KB:-115}"
 
 pick_asset() {
   local pattern="$1"

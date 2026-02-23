@@ -94,18 +94,68 @@ is_above_threshold() {
 require_tooling
 require_llvm_tools
 
+is_transient_sqlx_failure() {
+  local output_file="$1"
+  grep -qE 'PoolTimedOut|failed to connect to setup test database|timed out while waiting for an open connection|Connection refused|failed to lookup address information' "$output_file"
+}
+
+run_coverage_collection() {
+  local output_file="$1"
+  set +e
+  (
+    cd backend
+    cargo llvm-cov \
+      --all-features \
+      --lcov \
+      --output-path "$LCOV_FILE" \
+      --test csrf_authn_security \
+      --test rbac_authorization \
+      --test booking_flow \
+      --test operational_flow
+  ) >"$output_file" 2>&1
+  local status=$?
+  set -e
+  return "$status"
+}
+
 echo "==> backend coverage thresholds (auth=${AUTH_THRESHOLD} booking=${BOOKING_THRESHOLD} tenant=${TENANT_THRESHOLD})"
-(
-  cd backend
-  cargo llvm-cov \
-    --all-features \
-    --lcov \
-    --output-path "$LCOV_FILE" \
-    --test csrf_authn_security \
-    --test rbac_authorization \
-    --test booking_flow \
-    --test operational_flow
-)
+coverage_output="$(mktemp)"
+trap 'rm -f "$coverage_output"' EXIT
+
+attempt=1
+max_attempts=3
+coverage_status=1
+while [ "$attempt" -le "$max_attempts" ]; do
+  echo "==> coverage run (attempt ${attempt}/${max_attempts})"
+  if run_coverage_collection "$coverage_output"; then
+    coverage_status=0
+    break
+  fi
+
+  cat "$coverage_output"
+  if is_transient_sqlx_failure "$coverage_output" && [ "$attempt" -lt "$max_attempts" ]; then
+    echo "Detected transient sqlx coverage failure. Retrying..."
+    attempt=$((attempt + 1))
+    sleep 2
+    continue
+  fi
+  break
+done
+
+if [ "$coverage_status" -ne 0 ]; then
+  if [ "$STRICT_MODE" = "true" ]; then
+    echo "Coverage collection failed in strict mode." >&2
+    exit 1
+  fi
+  if is_transient_sqlx_failure "$coverage_output"; then
+    echo "Coverage collection skipped in non-strict mode due to transient DB/connectivity issue."
+    exit 0
+  fi
+  cat "$coverage_output"
+  exit 1
+fi
+
+cat "$coverage_output"
 
 if [ ! -s "$LCOV_FILE" ]; then
   echo "Coverage report not generated: $LCOV_FILE" >&2

@@ -46,6 +46,25 @@ async fn rls_phase1_policies_exist_for_critical_tables(pool: sqlx::PgPool) {
 }
 
 #[sqlx::test]
+async fn rls_bypass_defaults_to_fail_closed_when_unset(pool: sqlx::PgPool) {
+    let mut conn = pool.acquire().await.unwrap();
+    sqlx::query("SELECT set_config('app.rls_bypass', '', false)")
+        .execute(&mut *conn)
+        .await
+        .unwrap();
+
+    let bypass_enabled = sqlx::query_scalar::<_, bool>("SELECT public.hms_rls_bypass_enabled()")
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+
+    assert!(
+        !bypass_enabled,
+        "rls bypass must be false when config is not explicitly set"
+    );
+}
+
+#[sqlx::test]
 async fn rls_phase1_blocks_cross_tenant_reads_and_writes_when_bypass_disabled(pool: sqlx::PgPool) {
     setup_rls_test_role(&pool).await;
     let fixture = seed_fixture(&pool).await;
