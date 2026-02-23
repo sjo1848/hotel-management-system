@@ -82,6 +82,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 1,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 1000,
+        adr_cents: 10000,
       })
       .mockResolvedValueOnce({
         revenue_month_cents: 50000,
@@ -90,6 +92,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 3,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 12500,
+        adr_cents: 16666,
       });
     mockGetRevenueReport.mockResolvedValue([]);
     mockGetOccupancyReport.mockResolvedValue([]);
@@ -135,6 +139,8 @@ describe("DashboardHome", () => {
         active_bookings_count: 2,
         arrivals_today: [],
         departures_today: [],
+        rev_par_cents: 5000,
+        adr_cents: 10000,
       });
 
     renderDashboard();

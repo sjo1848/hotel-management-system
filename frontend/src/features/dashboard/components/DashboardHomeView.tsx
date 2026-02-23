@@ -26,6 +26,7 @@ import {
 } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import BookingList from "@/features/bookings/components/BookingList";
@@ -103,14 +104,25 @@ type DashboardHomeViewProps = {
   balance: CashBalance | null;
   revenueData: RevenueReportItem[];
   occupancyData: OccupancyReportItem[];
+  dailyPriorities: RevenueCockpitPriority[];
   isDrawerOpen: boolean;
   selectedBookingId: string | null;
   onRetry: () => void;
   onNavigateBookings: () => void;
   onCloseCash: () => void;
+  onRevenueCtaClick: (priority: RevenueCockpitPriority) => void;
   onAlertSelect: (bookingId: string) => void;
   onDrawerClose: () => void;
   onDrawerSuccess: () => Promise<void>;
+};
+
+export type RevenueCockpitPriority = {
+  id: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  route: string;
+  severity: "high" | "medium" | "low";
 };
 
 const AlertItem = ({
@@ -156,11 +168,13 @@ export const DashboardHomeView = ({
   balance,
   revenueData,
   occupancyData,
+  dailyPriorities,
   isDrawerOpen,
   selectedBookingId,
   onRetry,
   onNavigateBookings,
   onCloseCash,
+  onRevenueCtaClick,
   onAlertSelect,
   onDrawerClose,
   onDrawerSuccess,
@@ -176,6 +190,15 @@ export const DashboardHomeView = ({
     rate: item.occupancy_rate,
     dateLabel: format(new Date(item.date), "dd/MM"),
   }));
+
+  const occupancyTone =
+    (kpis?.occupancy_rate ?? 0) >= 80 ? "text-emerald-600" : (kpis?.occupancy_rate ?? 0) >= 65 ? "text-amber-600" : "text-rose-600";
+
+  const priorityTone = (severity: RevenueCockpitPriority["severity"]) => {
+    if (severity === "high") return "border-rose-200 bg-rose-50 text-rose-800";
+    if (severity === "medium") return "border-amber-200 bg-amber-50 text-amber-800";
+    return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  };
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
@@ -237,6 +260,72 @@ export const DashboardHomeView = ({
           loading={loading}
         />
       </div>
+
+      <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white">
+        <CardHeader className="border-b border-slate-100">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Revenue Cockpit</CardTitle>
+              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                ADR, RevPAR y prioridades accionables del día
+              </p>
+            </div>
+            <Badge variant="info" className="uppercase tracking-widest text-[10px]">
+              Comercial V1
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6 p-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">ADR</p>
+              <p className="mt-2 text-3xl font-black text-slate-900">
+                ${((kpis?.adr_cents ?? 0) / 100).toLocaleString("es-AR")}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Tarifa promedio por reserva activa</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">RevPAR</p>
+              <p className="mt-2 text-3xl font-black text-slate-900">
+                ${((kpis?.rev_par_cents ?? 0) / 100).toLocaleString("es-AR")}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Ingreso por habitación disponible</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ocupación</p>
+              <p className={`mt-2 text-3xl font-black ${occupancyTone}`}>{(kpis?.occupancy_rate ?? 0).toFixed(1)}%</p>
+              <p className="mt-1 text-xs font-semibold text-slate-500">Umbrales: bajo &lt;65, medio 65-79, alto ≥80</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {dailyPriorities.map((priority) => (
+              <div key={priority.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-sm font-black text-slate-900">{priority.title}</p>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${priorityTone(
+                      priority.severity,
+                    )}`}
+                  >
+                    {priority.severity}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-500">{priority.description}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 rounded-xl border-slate-200 bg-white text-slate-800"
+                  onClick={() => onRevenueCtaClick(priority)}
+                >
+                  {priority.actionLabel}
+                </Button>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-8 md:grid-cols-2">
         <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white p-6">

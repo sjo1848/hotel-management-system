@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import DashboardHomeView from "@/features/dashboard/components/DashboardHomeView";
+import DashboardHomeView, {
+  type RevenueCockpitPriority,
+} from "@/features/dashboard/components/DashboardHomeView";
 import {
   getDashboardKpis,
   getOccupancyReport,
@@ -31,6 +33,7 @@ const DashboardHome = () => {
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const hasTrackedLoadFailureRef = useRef(false);
+  const hasTrackedRevenueCockpitViewRef = useRef(false);
 
   const {
     data: dashboardData,
@@ -59,6 +62,68 @@ const DashboardHome = () => {
   const balance = dashboardData?.balance ?? null;
   const loadError = dashboardError ? "No se pudo cargar el dashboard. Reintentá." : null;
 
+  const dailyPriorities = useMemo<RevenueCockpitPriority[]>(() => {
+    if (!kpis) return [];
+    const priorities: RevenueCockpitPriority[] = [];
+
+    if (kpis.occupancy_rate < 65) {
+      priorities.push({
+        id: "occupancy-recovery",
+        title: "Ocupación baja para hoy",
+        description: "Publicar oferta de última hora y revisar disponibilidad abierta.",
+        actionLabel: "Ajustar inventario",
+        route: "/rooms",
+        severity: "high",
+      });
+    }
+
+    if (kpis.arrivals_today.length > 0) {
+      priorities.push({
+        id: "arrival-readiness",
+        title: "Pre-checkin y asignación pendiente",
+        description: "Priorizar llegadas del día para reducir fricción en recepción.",
+        actionLabel: "Ver reservas",
+        route: "/bookings",
+        severity: "medium",
+      });
+    }
+
+    if (kpis.rev_par_cents > 0 && kpis.adr_cents > 0 && kpis.rev_par_cents < kpis.adr_cents * 0.6) {
+      priorities.push({
+        id: "revpar-gap",
+        title: "RevPAR por debajo del potencial ADR",
+        description: "Impulsar upsell y revisar tarifas por segmento para cerrar brecha.",
+        actionLabel: "Abrir tendencias",
+        route: "/reports",
+        severity: "high",
+      });
+    }
+
+    if (kpis.departures_today.length > 0) {
+      priorities.push({
+        id: "checkout-turnover",
+        title: "Ventana de rotación por check-outs",
+        description: "Coordinar limpieza y liberar habitaciones para venta temprana.",
+        actionLabel: "Ir a limpieza",
+        route: "/housekeeping",
+        severity: "medium",
+      });
+    }
+
+    if (priorities.length === 0) {
+      priorities.push({
+        id: "steady-operations",
+        title: "Operación estable",
+        description: "Sin alertas críticas. Enfocar al equipo en upsell y experiencia huésped.",
+        actionLabel: "Ver calendario",
+        route: "/calendar",
+        severity: "low",
+      });
+    }
+
+    return priorities.slice(0, 3);
+  }, [kpis]);
+
   useEffect(() => {
     if (dashboardError && !hasTrackedLoadFailureRef.current) {
       hasTrackedLoadFailureRef.current = true;
@@ -72,6 +137,19 @@ const DashboardHome = () => {
       hasTrackedLoadFailureRef.current = false;
     }
   }, [dashboardError]);
+
+  useEffect(() => {
+    if (!kpis || dashboardError || hasTrackedRevenueCockpitViewRef.current) {
+      return;
+    }
+    hasTrackedRevenueCockpitViewRef.current = true;
+    trackUiEvent("revenue_cockpit_viewed", {
+      occupancy_rate: kpis.occupancy_rate,
+      adr_cents: kpis.adr_cents,
+      rev_par_cents: kpis.rev_par_cents,
+      priorities_count: dailyPriorities.length,
+    });
+  }, [dailyPriorities.length, dashboardError, kpis]);
 
   const handleCloseCash = useCallback(async () => {
     if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) {
@@ -115,6 +193,18 @@ const DashboardHome = () => {
     setIsDrawerOpen(false);
   }, []);
 
+  const handleRevenueCtaClick = useCallback(
+    (priority: RevenueCockpitPriority) => {
+      trackUiEvent("revenue_cockpit_cta_clicked", {
+        cta_id: priority.id,
+        severity: priority.severity,
+        destination: priority.route,
+      });
+      navigate(priority.route);
+    },
+    [navigate],
+  );
+
   return (
     <DashboardHomeView
       loading={loading}
@@ -124,11 +214,13 @@ const DashboardHome = () => {
       balance={balance}
       revenueData={revenueData}
       occupancyData={occupancyData}
+      dailyPriorities={dailyPriorities}
       isDrawerOpen={isDrawerOpen}
       selectedBookingId={selectedBookingId}
       onRetry={handleRetryDashboard}
       onNavigateBookings={() => navigate("/bookings")}
       onCloseCash={() => void handleCloseCash()}
+      onRevenueCtaClick={handleRevenueCtaClick}
       onAlertSelect={handleAlertSelect}
       onDrawerClose={handleDrawerClose}
       onDrawerSuccess={handleDrawerSuccess}

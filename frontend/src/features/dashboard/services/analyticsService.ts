@@ -14,6 +14,8 @@ export type DashboardKpis = {
   active_bookings_count: number;
   arrivals_today: BookingAlert[];
   departures_today: BookingAlert[];
+  rev_par_cents: number;
+  adr_cents: number;
 };
 
 export type RevenueReportItem = {

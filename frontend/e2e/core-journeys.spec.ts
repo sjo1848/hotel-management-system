@@ -38,6 +38,22 @@ test("billing journey: cash closure widget is visible in dashboard", async ({ pa
   ).toBeVisible();
 });
 
+test("dashboard journey: revenue cockpit and CTA are actionable", async ({ page }) => {
+  await login(page);
+  await expect(page.getByText("Revenue Cockpit")).toBeVisible();
+
+  const cta = page
+    .getByRole("button", {
+      name: /Ajustar inventario|Ver reservas|Abrir tendencias|Ir a limpieza|Ver calendario/,
+    })
+    .first();
+
+  await expect(cta).toBeVisible();
+  await cta.click();
+
+  await expect(page).toHaveURL(/\/(rooms|bookings|reports|housekeeping|calendar)$/);
+});
+
 test("rbac/admin journey: users and reports sections are reachable", async ({ page }) => {
   await login(page);
 

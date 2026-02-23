@@ -35,6 +35,8 @@ pub async fn track_ui_telemetry_handler(
         "dashboard_retry_clicked",
         "close_cash_success",
         "close_cash_failure",
+        "revenue_cockpit_viewed",
+        "revenue_cockpit_cta_clicked",
     ];
 
     if !ALLOWED_EVENTS.contains(&payload.event.as_str()) {
