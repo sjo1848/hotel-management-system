@@ -23,13 +23,14 @@ use crate::infrastructure::web::handlers::{
     add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
     create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
     finish_cleaning_handler, get_audit_events_handler, get_current_balance_handler,
-    get_dashboard_kpis_handler, get_hotel_network_kpis_handler, get_invoice_by_booking_handler,
-    get_occupancy_report_handler, get_revenue_report_handler, get_rooms_handler, health_check,
-    list_bookings_handler, list_dirty_rooms_handler, list_extra_charges_handler,
-    list_guests_handler, list_hotels_handler, list_invoices_handler, list_users_handler,
-    login_handler, logout_handler, me_handler, readiness_check, refresh_handler, root_handler,
-    search_rooms_handler, start_cleaning_handler, track_ui_telemetry_handler,
-    update_booking_handler, update_room_status_handler,
+    get_dashboard_kpis_handler, get_feature_flags_handler, get_hotel_network_kpis_handler,
+    get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
+    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler,
+    list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
+    list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
+    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
+    track_ui_telemetry_handler, update_booking_handler, update_hotel_plan_handler,
+    update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
     api_contract::api_contract_headers_middleware,
@@ -125,6 +126,11 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             "/api/v1/hotels/network-kpis",
             get(get_hotel_network_kpis_handler).layer(middleware::from_fn(hotels_read)),
         )
+        .route(
+            "/api/v1/hotels/:id/plan",
+            patch(update_hotel_plan_handler).layer(middleware::from_fn(hotels_write)),
+        )
+        .route("/api/v1/feature-flags", get(get_feature_flags_handler))
         .route(
             "/api/v1/rooms",
             get(get_rooms_handler)

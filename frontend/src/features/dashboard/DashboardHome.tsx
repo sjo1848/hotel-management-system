@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardHomeView, {
+  type AutomationInsight,
   type RevenueCockpitPriority,
 } from "@/features/dashboard/components/DashboardHomeView";
 import {
@@ -12,6 +13,8 @@ import {
   type RevenueReportItem,
 } from "@/features/dashboard/services/analyticsService";
 import { closeCash, getCashBalance, type CashBalance } from "@/features/dashboard/services/billingService";
+import { getFeatureFlags, type TenantFeatureFlags } from "@/features/dashboard/services/hotelService";
+import { getDirtyRooms } from "@/features/housekeeping/services/housekeepingService";
 import { useToast } from "@/components/ui/toast";
 import { useResourceQuery } from "@/lib/useResourceQuery";
 import { trackUiEvent } from "@/lib/telemetry";
@@ -34,6 +37,23 @@ const DashboardHome = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const hasTrackedLoadFailureRef = useRef(false);
   const hasTrackedRevenueCockpitViewRef = useRef(false);
+  const {
+    data: featureFlagsData,
+  } = useResourceQuery<TenantFeatureFlags>({
+    queryKey: "feature-flags:current",
+    queryFn: getFeatureFlags,
+    staleTimeMs: 30_000,
+    retry: false,
+  });
+
+  const {
+    data: dirtyRoomsData,
+  } = useResourceQuery({
+    queryKey: "automation:dirty-rooms",
+    queryFn: getDirtyRooms,
+    staleTimeMs: 15_000,
+    enabled: featureFlagsData?.automation_alerts_enabled ?? false,
+  });
 
   const {
     data: dashboardData,
@@ -60,6 +80,8 @@ const DashboardHome = () => {
   const revenueData = dashboardData?.revenueData ?? [];
   const occupancyData = dashboardData?.occupancyData ?? [];
   const balance = dashboardData?.balance ?? null;
+  const featureFlags = featureFlagsData ?? null;
+  const dirtyRoomsCount = dirtyRoomsData?.length ?? 0;
   const loadError = dashboardError ? "No se pudo cargar el dashboard. Reintentá." : null;
 
   const dailyPriorities = useMemo<RevenueCockpitPriority[]>(() => {
@@ -123,6 +145,58 @@ const DashboardHome = () => {
 
     return priorities.slice(0, 3);
   }, [kpis]);
+
+  const automationInsights = useMemo<AutomationInsight[]>(() => {
+    if (!featureFlags || !kpis || !featureFlags.automation_alerts_enabled) return [];
+
+    const insights: AutomationInsight[] = [];
+
+    if (dirtyRoomsCount >= 3) {
+      insights.push({
+        id: "housekeeping-sla",
+        title: "SLA housekeeping comprometido",
+        description: `${dirtyRoomsCount} habitaciones sucias requieren atención para evitar pérdida de inventario.`,
+        actionLabel: "Ir a limpieza",
+        route: "/housekeeping",
+        severity: "high",
+      });
+    }
+
+    if (featureFlags.pricing_assistant_enabled && kpis.occupancy_rate < 65) {
+      insights.push({
+        id: "pricing-assistant-low-occ",
+        title: "Pricing asistido: demanda baja",
+        description: "Recomendación: ajustar tarifa base (-8%) para recuperar ocupación de corto plazo.",
+        actionLabel: "Revisar tendencias",
+        route: "/reports",
+        severity: "medium",
+      });
+    }
+
+    if (kpis.departures_today.length > kpis.arrivals_today.length + 2) {
+      insights.push({
+        id: "inventory-gap",
+        title: "Excepción de rotación diaria",
+        description: "Más salidas que llegadas en la jornada. Revisar pipeline comercial y overbooking.",
+        actionLabel: "Ver reservas",
+        route: "/bookings",
+        severity: "medium",
+      });
+    }
+
+    if (insights.length === 0 && featureFlags.pricing_assistant_enabled) {
+      insights.push({
+        id: "pricing-health",
+        title: "Pricing asistido estable",
+        description: "Sin alertas críticas. Mantener monitoreo de ADR y RevPAR por segmento.",
+        actionLabel: "Abrir dashboard HQ",
+        route: "/network",
+        severity: "low",
+      });
+    }
+
+    return insights.slice(0, 3);
+  }, [dirtyRoomsCount, featureFlags, kpis]);
 
   useEffect(() => {
     if (dashboardError && !hasTrackedLoadFailureRef.current) {
@@ -205,6 +279,18 @@ const DashboardHome = () => {
     [navigate],
   );
 
+  const handleAutomationAction = useCallback(
+    (insight: AutomationInsight) => {
+      trackUiEvent("automation_alert_clicked", {
+        alert_id: insight.id,
+        severity: insight.severity,
+        destination: insight.route,
+      });
+      navigate(insight.route);
+    },
+    [navigate],
+  );
+
   return (
     <DashboardHomeView
       loading={loading}
@@ -215,12 +301,15 @@ const DashboardHome = () => {
       revenueData={revenueData}
       occupancyData={occupancyData}
       dailyPriorities={dailyPriorities}
+      featureFlags={featureFlags}
+      automationInsights={automationInsights}
       isDrawerOpen={isDrawerOpen}
       selectedBookingId={selectedBookingId}
       onRetry={handleRetryDashboard}
       onNavigateBookings={() => navigate("/bookings")}
       onCloseCash={() => void handleCloseCash()}
       onRevenueCtaClick={handleRevenueCtaClick}
+      onAutomationAction={handleAutomationAction}
       onAlertSelect={handleAlertSelect}
       onDrawerClose={handleDrawerClose}
       onDrawerSuccess={handleDrawerSuccess}

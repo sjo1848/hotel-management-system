@@ -4,7 +4,8 @@ export type UiTelemetryEventName =
   | "close_cash_success"
   | "close_cash_failure"
   | "revenue_cockpit_viewed"
-  | "revenue_cockpit_cta_clicked";
+  | "revenue_cockpit_cta_clicked"
+  | "automation_alert_clicked";
 
 type UiTelemetryPayload = Record<string, unknown>;
 

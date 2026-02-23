@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Globe,
@@ -23,9 +23,12 @@ import { EmptyState, ErrorState, LoadingState } from "@/components/ui/async-stat
 import { useToast } from "@/components/ui/toast";
 import {
   createHotel,
+  getFeatureFlags,
   getHotelNetworkKpis,
   getHotels,
   type HotelNetworkSummary,
+  type TenantFeatureFlags,
+  updateHotelPlanTier,
 } from "@/features/dashboard/services/hotelService";
 import { type Hotel } from "@/types/domain";
 import { getErrorMessage } from "@/api/errors";
@@ -35,6 +38,7 @@ import { useNavigate } from "react-router-dom";
 type NetworkData = {
   hotels: Hotel[];
   summary: HotelNetworkSummary;
+  flags: TenantFeatureFlags;
 };
 
 const toISODate = (value: Date) => value.toISOString().slice(0, 10);
@@ -57,6 +61,8 @@ const HotelNetworkPage = () => {
   const [formData, setFormData] = useState({ name: "", address: "" });
   const [range, setRange] = useState(getDefaultRange);
   const [selectedHotelId, setSelectedHotelId] = useState<string>("all");
+  const [planDraft, setPlanDraft] = useState<"BASIC" | "PRO" | "ENTERPRISE">("PRO");
+  const [planUpdateLoading, setPlanUpdateLoading] = useState(false);
 
   const networkQueryKey = useMemo(
     () => `network:summary:${range.start}:${range.end}`,
@@ -72,14 +78,19 @@ const HotelNetworkPage = () => {
   } = useResourceQuery<NetworkData>({
     queryKey: networkQueryKey,
     queryFn: async () => {
-      const [hotels, summary] = await Promise.all([getHotels(), getHotelNetworkKpis(range.start, range.end)]);
-      return { hotels, summary };
+      const [hotels, summary, flags] = await Promise.all([
+        getHotels(),
+        getHotelNetworkKpis(range.start, range.end),
+        getFeatureFlags(),
+      ]);
+      return { hotels, summary, flags };
     },
     staleTimeMs: 10_000,
   });
 
   const hotels = data?.hotels ?? [];
   const summary = data?.summary ?? null;
+  const flags = data?.flags ?? null;
 
   const hotelsById = useMemo(() => {
     return hotels.reduce<Record<string, Hotel>>((acc, hotel) => {
@@ -105,6 +116,11 @@ const HotelNetworkPage = () => {
     if (visibleHotels.length === 0) return null;
     return visibleHotels[0];
   }, [visibleHotels]);
+
+  useEffect(() => {
+    if (!selectedHotelDetail) return;
+    setPlanDraft(selectedHotelDetail.plan_tier);
+  }, [selectedHotelDetail]);
 
   const topByRevenue = useMemo(() => {
     if (enrichedHotelRows.length === 0) return null;
@@ -144,6 +160,32 @@ const HotelNetworkPage = () => {
     }));
   };
 
+  const handleUpdatePlanTier = async () => {
+    if (!selectedHotelDetail || selectedHotelId === "all") {
+      toast({
+        title: "Seleccioná una propiedad",
+        description: "Elegí un hotel específico antes de actualizar el plan.",
+        variant: "default",
+      });
+      return;
+    }
+    setPlanUpdateLoading(true);
+    try {
+      await updateHotelPlanTier(selectedHotelDetail.hotel_id, planDraft);
+      toast({ title: "Plan actualizado", variant: "success" });
+      invalidateNetwork();
+      await refetchNetwork();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getErrorMessage(error, "No se pudo actualizar el plan del hotel"),
+        variant: "error",
+      });
+    } finally {
+      setPlanUpdateLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -155,6 +197,11 @@ const HotelNetworkPage = () => {
             <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">HQ Multi-Hotel</h2>
           </div>
           <p className="text-slate-500 font-medium mt-2">Consolidado por cadena con benchmark y drill-down por propiedad.</p>
+          {flags ? (
+            <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+              Plan actual tenant: {flags.plan_tier}
+            </p>
+          ) : null}
         </div>
 
         <Button
@@ -270,9 +317,10 @@ const HotelNetworkPage = () => {
                       </Badge>
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-600">
+                      <span>Plan: {hotel.plan_tier}</span>
                       <span>Occ: {hotel.occupancy_rate.toFixed(1)}%</span>
                       <span>ADR: ${(hotel.adr_cents / 100).toLocaleString("es-AR")}</span>
-                      <span>RevPAR: ${(hotel.rev_par_cents / 100).toLocaleString("es-AR")}</span>
+                      <span className="col-span-3">RevPAR: ${(hotel.rev_par_cents / 100).toLocaleString("es-AR")}</span>
                     </div>
                   </button>
                 ))}
@@ -289,6 +337,9 @@ const HotelNetworkPage = () => {
                     <div>
                       <p className="text-sm font-black text-slate-900">{selectedHotelDetail.hotel_name}</p>
                       <p className="mt-1 text-xs text-slate-500">{selectedHotelDetail.address || "Sin dirección"}</p>
+                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                        Plan: {selectedHotelDetail.plan_tier}
+                      </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-xs">
                       <div className="rounded-xl bg-slate-50 p-3">
@@ -313,6 +364,31 @@ const HotelNetworkPage = () => {
                           ${(selectedHotelDetail.rev_par_cents / 100).toLocaleString("es-AR")}
                         </p>
                       </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="plan-tier">Plan comercial</Label>
+                      <select
+                        id="plan-tier"
+                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
+                        value={planDraft}
+                        onChange={(event) =>
+                          setPlanDraft(event.target.value as "BASIC" | "PRO" | "ENTERPRISE")
+                        }
+                        disabled={selectedHotelId === "all"}
+                      >
+                        <option value="BASIC">BASIC</option>
+                        <option value="PRO">PRO</option>
+                        <option value="ENTERPRISE">ENTERPRISE</option>
+                      </select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full border-slate-200"
+                        disabled={selectedHotelId === "all" || planUpdateLoading}
+                        onClick={() => void handleUpdatePlanTier()}
+                      >
+                        {planUpdateLoading ? "Actualizando..." : "Actualizar plan"}
+                      </Button>
                     </div>
                     <Button
                       type="button"

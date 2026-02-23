@@ -652,6 +652,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hotels/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualizar plan comercial de un hotel */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateHotelPlanRequest"];
+                };
+            };
+            responses: {
+                /** @description Feature flags del hotel actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantFeatureFlags"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/feature-flags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Feature flags del tenant actual por plan */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Flags de capacidades habilitadas */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TenantFeatureFlags"];
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/rooms/{id}/status": {
         parameters: {
             query?: never;
@@ -1355,6 +1436,10 @@ export interface components {
             name: string;
             address?: string | null;
         };
+        UpdateHotelPlanRequest: {
+            /** @enum {string} */
+            plan_tier: "BASIC" | "PRO" | "ENTERPRISE";
+        };
         Hotel: {
             /** Format: uuid */
             id?: string;
@@ -1365,6 +1450,8 @@ export interface components {
             /** Format: uuid */
             hotel_id?: string;
             hotel_name?: string;
+            /** @enum {string} */
+            plan_tier?: "BASIC" | "PRO" | "ENTERPRISE";
             /** Format: double */
             occupancy_rate?: number;
             active_bookings_count?: number;
@@ -1383,6 +1470,16 @@ export interface components {
             /** Format: double */
             average_occupancy_rate?: number;
             hotels?: components["schemas"]["HotelNetworkHotelKpi"][];
+        };
+        TenantFeatureFlags: {
+            /** Format: uuid */
+            hotel_id?: string;
+            /** @enum {string} */
+            plan_tier?: "BASIC" | "PRO" | "ENTERPRISE";
+            automation_alerts_enabled?: boolean;
+            pricing_assistant_enabled?: boolean;
+            hq_benchmark_enabled?: boolean;
+            advanced_analytics_enabled?: boolean;
         };
         AddExtraChargeRequest: {
             description: string;

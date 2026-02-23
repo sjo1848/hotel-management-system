@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::Hotel;
+use crate::domain::models::{Hotel, TenantFeatureFlags};
 use crate::domain::repositories::HotelRepository;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -47,12 +47,84 @@ impl HotelService {
             .map_err(DomainError::InfrastructureError)
             .map(|hotel| hotel.map(|value| value.id))
     }
+
+    pub async fn get_feature_flags(
+        &self,
+        hotel_id: Uuid,
+    ) -> Result<TenantFeatureFlags, DomainError> {
+        let plan_tier = self
+            .hotel_repo
+            .find_plan_tier(hotel_id)
+            .await
+            .map_err(map_hotel_repo_error)?;
+        Ok(build_feature_flags(hotel_id, &plan_tier))
+    }
+
+    pub async fn update_plan_tier(
+        &self,
+        hotel_id: Uuid,
+        plan_tier: String,
+    ) -> Result<TenantFeatureFlags, DomainError> {
+        let normalized = normalize_plan_tier(&plan_tier).ok_or_else(|| {
+            DomainError::InvalidInput(
+                "Plan inválido. Valores permitidos: BASIC, PRO, ENTERPRISE".to_string(),
+            )
+        })?;
+
+        self.hotel_repo
+            .update_plan_tier(hotel_id, &normalized)
+            .await
+            .map_err(map_hotel_repo_error)?;
+
+        self.get_feature_flags(hotel_id).await
+    }
 }
 
 fn map_hotel_repo_error(message: String) -> DomainError {
     match message.as_str() {
         "HOTEL_ALREADY_EXISTS" => DomainError::HotelAlreadyExists,
+        "HOTEL_NOT_FOUND" => DomainError::HotelNotFound,
+        "PLAN_TIER_INVALID" => DomainError::InvalidInput(
+            "Plan inválido. Valores permitidos: BASIC, PRO, ENTERPRISE".to_string(),
+        ),
         _ => DomainError::InfrastructureError(message),
+    }
+}
+
+fn normalize_plan_tier(value: &str) -> Option<String> {
+    let normalized = value.trim().to_uppercase();
+    match normalized.as_str() {
+        "BASIC" | "PRO" | "ENTERPRISE" => Some(normalized),
+        _ => None,
+    }
+}
+
+fn build_feature_flags(hotel_id: Uuid, plan_tier: &str) -> TenantFeatureFlags {
+    match plan_tier {
+        "BASIC" => TenantFeatureFlags {
+            hotel_id,
+            plan_tier: "BASIC".to_string(),
+            automation_alerts_enabled: true,
+            pricing_assistant_enabled: false,
+            hq_benchmark_enabled: false,
+            advanced_analytics_enabled: false,
+        },
+        "ENTERPRISE" => TenantFeatureFlags {
+            hotel_id,
+            plan_tier: "ENTERPRISE".to_string(),
+            automation_alerts_enabled: true,
+            pricing_assistant_enabled: true,
+            hq_benchmark_enabled: true,
+            advanced_analytics_enabled: true,
+        },
+        _ => TenantFeatureFlags {
+            hotel_id,
+            plan_tier: "PRO".to_string(),
+            automation_alerts_enabled: true,
+            pricing_assistant_enabled: true,
+            hq_benchmark_enabled: true,
+            advanced_analytics_enabled: false,
+        },
     }
 }
 

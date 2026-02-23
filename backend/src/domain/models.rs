@@ -240,6 +240,7 @@ pub struct Hotel {
 pub struct HotelNetworkHotelKpi {
     pub hotel_id: Uuid,
     pub hotel_name: String,
+    pub plan_tier: String,
     pub occupancy_rate: f64,
     pub active_bookings_count: i64,
     pub revenue_cents: i64,
@@ -256,6 +257,16 @@ pub struct HotelNetworkSummary {
     pub total_revenue_cents: i64,
     pub average_occupancy_rate: f64,
     pub hotels: Vec<HotelNetworkHotelKpi>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct TenantFeatureFlags {
+    pub hotel_id: Uuid,
+    pub plan_tier: String,
+    pub automation_alerts_enabled: bool,
+    pub pricing_assistant_enabled: bool,
+    pub hq_benchmark_enabled: bool,
+    pub advanced_analytics_enabled: bool,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]

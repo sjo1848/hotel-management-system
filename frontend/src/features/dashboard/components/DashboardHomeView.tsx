@@ -37,6 +37,7 @@ import {
   type RevenueReportItem,
 } from "@/features/dashboard/services/analyticsService";
 import { type CashBalance } from "@/features/dashboard/services/billingService";
+import { type TenantFeatureFlags } from "@/features/dashboard/services/hotelService";
 
 type KPICardProps = {
   title: string;
@@ -105,18 +106,30 @@ type DashboardHomeViewProps = {
   revenueData: RevenueReportItem[];
   occupancyData: OccupancyReportItem[];
   dailyPriorities: RevenueCockpitPriority[];
+  featureFlags: TenantFeatureFlags | null;
+  automationInsights: AutomationInsight[];
   isDrawerOpen: boolean;
   selectedBookingId: string | null;
   onRetry: () => void;
   onNavigateBookings: () => void;
   onCloseCash: () => void;
   onRevenueCtaClick: (priority: RevenueCockpitPriority) => void;
+  onAutomationAction: (insight: AutomationInsight) => void;
   onAlertSelect: (bookingId: string) => void;
   onDrawerClose: () => void;
   onDrawerSuccess: () => Promise<void>;
 };
 
 export type RevenueCockpitPriority = {
+  id: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+  route: string;
+  severity: "high" | "medium" | "low";
+};
+
+export type AutomationInsight = {
   id: string;
   title: string;
   description: string;
@@ -169,12 +182,15 @@ export const DashboardHomeView = ({
   revenueData,
   occupancyData,
   dailyPriorities,
+  featureFlags,
+  automationInsights,
   isDrawerOpen,
   selectedBookingId,
   onRetry,
   onNavigateBookings,
   onCloseCash,
   onRevenueCtaClick,
+  onAutomationAction,
   onAlertSelect,
   onDrawerClose,
   onDrawerSuccess,
@@ -198,6 +214,12 @@ export const DashboardHomeView = ({
     if (severity === "high") return "border-rose-200 bg-rose-50 text-rose-800";
     if (severity === "medium") return "border-amber-200 bg-amber-50 text-amber-800";
     return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  };
+
+  const automationTone = (severity: AutomationInsight["severity"]) => {
+    if (severity === "high") return "border-rose-200 bg-rose-50 text-rose-900";
+    if (severity === "medium") return "border-amber-200 bg-amber-50 text-amber-900";
+    return "border-emerald-200 bg-emerald-50 text-emerald-900";
   };
 
   return (
@@ -326,6 +348,58 @@ export const DashboardHomeView = ({
           </div>
         </CardContent>
       </Card>
+
+      {featureFlags?.automation_alerts_enabled ? (
+        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white">
+          <CardHeader className="border-b border-slate-100">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Automation & Alerts</CardTitle>
+                <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                  SLA housekeeping, pricing asistido y excepciones operativas
+                </p>
+              </div>
+              <Badge variant="secondary" className="uppercase tracking-widest text-[10px]">
+                Plan {featureFlags.plan_tier}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 p-6">
+            {automationInsights.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">
+                Sin alertas de automatización para este momento.
+              </div>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-3">
+                {automationInsights.map((insight) => (
+                  <div
+                    key={insight.id}
+                    className={`rounded-2xl border p-4 shadow-sm ${automationTone(insight.severity)}`}
+                  >
+                    <p className="text-sm font-black">{insight.title}</p>
+                    <p className="mt-1 text-xs font-medium">{insight.description}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-4 border-white/70 bg-white text-slate-800"
+                      onClick={() => onAutomationAction(insight)}
+                    >
+                      {insight.actionLabel}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!featureFlags.pricing_assistant_enabled ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-900">
+                Pricing asistido disponible en plan PRO/ENTERPRISE.
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-8 md:grid-cols-2">
         <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white p-6">

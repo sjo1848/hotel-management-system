@@ -11,6 +11,26 @@ pub async fn list_hotels_handler(
 
 #[utoipa::path(
     get,
+    path = "/api/v1/feature-flags",
+    responses(
+        (status = 200, description = "Feature flags por plan del tenant actual", body = crate::domain::models::TenantFeatureFlags)
+    ),
+    tag = "Operación",
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn get_feature_flags_handler(
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Value>, DomainError> {
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let flags = state.hotel_service.get_feature_flags(hotel_id).await?;
+    Ok(Json(json!(flags)))
+}
+
+#[utoipa::path(
+    get,
     path = "/api/v1/hotels/network-kpis",
     responses(
         (status = 200, description = "Resumen consolidado HQ multi-hotel", body = crate::domain::models::HotelNetworkSummary)
@@ -49,6 +69,7 @@ pub async fn get_hotel_network_kpis_handler(
             .reporting_service
             .get_dashboard_summary(hotel.id)
             .await?;
+        let feature_flags = state.hotel_service.get_feature_flags(hotel.id).await?;
         let revenue_report = state
             .reporting_service
             .get_revenue_report(hotel.id, start, end)
@@ -62,6 +83,7 @@ pub async fn get_hotel_network_kpis_handler(
         hotel_summaries.push(crate::domain::models::HotelNetworkHotelKpi {
             hotel_id: hotel.id,
             hotel_name: hotel.name,
+            plan_tier: feature_flags.plan_tier,
             occupancy_rate: dashboard_kpis.occupancy_rate,
             active_bookings_count: dashboard_kpis.active_bookings_count,
             revenue_cents,
@@ -107,4 +129,36 @@ pub async fn create_hotel_handler(
         .create_hotel(payload.name, payload.address)
         .await?;
     Ok(Json(json!(hotel)))
+}
+
+#[utoipa::path(
+    patch,
+    path = "/api/v1/hotels/{id}/plan",
+    params(
+        ("id" = Uuid, Path, description = "ID del hotel")
+    ),
+    request_body = UpdateHotelPlanRequest,
+    responses(
+        (status = 200, description = "Plan actualizado", body = crate::domain::models::TenantFeatureFlags),
+        (status = 400, description = "Plan inválido"),
+        (status = 404, description = "Hotel no encontrado")
+    ),
+    tag = "Operación",
+    security(
+        ("jwt" = [])
+    )
+)]
+pub async fn update_hotel_plan_handler(
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+    State(state): State<Arc<AppState>>,
+    Path(hotel_id): Path<Uuid>,
+    Json(payload): Json<UpdateHotelPlanRequest>,
+) -> Result<Json<Value>, DomainError> {
+    let _ = claims;
+    validate_non_empty_trimmed("plan_tier", &payload.plan_tier)?;
+    let flags = state
+        .hotel_service
+        .update_plan_tier(hotel_id, payload.plan_tier)
+        .await?;
+    Ok(Json(json!(flags)))
 }

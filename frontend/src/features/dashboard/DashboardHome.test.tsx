@@ -14,6 +14,8 @@ const mockGetDashboardKpis = vi.fn();
 const mockGetRevenueReport = vi.fn();
 const mockGetOccupancyReport = vi.fn();
 const mockGetCashBalance = vi.fn();
+const mockGetFeatureFlags = vi.fn();
+const mockGetDirtyRooms = vi.fn();
 
 vi.mock("@/components/ui/toast", () => ({
   useToast: () => ({ toast: mockToast }),
@@ -40,6 +42,14 @@ vi.mock("./services/analyticsService", () => ({
 vi.mock("./services/billingService", () => ({
   getCashBalance: (...args: unknown[]) => mockGetCashBalance(...args),
   closeCash: (...args: unknown[]) => mockCloseCash(...args),
+}));
+
+vi.mock("./services/hotelService", () => ({
+  getFeatureFlags: (...args: unknown[]) => mockGetFeatureFlags(...args),
+}));
+
+vi.mock("@/features/housekeeping/services/housekeepingService", () => ({
+  getDirtyRooms: (...args: unknown[]) => mockGetDirtyRooms(...args),
 }));
 
 vi.mock("recharts", () => {
@@ -102,6 +112,15 @@ describe("DashboardHome", () => {
       cash_amount_cents: 10000,
       card_amount_cents: 5000,
     });
+    mockGetFeatureFlags.mockResolvedValue({
+      hotel_id: "00000000-0000-0000-0000-000000000001",
+      plan_tier: "PRO",
+      automation_alerts_enabled: true,
+      pricing_assistant_enabled: true,
+      hq_benchmark_enabled: true,
+      advanced_analytics_enabled: false,
+    });
+    mockGetDirtyRooms.mockResolvedValue([]);
     mockCloseCash.mockResolvedValue({});
   });
 

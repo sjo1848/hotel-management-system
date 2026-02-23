@@ -3,6 +3,15 @@
 ## v1
 
 ### 2026-02-23
+- Se agregan endpoints de feature flags por plan:
+  - `GET /api/v1/feature-flags`
+  - `PATCH /api/v1/hotels/{id}/plan`
+- Se agregan schemas contractuales:
+  - `UpdateHotelPlanRequest`
+  - `TenantFeatureFlags`
+- Se introduce `plan_tier` (`BASIC|PRO|ENTERPRISE`) como fuente de gating SaaS sin redeploy.
+
+### 2026-02-23
 - Se agrega endpoint HQ multi-hotel:
   - `GET /api/v1/hotels/network-kpis` con filtros opcionales `start`/`end`.
 - Se incorporan nuevos schemas OpenAPI para consolidado de cadena:

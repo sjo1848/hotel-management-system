@@ -362,6 +362,45 @@ paths:
                 $ref: "#/components/schemas/HotelNetworkSummary"
         "400":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/hotels/{id}/plan:
+    patch:
+      summary: Actualizar plan comercial de un hotel
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateHotelPlanRequest"
+      responses:
+        "200":
+          description: Feature flags del hotel actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantFeatureFlags"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/feature-flags:
+    get:
+      summary: Feature flags del tenant actual por plan
+      responses:
+        "200":
+          description: Flags de capacidades habilitadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TenantFeatureFlags"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/rooms/{id}/status:
     patch:
       summary: Actualizar estado de habitación
@@ -903,6 +942,16 @@ components:
         address:
           type: string
           nullable: true
+    UpdateHotelPlanRequest:
+      type: object
+      required: [plan_tier]
+      properties:
+        plan_tier:
+          type: string
+          enum:
+            - BASIC
+            - PRO
+            - ENTERPRISE
     Hotel:
       type: object
       properties:
@@ -922,6 +971,12 @@ components:
           format: uuid
         hotel_name:
           type: string
+        plan_tier:
+          type: string
+          enum:
+            - BASIC
+            - PRO
+            - ENTERPRISE
         occupancy_rate:
           type: number
           format: double
@@ -955,6 +1010,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/HotelNetworkHotelKpi"
+    TenantFeatureFlags:
+      type: object
+      properties:
+        hotel_id:
+          type: string
+          format: uuid
+        plan_tier:
+          type: string
+          enum:
+            - BASIC
+            - PRO
+            - ENTERPRISE
+        automation_alerts_enabled:
+          type: boolean
+        pricing_assistant_enabled:
+          type: boolean
+        hq_benchmark_enabled:
+          type: boolean
+        advanced_analytics_enabled:
+          type: boolean
     AddExtraChargeRequest:
       type: object
       required: [description, amount_cents, category]

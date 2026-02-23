@@ -14,6 +14,8 @@ pub trait HotelRepository: Send + Sync {
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Hotel>, String>;
     async fn find_by_name_ci(&self, name: &str) -> Result<Option<Hotel>, String>;
     async fn update(&self, hotel: Hotel) -> Result<Hotel, String>;
+    async fn find_plan_tier(&self, hotel_id: Uuid) -> Result<String, String>;
+    async fn update_plan_tier(&self, hotel_id: Uuid, plan_tier: &str) -> Result<(), String>;
 }
 
 #[async_trait]

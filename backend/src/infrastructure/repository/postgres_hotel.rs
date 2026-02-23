@@ -83,6 +83,34 @@ impl HotelRepository for PostgresHotelRepository {
             .map_err(map_db_error)?;
         Ok(hotel)
     }
+
+    async fn find_plan_tier(&self, hotel_id: Uuid) -> Result<String, String> {
+        let record = sqlx::query("SELECT plan_tier FROM hotels WHERE id = $1")
+            .bind(hotel_id)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        let Some(row) = record else {
+            return Err("HOTEL_NOT_FOUND".to_string());
+        };
+
+        row.try_get("plan_tier").map_err(|e| e.to_string())
+    }
+
+    async fn update_plan_tier(&self, hotel_id: Uuid, plan_tier: &str) -> Result<(), String> {
+        let result = sqlx::query("UPDATE hotels SET plan_tier = $1 WHERE id = $2")
+            .bind(plan_tier)
+            .bind(hotel_id)
+            .execute(&self.pool)
+            .await
+            .map_err(map_db_error)?;
+
+        if result.rows_affected() == 0 {
+            return Err("HOTEL_NOT_FOUND".to_string());
+        }
+        Ok(())
+    }
 }
 
 fn map_db_error(error: sqlx::Error) -> String {
@@ -92,6 +120,12 @@ fn map_db_error(error: sqlx::Error) -> String {
                 let constraint_name = db_error.constraint().unwrap_or_default();
                 if constraint_name == "ux_hotels_name_ci" || constraint_name == "hotels_name_key" {
                     return "HOTEL_ALREADY_EXISTS".to_string();
+                }
+            }
+            if code == "23514" {
+                let constraint_name = db_error.constraint().unwrap_or_default();
+                if constraint_name == "ck_hotels_plan_tier" {
+                    return "PLAN_TIER_INVALID".to_string();
                 }
             }
         }
