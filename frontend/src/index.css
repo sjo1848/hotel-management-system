@@ -1,30 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: hsl(222 47% 11%);
-  --color-primary-foreground: hsl(210 40% 98%);
-
-  --color-secondary: hsl(40 40% 45%);
-  --color-secondary-foreground: hsl(210 40% 98%);
-
-  --color-destructive: hsl(0 84.2% 60.2%);
-  --color-destructive-foreground: hsl(210 40% 98%);
-
-  --color-muted: hsl(210 40% 96.1%);
-  --color-muted-foreground: hsl(215.4 16.3% 46.9%);
-
-  --color-accent: hsl(210 40% 96.1%);
-  --color-accent-foreground: hsl(222.2 47.4% 11.2%);
-
-  --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(222 47% 11%);
-
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(222 47% 11%);
-
-  --color-border: hsl(214.3 31.8% 91.4%);
-  --color-input: hsl(214.3 31.8% 91.4%);
-  --color-ring: hsl(222.2 84% 4.9%);
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
 
   --radius-lg: 0.5rem;
   --radius-md: calc(0.5rem - 2px);
@@ -55,14 +50,161 @@
 }
 
 @layer base {
-  :root {
-    --background: 210 40% 98%;
-    --foreground: 222 47% 11%;
+  :root,
+  [data-theme="light"] {
+    --background: 210 32% 98%;
+    --foreground: 222 30% 14%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 14%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 14%;
+    --primary: 222 47% 14%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 38 84% 52%;
+    --secondary-foreground: 222 34% 12%;
+    --muted: 210 24% 93%;
+    --muted-foreground: 216 14% 40%;
+    --accent: 212 30% 90%;
+    --accent-foreground: 222 30% 14%;
+    --destructive: 0 78% 52%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 24% 86%;
+    --input: 214 24% 86%;
+    --ring: 38 84% 52%;
+
+    --shell-main-bg: 210 36% 97%;
+    --shell-sidebar-bg: 223 36% 12%;
+    --shell-sidebar-fg: 210 40% 98%;
+    --shell-sidebar-muted: 217 19% 70%;
+    --shell-sidebar-icon: 216 20% 64%;
+    --shell-sidebar-hover: 223 34% 18%;
+    --shell-sidebar-active: 223 33% 22%;
+    --shell-sidebar-border: 223 26% 28%;
+    --shell-sidebar-footer: 223 30% 16%;
+    --shell-header-bg: 0 0% 100%;
+    --shell-search-bg: 0 0% 100%;
+    --shell-search-border: 214 23% 84%;
+    --shell-search-icon: 217 13% 46%;
+    --shadow-ambient: 222 47% 11%;
+
+    --login-bg: 224 31% 15%;
+    --login-fg: 210 30% 95%;
+    --login-overlay-from: 223 36% 12%;
+    --login-overlay-via: 223 31% 11%;
+    --login-overlay-to: 223 27% 9%;
+    --login-card-bg: 223 28% 14%;
+    --login-card-border: 214 20% 28%;
+    --login-input-bg: 223 24% 18%;
+    --login-input-border: 220 16% 34%;
+    --login-input-text: 210 30% 95%;
+    --login-input-placeholder: 218 13% 64%;
+    --login-label: 210 20% 84%;
+    --login-muted: 216 14% 68%;
+    --login-footer: 216 14% 58%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+  [data-theme="balanced"] {
+    --background: 214 18% 93%;
+    --foreground: 222 28% 16%;
+    --card: 0 0% 98%;
+    --card-foreground: 222 28% 16%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 222 28% 16%;
+    --primary: 223 34% 16%;
+    --primary-foreground: 210 36% 96%;
+    --secondary: 36 56% 47%;
+    --secondary-foreground: 220 32% 12%;
+    --muted: 213 16% 87%;
+    --muted-foreground: 217 12% 36%;
+    --accent: 213 18% 83%;
+    --accent-foreground: 222 28% 16%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 15% 77%;
+    --input: 214 15% 77%;
+    --ring: 36 56% 47%;
+
+    --shell-main-bg: 214 18% 92%;
+    --shell-sidebar-bg: 224 22% 15%;
+    --shell-sidebar-fg: 210 36% 96%;
+    --shell-sidebar-muted: 217 16% 73%;
+    --shell-sidebar-icon: 218 16% 66%;
+    --shell-sidebar-hover: 224 20% 20%;
+    --shell-sidebar-active: 224 18% 25%;
+    --shell-sidebar-border: 224 14% 31%;
+    --shell-sidebar-footer: 223 19% 18%;
+    --shell-header-bg: 0 0% 98%;
+    --shell-search-bg: 0 0% 98%;
+    --shell-search-border: 214 14% 74%;
+    --shell-search-icon: 217 12% 40%;
+    --shadow-ambient: 222 30% 18%;
+
+    --login-bg: 223 26% 14%;
+    --login-fg: 210 30% 94%;
+    --login-overlay-from: 223 27% 12%;
+    --login-overlay-via: 223 24% 10%;
+    --login-overlay-to: 223 22% 8%;
+    --login-card-bg: 223 20% 15%;
+    --login-card-border: 217 14% 31%;
+    --login-input-bg: 223 17% 20%;
+    --login-input-border: 218 13% 36%;
+    --login-input-text: 210 28% 94%;
+    --login-input-placeholder: 217 11% 66%;
+    --login-label: 211 17% 82%;
+    --login-muted: 217 12% 68%;
+    --login-footer: 217 12% 56%;
+  }
+
+  [data-theme="dark"] {
+    --background: 224 23% 10%;
+    --foreground: 210 32% 92%;
+    --card: 223 18% 14%;
+    --card-foreground: 210 32% 92%;
+    --popover: 223 18% 14%;
+    --popover-foreground: 210 32% 92%;
+    --primary: 210 28% 88%;
+    --primary-foreground: 223 21% 11%;
+    --secondary: 42 78% 58%;
+    --secondary-foreground: 222 30% 12%;
+    --muted: 223 15% 20%;
+    --muted-foreground: 217 13% 67%;
+    --accent: 223 14% 19%;
+    --accent-foreground: 210 32% 92%;
+    --destructive: 0 66% 52%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 223 14% 25%;
+    --input: 223 14% 25%;
+    --ring: 42 78% 58%;
+
+    --shell-main-bg: 223 21% 11%;
+    --shell-sidebar-bg: 223 30% 8%;
+    --shell-sidebar-fg: 210 34% 95%;
+    --shell-sidebar-muted: 217 17% 74%;
+    --shell-sidebar-icon: 218 13% 66%;
+    --shell-sidebar-hover: 223 23% 16%;
+    --shell-sidebar-active: 223 20% 21%;
+    --shell-sidebar-border: 223 16% 26%;
+    --shell-sidebar-footer: 223 22% 13%;
+    --shell-header-bg: 223 21% 11%;
+    --shell-search-bg: 223 20% 14%;
+    --shell-search-border: 223 14% 28%;
+    --shell-search-icon: 217 12% 68%;
+    --shadow-ambient: 0 0% 0%;
+
+    --login-bg: 223 30% 8%;
+    --login-fg: 210 30% 94%;
+    --login-overlay-from: 223 32% 7%;
+    --login-overlay-via: 223 28% 7%;
+    --login-overlay-to: 223 25% 6%;
+    --login-card-bg: 223 22% 11%;
+    --login-card-border: 223 14% 24%;
+    --login-input-bg: 223 17% 15%;
+    --login-input-border: 223 12% 27%;
+    --login-input-text: 210 30% 94%;
+    --login-input-placeholder: 217 11% 62%;
+    --login-label: 211 18% 82%;
+    --login-muted: 217 11% 67%;
+    --login-footer: 217 10% 54%;
   }
 }
 
@@ -89,8 +231,111 @@
     @apply border-border;
   }
 
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    @apply bg-white text-slate-950;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .theme-fade,
+  .theme-fade * {
+    transition-property: background-color, border-color, color, box-shadow, fill, stroke;
+    transition-duration: 220ms;
+    transition-timing-function: cubic-bezier(0.2, 0.7, 0, 1);
+  }
+
+  .app-shell {
+    background: hsl(var(--shell-main-bg));
+  }
+
+  .app-sidebar {
+    background: hsl(var(--shell-sidebar-bg));
+    color: hsl(var(--shell-sidebar-fg));
+    border-right: 1px solid hsl(var(--shell-sidebar-border));
+  }
+
+  .app-sidebar-gradient {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--shell-sidebar-active) / 0.75) 0%,
+      hsl(var(--shell-sidebar-bg)) 70%
+    );
+  }
+
+  .app-sidebar-link {
+    color: hsl(var(--shell-sidebar-muted));
+  }
+
+  .app-sidebar-link:hover {
+    color: hsl(var(--shell-sidebar-fg));
+    background: hsl(var(--shell-sidebar-hover));
+  }
+
+  .app-sidebar-link-active {
+    color: hsl(var(--shell-sidebar-fg));
+    background: hsl(var(--shell-sidebar-active));
+    border: 1px solid hsl(var(--shell-sidebar-border));
+    box-shadow: 0 14px 34px hsl(var(--shadow-ambient) / 0.36);
+  }
+
+  .app-header {
+    background: hsl(var(--shell-header-bg) / 0.78);
+    border-bottom: 1px solid hsl(var(--border) / 0.8);
+    backdrop-filter: blur(14px);
+  }
+
+  .app-search-input {
+    background: hsl(var(--shell-search-bg));
+    border-color: hsl(var(--shell-search-border));
+  }
+
+  .app-search-input:focus {
+    border-color: hsl(var(--ring));
+  }
+
+  .drawer-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .drawer-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .login-shell {
+    background: hsl(var(--login-bg));
+    color: hsl(var(--login-fg));
+  }
+
+  .login-overlay {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--login-overlay-from) / 0.92) 0%,
+      hsl(var(--login-overlay-via) / 0.86) 45%,
+      hsl(var(--login-overlay-to) / 0.95) 100%
+    );
+  }
+
+  .login-card {
+    background: hsl(var(--login-card-bg) / 0.88);
+    border-color: hsl(var(--login-card-border));
+  }
+
+  .login-input {
+    background: hsl(var(--login-input-bg));
+    border-color: hsl(var(--login-input-border));
+    color: hsl(var(--login-input-text));
+  }
+
+  .login-input::placeholder {
+    color: hsl(var(--login-input-placeholder));
   }
 }
