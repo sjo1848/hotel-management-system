@@ -27,7 +27,8 @@ done
 run_frontend_gates() {
   echo "==> frontend gates"
   if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
-    if docker compose ps --services 2>/dev/null | grep -qx frontend; then
+    if docker compose config --services 2>/dev/null | grep -qx frontend; then
+      docker compose up -d frontend >/dev/null 2>&1 || true
       echo "==> using docker compose frontend"
       docker compose exec -T frontend npm run lint
       docker compose exec -T frontend npm run test -- --run
@@ -51,12 +52,19 @@ run_frontend_gates() {
 
 resolve_qa_runner() {
   if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
-    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+    if docker compose config --services 2>/dev/null | grep -qx backend; then
       echo "docker"
       return 0
     fi
   fi
   echo "host"
+}
+
+ensure_backend_runner() {
+  local runner="$1"
+  if [[ "$runner" == "docker" ]]; then
+    docker compose up -d db backend >/dev/null 2>&1 || true
+  fi
 }
 
 echo "=============================="
@@ -100,11 +108,12 @@ echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh
 
 if [[ "$FULL" == "true" ]]; then
-  echo "==> backend integration"
-  ./scripts/ci-backend-integration.sh
-  echo "==> backend security regression"
-  ./scripts/backend-security-regression.sh
   QA_RUNNER="$(resolve_qa_runner)"
+  ensure_backend_runner "$QA_RUNNER"
+  echo "==> backend integration"
+  RUNNER="$QA_RUNNER" ./scripts/ci-backend-integration.sh --runner "$QA_RUNNER"
+  echo "==> backend security regression"
+  RUNNER="$QA_RUNNER" ./scripts/backend-security-regression.sh --runner "$QA_RUNNER"
   echo "==> QA core journeys (runner=${QA_RUNNER})"
   ./scripts/qa-core-journeys.sh --runner "$QA_RUNNER"
   echo "==> observability smoke (runner=${QA_RUNNER})"
@@ -124,7 +133,8 @@ if [[ "${HMS_E2E_FLAKY_CHECK:-false}" == "true" ]]; then
     --runner "${HMS_E2E_FLAKY_RUNNER:-pw-container}" \
     --runs "${HMS_E2E_FLAKY_RUNS:-30}" \
     --max-failure-rate "${HMS_E2E_FLAKY_MAX_FAILURE_RATE:-1}" \
-    --report /tmp/hms_e2e_flaky_report.md
+    --report /tmp/hms_e2e_flaky_report.md \
+    --no-manage-stack
 else
   echo "==> frontend e2e flaky rate gate (skipped; set HMS_E2E_FLAKY_CHECK=true)"
 fi

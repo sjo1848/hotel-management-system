@@ -12,6 +12,7 @@ MAX_FAILURE_RATE="${HMS_E2E_FLAKY_MAX_FAILURE_RATE:-1}"
 BASE_URL="${PLAYWRIGHT_BASE_URL:-http://localhost:5173}"
 GREP_PATTERN="${HMS_E2E_FLAKY_GREP:-journey|lifecycle|billing|rbac}"
 REPORT_FILE="${HMS_E2E_FLAKY_REPORT:-/tmp/hms_e2e_flaky_report.md}"
+PW_IMAGE="${HMS_E2E_PW_IMAGE:-mcr.microsoft.com/playwright:v1.58.2-noble}"
 MANAGE_STACK=true
 
 usage() {
@@ -93,19 +94,12 @@ wait_for_url() {
 if [[ "$RUNNER" == "docker" ]]; then
   wait_for_url "http://localhost:3001/health" 90 2
   wait_for_url "${BASE_URL%/}/login" 90 2
-  echo "==> Installing Playwright browsers in frontend container"
-  docker compose exec -T frontend npx playwright install chromium chromium-headless-shell
 elif [[ "$RUNNER" == "pw-container" ]]; then
   wait_for_url "http://localhost:3001/health" 90 2
   wait_for_url "${BASE_URL%/}/login" 90 2
-  if [[ ! -d "frontend/node_modules" ]]; then
-    echo "==> Installing frontend deps in Playwright container (one-time)"
-    docker run --rm \
-      --network host \
-      -v "$(pwd)/frontend:/work" \
-      -w /work \
-      mcr.microsoft/playwright:v1.58.2-jammy \
-      bash -lc "npm ci --include=optional"
+  if ! docker image inspect "$PW_IMAGE" >/dev/null 2>&1; then
+    echo "==> Pulling Playwright image: $PW_IMAGE"
+    docker pull "$PW_IMAGE"
   fi
 else
   wait_for_url "${BASE_URL%/}/login" 90 2
@@ -124,19 +118,39 @@ run_once() {
   local run_index="$1"
   echo "==> E2E flaky run ${run_index}/${RUNS}"
   if [[ "$RUNNER" == "docker" ]]; then
-    docker compose exec -T frontend sh -lc \
-      "PLAYWRIGHT_BASE_URL='${BASE_URL}' npm run test:e2e -- --grep '${GREP_PATTERN}'"
+    docker compose exec -T frontend sh -lc "
+      if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
+        echo '==> Installing chromium in frontend container for E2E'
+        apk add --no-cache chromium nss freetype harfbuzz ttf-freefont >/tmp/hms_e2e_chromium_install.log 2>&1 || {
+          cat /tmp/hms_e2e_chromium_install.log >&2
+          exit 1
+        }
+      fi
+      BROWSER_BIN=\$(command -v chromium-browser || command -v chromium || true)
+      if [ -z \"\$BROWSER_BIN\" ]; then
+        echo 'chromium is required in frontend container for E2E (rebuild frontend image).' >&2
+        exit 1
+      fi
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"\$BROWSER_BIN\" \
+      PLAYWRIGHT_BASE_URL='${BASE_URL}' \
+      npm run test:e2e -- --grep '${GREP_PATTERN}' --fail-on-flaky-tests
+    "
   elif [[ "$RUNNER" == "pw-container" ]]; then
     docker run --rm \
       --network host \
       -v "$(pwd)/frontend:/work" \
       -w /work \
-      mcr.microsoft/playwright:v1.58.2-jammy \
-      bash -lc "PLAYWRIGHT_BASE_URL='${BASE_URL}' npm run test:e2e -- --grep \"${GREP_PATTERN}\""
+      "$PW_IMAGE" \
+      bash -lc "
+        if [ ! -d node_modules/@playwright/test ]; then
+          npm ci --include=optional
+        fi
+        PLAYWRIGHT_BASE_URL='${BASE_URL}' npm run test:e2e -- --grep \"${GREP_PATTERN}\" --fail-on-flaky-tests
+      "
   else
     (
       cd frontend
-      PLAYWRIGHT_BASE_URL="${BASE_URL}" npm run test:e2e -- --grep "${GREP_PATTERN}"
+      PLAYWRIGHT_BASE_URL="${BASE_URL}" npm run test:e2e -- --grep "${GREP_PATTERN}" --fail-on-flaky-tests
     )
   fi
 }

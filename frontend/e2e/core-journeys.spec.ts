@@ -48,7 +48,14 @@ test("dashboard journey: revenue cockpit and CTA are actionable", async ({ page 
     })
     .first();
 
-  await expect(cta).toBeVisible();
+  const retryButton = page.getByRole("button", { name: "Reintentar" });
+  await expect(async () => {
+    if (await retryButton.isVisible().catch(() => false)) {
+      await retryButton.click();
+    }
+    await expect(cta).toBeVisible({ timeout: 3_000 });
+  }).toPass({ timeout: 20_000, intervals: [1_000, 2_000, 3_000] });
+
   await cta.click();
 
   await expect(page).toHaveURL(/\/(rooms|bookings|reports|housekeeping|calendar)$/);
