@@ -7,15 +7,17 @@ if [ ! -f "backend/Cargo.toml" ]; then
 fi
 
 export DATABASE_URL=${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core}
-RUNNER="host"
+RUNNER="${RUNNER:-auto}"
 
 usage() {
   cat <<USAGE
 Usage: $0 [--runner host|docker]
+Usage: $0 [--runner auto|host|docker]
 
 Options:
   --runner MODE   Execution mode for tests.
-                  host   -> run cargo tests on host (default, CI mode)
+                  auto   -> prefer docker when compose backend is available (default)
+                  host   -> run cargo tests on host
                   docker -> run cargo tests via docker compose backend container
   -h, --help      Show this help
 USAGE
@@ -39,10 +41,26 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ "$RUNNER" != "host" && "$RUNNER" != "docker" ]]; then
-  echo "Invalid --runner value: $RUNNER (expected host|docker)" >&2
+if [[ "$RUNNER" != "auto" && "$RUNNER" != "host" && "$RUNNER" != "docker" ]]; then
+  echo "Invalid --runner value: $RUNNER (expected auto|host|docker)" >&2
   exit 1
 fi
+
+resolve_runner() {
+  if [[ "$RUNNER" == "host" || "$RUNNER" == "docker" ]]; then
+    echo "$RUNNER"
+    return
+  fi
+
+  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
+    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+      echo "docker"
+      return
+    fi
+  fi
+
+  echo "host"
+}
 
 is_transient_sqlx_failure() {
   local output_file="$1"
@@ -61,7 +79,7 @@ run_test_with_retry() {
     echo "==> ${test_name} (attempt ${attempt}/${max_attempts})"
 
     set +e
-    if [[ "$RUNNER" == "docker" ]]; then
+    if [[ "$RUNNER_RESOLVED" == "docker" ]]; then
       docker compose exec -T backend cargo test --test "${test_name}" -- --test-threads=1 --nocapture >"$output_file" 2>&1
     else
       (
@@ -89,7 +107,8 @@ run_test_with_retry() {
   done
 }
 
-echo "==> HMS-QA-010 core journeys (runner=${RUNNER})"
+RUNNER_RESOLVED="$(resolve_runner)"
+echo "==> HMS-QA-010 core journeys (runner=${RUNNER_RESOLVED})"
 run_test_with_retry "csrf_authn_security"
 run_test_with_retry "rbac_authorization"
 run_test_with_retry "booking_flow"

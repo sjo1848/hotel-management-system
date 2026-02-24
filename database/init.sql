@@ -26,8 +26,9 @@
 \ir ../backend/migrations/0013_refresh_session_hardening.sql
 \ir ../backend/migrations/0014_tenant_query_tuning_indexes.sql
 \ir ../backend/migrations/0015_rls_phase1_tenant_policies.sql
-\ir ../backend/migrations/0016_refresh_token_lookup_without_rls_bypass.sql
-\ir ../backend/migrations/0017_rls_fail_closed_default.sql
-\ir ../backend/migrations/0018_hotel_plan_tier_feature_flags.sql
+\ir ../backend/migrations/0016_keyset_pagination_indexes.sql
+\ir ../backend/migrations/0017_rls_bypass_default_false.sql
+\ir ../backend/migrations/0018_refresh_token_lookup_without_rls_bypass.sql
+\ir ../backend/migrations/0019_hotel_plan_tier_and_automation_flags.sql
 
 \echo '[hms] migraciones SQLx aplicadas desde database/init.sql (compat shim).'

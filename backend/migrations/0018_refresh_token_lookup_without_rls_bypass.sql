@@ -1,6 +1,6 @@
--- HMS-SEC-011A:
+-- HMS-SEC-011 final hardening:
 -- remove runtime dependency on app.rls_bypass=true for pre-auth refresh token lookup.
--- lookup is constrained by token_hash session context.
+-- The lookup is now constrained by token_hash session context.
 
 CREATE OR REPLACE FUNCTION public.hms_refresh_token_hash()
 RETURNS TEXT
@@ -24,14 +24,8 @@ DROP POLICY IF EXISTS refresh_tokens_preauth_lookup ON refresh_tokens;
 CREATE POLICY refresh_tokens_tenant_isolation
     ON refresh_tokens
     FOR ALL
-    USING (
-        public.hms_rls_bypass_enabled()
-        OR hotel_id = public.hms_current_hotel_id()
-    )
-    WITH CHECK (
-        public.hms_rls_bypass_enabled()
-        OR hotel_id = public.hms_current_hotel_id()
-    );
+    USING (hotel_id = public.hms_current_hotel_id())
+    WITH CHECK (hotel_id = public.hms_current_hotel_id());
 
 CREATE POLICY refresh_tokens_preauth_lookup
     ON refresh_tokens

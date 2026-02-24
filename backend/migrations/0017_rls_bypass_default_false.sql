@@ -1,6 +1,7 @@
--- HMS-SEC-011B:
--- enforce fail-closed behavior when app.rls_bypass is not explicitly set.
--- previous phase allowed implicit bypass=true for rollout compatibility.
+-- HMS-SEC-T011: harden RLS bypass defaults.
+-- Goal:
+-- - deny-by-default when app.rls_bypass is not explicitly set.
+-- - allow controlled bypass only through explicit runtime setter in repository helper.
 
 CREATE OR REPLACE FUNCTION public.hms_rls_bypass_enabled()
 RETURNS BOOLEAN
@@ -20,3 +21,4 @@ EXCEPTION
         RETURN false;
 END;
 $$;
+
