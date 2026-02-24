@@ -67,7 +67,7 @@ const SidebarItem = ({
 };
 
 type NavItem = {
-  icon: any;
+  icon: LucideIcon;
   label: string;
   path: string;
   capability: Capability;
