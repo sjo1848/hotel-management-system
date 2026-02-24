@@ -21,6 +21,12 @@ BOOKING_THRESHOLD="${HMS_COVERAGE_BOOKING_MIN:-45}"
 TENANT_THRESHOLD="${HMS_COVERAGE_TENANT_MIN:-45}"
 LCOV_FILE="${HMS_COVERAGE_LCOV_FILE:-/tmp/hms_backend_coverage.info}"
 export DATABASE_URL="${DATABASE_URL:-postgres://admin:password123@localhost:5432/hms_core}"
+COVERAGE_DB_MODE="${HMS_COVERAGE_DB_MODE:-auto}" # auto|shared|isolated
+
+if [[ "$COVERAGE_DB_MODE" != "auto" && "$COVERAGE_DB_MODE" != "shared" && "$COVERAGE_DB_MODE" != "isolated" ]]; then
+  echo "Invalid HMS_COVERAGE_DB_MODE: ${COVERAGE_DB_MODE} (expected auto|shared|isolated)" >&2
+  exit 1
+fi
 
 require_tooling() {
   if cargo llvm-cov --version >/dev/null 2>&1; then
@@ -64,7 +70,7 @@ module_for_file() {
     */src/application/booking_service.rs|*/src/application/booking_transaction_service.rs|*/src/infrastructure/web/handlers/ops/bookings.rs)
       echo "booking"
       ;;
-    */src/infrastructure/web/middleware/rbac.rs|*/src/infrastructure/web/middleware/auth.rs|*/src/infrastructure/web/middleware/request_id.rs)
+    */src/infrastructure/web/middleware/rbac.rs|*/src/infrastructure/web/middleware/rbac_generated.rs|*/src/infrastructure/web/middleware/auth.rs|*/src/infrastructure/web/middleware/request_id.rs)
       echo "tenant"
       ;;
     *)
@@ -99,6 +105,76 @@ is_transient_sqlx_failure() {
   grep -qE 'PoolTimedOut|failed to connect to setup test database|timed out while waiting for an open connection|Connection refused|failed to lookup address information' "$output_file"
 }
 
+ISOLATED_DB_CONTAINER=""
+coverage_output=""
+
+cleanup_resources() {
+  if [[ -n "$coverage_output" ]]; then
+    rm -f "$coverage_output" >/dev/null 2>&1 || true
+  fi
+  if [[ -n "$ISOLATED_DB_CONTAINER" ]]; then
+    docker rm -f "$ISOLATED_DB_CONTAINER" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup_resources EXIT
+
+setup_isolated_db_if_needed() {
+  local use_isolated="false"
+  if [[ "$COVERAGE_DB_MODE" == "isolated" ]]; then
+    use_isolated="true"
+  elif [[ "$COVERAGE_DB_MODE" == "auto" && -n "$(command -v docker || true)" ]]; then
+    use_isolated="true"
+  fi
+
+  if [[ "$use_isolated" != "true" ]]; then
+    return 0
+  fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    if [[ "$STRICT_MODE" == "true" ]]; then
+      echo "Docker is required when HMS_COVERAGE_DB_MODE=isolated in strict mode." >&2
+      exit 1
+    fi
+    echo "docker unavailable; falling back to shared DATABASE_URL for coverage."
+    return 0
+  fi
+
+  ISOLATED_DB_CONTAINER="hms-coverage-db-$$"
+  docker rm -f "$ISOLATED_DB_CONTAINER" >/dev/null 2>&1 || true
+  docker run -d \
+    --name "$ISOLATED_DB_CONTAINER" \
+    -e POSTGRES_USER=admin \
+    -e POSTGRES_PASSWORD=password123 \
+    -e POSTGRES_DB=hms_core \
+    -p 127.0.0.1::5432 \
+    postgres:16-alpine >/dev/null
+
+  local mapped_port
+  mapped_port="$(docker port "$ISOLATED_DB_CONTAINER" 5432/tcp | awk -F: '{print $2}' | head -n1)"
+  if [[ -z "$mapped_port" ]]; then
+    echo "Failed to determine mapped port for isolated coverage DB." >&2
+    exit 1
+  fi
+
+  local pg_ready=false
+  local attempt
+  for attempt in $(seq 1 45); do
+    if docker exec "$ISOLATED_DB_CONTAINER" pg_isready -U admin -d hms_core >/dev/null 2>&1; then
+      pg_ready=true
+      break
+    fi
+    sleep 1
+  done
+  if [[ "$pg_ready" != "true" ]]; then
+    echo "Isolated coverage postgres did not become ready." >&2
+    exit 1
+  fi
+
+  DATABASE_URL="postgres://admin:password123@127.0.0.1:${mapped_port}/hms_core"
+  export DATABASE_URL
+  echo "Using isolated coverage DB at ${DATABASE_URL}"
+}
+
 run_coverage_collection() {
   local output_file="$1"
   set +e
@@ -111,7 +187,9 @@ run_coverage_collection() {
       --test csrf_authn_security \
       --test rbac_authorization \
       --test booking_flow \
-      --test operational_flow
+      --test operational_flow \
+      -- \
+      --test-threads=1
   ) >"$output_file" 2>&1
   local status=$?
   set -e
@@ -119,8 +197,8 @@ run_coverage_collection() {
 }
 
 echo "==> backend coverage thresholds (auth=${AUTH_THRESHOLD} booking=${BOOKING_THRESHOLD} tenant=${TENANT_THRESHOLD})"
+setup_isolated_db_if_needed
 coverage_output="$(mktemp)"
-trap 'rm -f "$coverage_output"' EXIT
 
 attempt=1
 max_attempts=3
