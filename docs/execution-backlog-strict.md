@@ -70,6 +70,11 @@ PASS/FAIL:
    - PASS: schema canónico versionado + validacion en CI.
    - Comando: `./scripts/check-rbac-canon.sh`.
 
+### Sprint 2 (reliability FE)
+1. Flaky rate E2E:
+   - PASS: `failure_rate < 1%` en 30 corridas.
+   - Comando: `HMS_E2E_FLAKY_CHECK=true HMS_E2E_FLAKY_RUNS=30 ./scripts/gate-ci.sh --skip-perf`.
+
 ## Regla tecnica exacta: tenant helper enforcement
 
 Scope:

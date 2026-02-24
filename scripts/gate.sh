@@ -118,6 +118,17 @@ run_frontend_gates
 echo "==> frontend session coverage gate"
 ./scripts/check-frontend-session-coverage.sh
 
+if [[ "${HMS_E2E_FLAKY_CHECK:-false}" == "true" ]]; then
+  echo "==> frontend e2e flaky rate gate"
+  ./scripts/check-e2e-flaky-rate.sh \
+    --runner "${HMS_E2E_FLAKY_RUNNER:-pw-container}" \
+    --runs "${HMS_E2E_FLAKY_RUNS:-30}" \
+    --max-failure-rate "${HMS_E2E_FLAKY_MAX_FAILURE_RATE:-1}" \
+    --report /tmp/hms_e2e_flaky_report.md
+else
+  echo "==> frontend e2e flaky rate gate (skipped; set HMS_E2E_FLAKY_CHECK=true)"
+fi
+
 echo "=============================="
 echo " HMS GATE (LOCAL) — PASS"
 echo "=============================="
