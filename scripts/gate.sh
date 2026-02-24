@@ -104,6 +104,12 @@ echo "==> rbac canon gate"
 echo "==> auth refresh slo contract gate"
 ./scripts/check-auth-refresh-slo.sh
 
+echo "==> ops slo contract gate"
+./scripts/check-ops-slo-contract.sh
+
+echo "==> business kpi contract gate"
+./scripts/check-business-kpi-contract.sh
+
 echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh
 

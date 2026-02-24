@@ -1,7 +1,7 @@
 # HMS Elite — Contrato de ejecucion estricto (PASS/FAIL)
 
 Estado: listo para ejecucion condicionada.
-Ultima actualizacion: 2026-02-23 UTC.
+Ultima actualizacion: 2026-02-24 UTC.
 
 ## Baseline formal (obligatorio antes de Sprint 1)
 
@@ -48,15 +48,32 @@ PASS/FAIL:
 ### M4. change_failure_rate
 - Formula: `failed_deploys / total_deploys * 100`.
 - Umbral: `change_failure_rate <= 10%`.
+- Comando: `./scripts/check-ops-slo-contract.sh`.
 
 ### M5. rollback_rate
 - Formula: `rollbacks / total_deploys * 100`.
 - Umbral: `rollback_rate <= 5%`.
+- Comando: `./scripts/check-ops-slo-contract.sh`.
 
 ### M6. mttr_prod
 - Formula: promedio de tiempo desde alerta critica a recuperacion.
 - Umbral: `mttr_prod < 30 min`.
-- Estado: SIN EVIDENCIA EN REPO para automatizacion completa.
+- Comando: `./scripts/check-ops-slo-contract.sh`.
+
+## Contrato KPI de negocio (premium)
+
+Documentacion fuente:
+- `docs/validation/ops-kpi-contract.md`
+
+Indicadores requeridos:
+- `kpi_hq_activation_rate >= 60%`
+- `kpi_feature_flags_usage_rate >= 70%`
+- `kpi_plan_upgrade_rate >= 5%`
+- `kpi_critical_task_time_p95 <= 120 sec`
+- `kpi_churn_proxy_4w <= 15%`
+
+Comando de validacion:
+- `./scripts/check-business-kpi-contract.sh`
 
 ## Sprint gates (operables)
 
@@ -95,3 +112,4 @@ Excepciones:
 - [ ] Tenant helper enforcement gate activo y en verde.
 - [ ] Suite FE critica minima implementada y estable.
 - [ ] SLOs con formula/fuente/ventana/comando en operacion.
+- [ ] Contrato de KPIs premium versionado y validado en gate.

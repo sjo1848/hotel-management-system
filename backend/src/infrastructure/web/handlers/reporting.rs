@@ -38,6 +38,10 @@ pub async fn track_ui_telemetry_handler(
         "revenue_cockpit_viewed",
         "revenue_cockpit_cta_clicked",
         "automation_alert_clicked",
+        "network_kpis_viewed",
+        "network_plan_upgrade_submitted",
+        "network_plan_upgrade_succeeded",
+        "network_plan_upgrade_failed",
     ];
 
     if !ALLOWED_EVENTS.contains(&payload.event.as_str()) {

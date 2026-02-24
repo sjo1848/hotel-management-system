@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowRight,
   Globe,
@@ -34,6 +34,7 @@ import { type Hotel } from "@/types/domain";
 import { getErrorMessage } from "@/api/errors";
 import { useResourceQuery } from "@/lib/useResourceQuery";
 import { useNavigate } from "react-router-dom";
+import { trackUiEvent } from "@/lib/telemetry";
 
 type NetworkData = {
   hotels: Hotel[];
@@ -63,6 +64,7 @@ const HotelNetworkPage = () => {
   const [selectedHotelId, setSelectedHotelId] = useState<string>("all");
   const [planDraft, setPlanDraft] = useState<"BASIC" | "PRO" | "ENTERPRISE">("PRO");
   const [planUpdateLoading, setPlanUpdateLoading] = useState(false);
+  const lastTrackedNetworkViewRef = useRef<string | null>(null);
 
   const networkQueryKey = useMemo(
     () => `network:summary:${range.start}:${range.end}`,
@@ -118,6 +120,22 @@ const HotelNetworkPage = () => {
   }, [visibleHotels]);
 
   useEffect(() => {
+    if (!summary) return;
+    const telemetryKey = `${range.start}:${range.end}:${selectedHotelId}:${summary.total_hotels}:${summary.total_active_bookings}`;
+    if (lastTrackedNetworkViewRef.current === telemetryKey) return;
+    lastTrackedNetworkViewRef.current = telemetryKey;
+    trackUiEvent("network_kpis_viewed", {
+      range_start: range.start,
+      range_end: range.end,
+      selected_hotel_id: selectedHotelId,
+      total_hotels: summary.total_hotels,
+      total_active_bookings: summary.total_active_bookings,
+      total_revenue_cents: summary.total_revenue_cents,
+      average_occupancy_rate: summary.average_occupancy_rate,
+    });
+  }, [range.end, range.start, selectedHotelId, summary]);
+
+  useEffect(() => {
     if (!selectedHotelDetail) return;
     setPlanDraft(selectedHotelDetail.plan_tier);
   }, [selectedHotelDetail]);
@@ -170,12 +188,29 @@ const HotelNetworkPage = () => {
       return;
     }
     setPlanUpdateLoading(true);
+    const previousPlanTier = selectedHotelDetail.plan_tier;
+    trackUiEvent("network_plan_upgrade_submitted", {
+      hotel_id: selectedHotelDetail.hotel_id,
+      previous_plan_tier: previousPlanTier,
+      requested_plan_tier: planDraft,
+    });
     try {
       await updateHotelPlanTier(selectedHotelDetail.hotel_id, planDraft);
+      trackUiEvent("network_plan_upgrade_succeeded", {
+        hotel_id: selectedHotelDetail.hotel_id,
+        previous_plan_tier: previousPlanTier,
+        updated_plan_tier: planDraft,
+      });
       toast({ title: "Plan actualizado", variant: "success" });
       invalidateNetwork();
       await refetchNetwork();
     } catch (error) {
+      trackUiEvent("network_plan_upgrade_failed", {
+        hotel_id: selectedHotelDetail.hotel_id,
+        previous_plan_tier: previousPlanTier,
+        requested_plan_tier: planDraft,
+        error_message: getErrorMessage(error, "plan upgrade failed"),
+      });
       toast({
         title: "Error",
         description: getErrorMessage(error, "No se pudo actualizar el plan del hotel"),
