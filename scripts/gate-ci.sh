@@ -233,6 +233,8 @@ if [[ "$SKIP_FRONTEND" != "true" ]]; then
   echo "==> frontend preflight (rollup fallback)"
   ./scripts/frontend-runner-preflight.sh
   run_frontend_gates
+  echo "==> frontend session coverage gate"
+  ./scripts/check-frontend-session-coverage.sh
 fi
 
 if [[ "$SKIP_PERF" != "true" ]]; then

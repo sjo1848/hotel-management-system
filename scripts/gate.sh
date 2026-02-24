@@ -115,6 +115,9 @@ fi
 
 run_frontend_gates
 
+echo "==> frontend session coverage gate"
+./scripts/check-frontend-session-coverage.sh
+
 echo "=============================="
 echo " HMS GATE (LOCAL) — PASS"
 echo "=============================="
