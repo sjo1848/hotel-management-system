@@ -239,6 +239,8 @@ fi
 
 if [[ "$SKIP_PERF" != "true" ]]; then
   run_perf_smoke_gate
+  echo "==> auth refresh perf gate"
+  ./scripts/check-auth-refresh-perf-gate.sh --report /tmp/hms_perf_gate_ci.md
 fi
 
 echo "=============================="
