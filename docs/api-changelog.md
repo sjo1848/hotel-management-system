@@ -2,6 +2,15 @@
 
 ## v1
 
+### 2026-02-24
+- Se amplía el enum de `UiTelemetryEventRequest.event` para soportar KPIs premium HQ:
+  - `network_kpis_viewed`
+  - `network_plan_upgrade_submitted`
+  - `network_plan_upgrade_succeeded`
+  - `network_plan_upgrade_failed`
+- Se mantienen eventos previos de dashboard/revenue para trazabilidad de adopción.
+- No hay breaking change: el endpoint `POST /api/v1/telemetry/ui` conserva contrato v1 y formato de payload.
+
 ### 2026-02-23
 - Se agregan endpoints de feature flags por plan:
   - `GET /api/v1/feature-flags`

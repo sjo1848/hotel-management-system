@@ -47,21 +47,27 @@ if ! git rev-parse --verify --quiet "$BASE_REF" >/dev/null; then
   exit 1
 fi
 
-openapi_changed=$(
+openapi_changed_committed=$(
   git diff --name-only "$BASE_REF"...HEAD -- backend/openapi.yaml docs/openapi.yaml | wc -l | tr -d ' '
 )
+openapi_changed_worktree=$(
+  git diff --name-only HEAD -- backend/openapi.yaml docs/openapi.yaml | wc -l | tr -d ' '
+)
 
-if [[ "$openapi_changed" == "0" ]]; then
+if [[ "$openapi_changed_committed" == "0" && "$openapi_changed_worktree" == "0" ]]; then
   echo "OpenAPI changelog gate passed (no OpenAPI diff detected)."
   exit 0
 fi
 
-changelog_changed=$(
+changelog_changed_committed=$(
   git diff --name-only "$BASE_REF"...HEAD -- docs/api-changelog.md | wc -l | tr -d ' '
 )
+changelog_changed_worktree=$(
+  git diff --name-only HEAD -- docs/api-changelog.md | wc -l | tr -d ' '
+)
 
-if [[ "$changelog_changed" == "0" ]]; then
-  echo "OpenAPI changed since $BASE_REF but docs/api-changelog.md was not updated." >&2
+if [[ "$changelog_changed_committed" == "0" && "$changelog_changed_worktree" == "0" ]]; then
+  echo "OpenAPI changed since $BASE_REF or in working tree but docs/api-changelog.md was not updated." >&2
   exit 1
 fi
 
