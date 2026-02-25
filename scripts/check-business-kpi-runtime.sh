@@ -58,17 +58,49 @@ do
 done
 
 resolve_runner() {
-  if [[ "$RUNNER" == "host" || "$RUNNER" == "docker" ]]; then
-    echo "$RUNNER"
-    return
-  fi
+  local docker_ready=false
+  local host_ready=false
+
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     if docker compose config --services 2>/dev/null | grep -qx db; then
-      echo "docker"
-      return
+      docker_ready=true
     fi
   fi
-  echo "host"
+
+  if command -v psql >/dev/null 2>&1; then
+    host_ready=true
+  fi
+
+  case "$RUNNER" in
+    docker)
+      if [[ "$docker_ready" != "true" ]]; then
+        echo "docker runner requested but docker compose db service is unavailable." >&2
+        exit 1
+      fi
+      echo "docker"
+      ;;
+    host)
+      if [[ "$host_ready" != "true" ]]; then
+        echo "host runner requested but psql is unavailable." >&2
+        exit 1
+      fi
+      echo "host"
+      ;;
+    auto)
+      if [[ "$docker_ready" == "true" ]]; then
+        echo "docker"
+      elif [[ "$host_ready" == "true" ]]; then
+        echo "host"
+      else
+        echo "Unable to resolve KPI runner: neither docker(db) nor host psql are available." >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "Invalid --runner value: $RUNNER (expected auto|host|docker)" >&2
+      exit 1
+      ;;
+  esac
 }
 
 RUNNER_RESOLVED="$(resolve_runner)"
@@ -84,10 +116,6 @@ run_sql() {
     status=$?
     set -e
   else
-    if ! command -v psql >/dev/null 2>&1; then
-      echo "psql not found for host runner." >&2
-      exit 1
-    fi
     set +e
     result="$(psql "$DATABASE_URL" -tA -c "$sql" 2>/dev/null)"
     status=$?
