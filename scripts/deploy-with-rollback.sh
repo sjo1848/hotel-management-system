@@ -81,13 +81,23 @@ if [[ "$DEPLOY_PROFILE" != "auto" && "$DEPLOY_PROFILE" != "dev" && "$DEPLOY_PROF
 fi
 
 PREV_REF="$(git rev-parse --verify HEAD)"
+TARGET_COMMIT=""
 DEPLOY_TS="$(date +%Y%m%d_%H%M%S)"
 BACKUP_NAME="predeploy_${DEPLOY_TS}.sql.gz"
 BACKUP_DIR="${BACKUP_DIR:-./scripts/backups}"
 BACKUP_PATH="${BACKUP_DIR}/${BACKUP_NAME}"
+DEPLOY_START_EPOCH="$(date +%s)"
 
 rollback_needed=false
 COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.yml)
+RUNTIME_PROFILE="unknown"
+
+log_release_event_safe() {
+  if [[ ! -x "./scripts/log-release-event.sh" ]]; then
+    return 0
+  fi
+  ./scripts/log-release-event.sh "$@" >/dev/null 2>&1 || true
+}
 
 resolve_profile() {
   if [ "$DEPLOY_PROFILE" != "auto" ]; then
@@ -124,9 +134,28 @@ rollback() {
   fi
 
   trap - ERR
+  local rollback_start_epoch
+  local rollback_end_epoch
+  local rollback_recovery_seconds=0
+  local deploy_duration_seconds
+  deploy_duration_seconds=$(( $(date +%s) - DEPLOY_START_EPOCH ))
+
   echo "⚠️  Despliegue fallido. Ejecutando rollback automático..."
+  rollback_start_epoch="$(date +%s)"
   if ! git checkout -q "$PREV_REF"; then
     echo "❌ No se pudo volver al commit previo: $PREV_REF"
+    log_release_event_safe \
+      --event deploy \
+      --status failure \
+      --field profile="$RUNTIME_PROFILE" \
+      --field previous_ref="$PREV_REF" \
+      --field target_ref="$TARGET_REF" \
+      --field deployed_ref="${TARGET_COMMIT:-unknown}" \
+      --field rollback_executed=true \
+      --field rollback_status=failed \
+      --field reason=rollback_checkout_failed \
+      --field duration_seconds="$deploy_duration_seconds" \
+      --field recovery_seconds=0
     exit 1
   fi
 
@@ -134,12 +163,36 @@ rollback() {
   echo "🗄️  Asegurando DB para rollback..."
   if ! docker compose "${COMPOSE_ARGS[@]}" up -d db; then
     echo "❌ No se pudo iniciar DB para rollback"
+    log_release_event_safe \
+      --event deploy \
+      --status failure \
+      --field profile="$RUNTIME_PROFILE" \
+      --field previous_ref="$PREV_REF" \
+      --field target_ref="$TARGET_REF" \
+      --field deployed_ref="${TARGET_COMMIT:-unknown}" \
+      --field rollback_executed=true \
+      --field rollback_status=failed \
+      --field reason=rollback_db_start_failed \
+      --field duration_seconds="$deploy_duration_seconds" \
+      --field recovery_seconds=0
     exit 1
   fi
   if [ -f "$BACKUP_PATH" ]; then
     echo "🗄️  Restaurando base de datos desde backup pre-deploy..."
     if ! ./scripts/restore.sh "$BACKUP_PATH" --recreate-db --yes; then
       echo "❌ Falló la restauración de DB durante rollback"
+      log_release_event_safe \
+        --event deploy \
+        --status failure \
+        --field profile="$RUNTIME_PROFILE" \
+        --field previous_ref="$PREV_REF" \
+        --field target_ref="$TARGET_REF" \
+        --field deployed_ref="${TARGET_COMMIT:-unknown}" \
+        --field rollback_executed=true \
+        --field rollback_status=failed \
+        --field reason=rollback_db_restore_failed \
+        --field duration_seconds="$deploy_duration_seconds" \
+        --field recovery_seconds=0
       exit 1
     fi
   else
@@ -148,8 +201,36 @@ rollback() {
 
   if ! compose_up_with_retry; then
     echo "❌ No se pudo restaurar servicios al commit previo"
+    log_release_event_safe \
+      --event deploy \
+      --status failure \
+      --field profile="$RUNTIME_PROFILE" \
+      --field previous_ref="$PREV_REF" \
+      --field target_ref="$TARGET_REF" \
+      --field deployed_ref="${TARGET_COMMIT:-unknown}" \
+      --field rollback_executed=true \
+      --field rollback_status=failed \
+      --field reason=rollback_compose_restore_failed \
+      --field duration_seconds="$deploy_duration_seconds" \
+      --field recovery_seconds=0
     exit 1
   fi
+
+  rollback_end_epoch="$(date +%s)"
+  rollback_recovery_seconds=$((rollback_end_epoch - rollback_start_epoch))
+  deploy_duration_seconds=$((rollback_end_epoch - DEPLOY_START_EPOCH))
+  log_release_event_safe \
+    --event deploy \
+    --status failure \
+    --field profile="$RUNTIME_PROFILE" \
+    --field previous_ref="$PREV_REF" \
+    --field target_ref="$TARGET_REF" \
+    --field deployed_ref="${TARGET_COMMIT:-unknown}" \
+    --field rollback_executed=true \
+    --field rollback_status=success \
+    --field reason=deploy_failed_rollback_applied \
+    --field duration_seconds="$deploy_duration_seconds" \
+    --field recovery_seconds="$rollback_recovery_seconds"
 
   echo "✅ Rollback finalizado sobre commit $(git rev-parse --short HEAD)"
   exit 1
@@ -202,6 +283,20 @@ fi
 
 rollback_needed=false
 trap - ERR
+
+deploy_duration_seconds=$(( $(date +%s) - DEPLOY_START_EPOCH ))
+log_release_event_safe \
+  --event deploy \
+  --status success \
+  --field profile="$RUNTIME_PROFILE" \
+  --field previous_ref="$PREV_REF" \
+  --field target_ref="$TARGET_REF" \
+  --field deployed_ref="$TARGET_COMMIT" \
+  --field rollback_executed=false \
+  --field rollback_status=not_needed \
+  --field reason=deploy_success \
+  --field duration_seconds="$deploy_duration_seconds" \
+  --field recovery_seconds=0
 
 echo "✅ Deploy completado con éxito"
 echo "• Commit desplegado: $(git rev-parse --short HEAD)"
