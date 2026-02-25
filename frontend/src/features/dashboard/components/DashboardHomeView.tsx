@@ -53,7 +53,7 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
   <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden group hover:-translate-y-1 transition-all duration-300">
     <div className={cn("h-1 w-full", accent.replace("bg-", "bg-").replace("-50", "-500"))} />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-      <CardTitle className="text-xs font-black text-slate-400 uppercase tracking-widest">
+      <CardTitle className="text-xs font-black text-muted-foreground uppercase tracking-widest">
         {title}
       </CardTitle>
       <div
@@ -62,14 +62,14 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
           accent,
         )}
       >
-        <Icon className="h-5 w-5 text-slate-700" />
+        <Icon className="h-5 w-5 text-foreground" />
       </div>
     </CardHeader>
     <CardContent>
       {loading ? (
         <Skeleton className="h-8 w-24 mb-2" />
       ) : (
-        <div className="text-3xl font-black text-slate-900 tracking-tight">{value}</div>
+        <div className="text-3xl font-black text-foreground tracking-tight">{value}</div>
       )}
       <div className="flex items-center gap-2 mt-2">
         {loading ? (
@@ -89,7 +89,7 @@ const KPICard = ({ title, value, subtext, trend, icon: Icon, accent, loading }: 
               )}
               {trend === "up" ? "12%" : "4%"}
             </div>
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{subtext}</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">{subtext}</span>
           </>
         )}
       </div>
@@ -148,7 +148,7 @@ const AlertItem = ({
   onClick: (bookingId: string) => void;
 }) => (
   <div
-    className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100 hover:bg-white hover:shadow-md transition-all group cursor-pointer"
+    className="flex items-center justify-between p-4 bg-muted rounded-xl border border-border hover:bg-card hover:shadow-md transition-all group cursor-pointer"
     onClick={() => onClick(alert.booking_id)}
   >
     <div className="flex items-center gap-4">
@@ -161,14 +161,14 @@ const AlertItem = ({
         {type === "arrival" ? <LogIn className="w-5 h-5" /> : <LogOutIcon className="w-5 h-5" />}
       </div>
       <div>
-        <div className="text-sm font-black text-slate-900 tracking-tight">{alert.guest_name}</div>
-        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+        <div className="text-sm font-black text-foreground tracking-tight">{alert.guest_name}</div>
+        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
           Habitación {alert.room_number}
         </div>
       </div>
     </div>
     <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-      <MoreVertical className="w-4 h-4 text-slate-400" />
+      <MoreVertical className="w-4 h-4 text-muted-foreground" />
     </Button>
   </div>
 );
@@ -225,8 +225,8 @@ export const DashboardHomeView = ({
   return (
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col">
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">Vista General</h2>
-        <p className="text-slate-500 font-medium mt-2">Estado operativo del hotel en tiempo real.</p>
+        <h2 className="text-3xl font-black text-foreground tracking-tight leading-none">Vista General</h2>
+        <p className="text-muted-foreground font-medium mt-2">Estado operativo del hotel en tiempo real.</p>
       </div>
 
       {loadError ? (
@@ -236,7 +236,7 @@ export const DashboardHomeView = ({
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-lg border-rose-200 bg-white text-rose-700 hover:bg-rose-100"
+            className="rounded-lg border-rose-200 bg-card text-rose-700 hover:bg-rose-100"
             onClick={onRetry}
           >
             Reintentar
@@ -283,12 +283,12 @@ export const DashboardHomeView = ({
         />
       </div>
 
-      <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white">
-        <CardHeader className="border-b border-slate-100">
+      <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-card">
+        <CardHeader className="border-b border-border">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Revenue Cockpit</CardTitle>
-              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+              <CardTitle className="text-xl font-black text-foreground tracking-tight">Revenue Cockpit</CardTitle>
+              <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                 ADR, RevPAR y prioridades accionables del día
               </p>
             </div>
@@ -299,32 +299,32 @@ export const DashboardHomeView = ({
         </CardHeader>
         <CardContent className="space-y-6 p-6">
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">ADR</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">
+            <div className="rounded-2xl border border-border bg-muted p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">ADR</p>
+              <p className="mt-2 text-3xl font-black text-foreground">
                 ${((kpis?.adr_cents ?? 0) / 100).toLocaleString("es-AR")}
               </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">Tarifa promedio por reserva activa</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">Tarifa promedio por reserva activa</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">RevPAR</p>
-              <p className="mt-2 text-3xl font-black text-slate-900">
+            <div className="rounded-2xl border border-border bg-muted p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">RevPAR</p>
+              <p className="mt-2 text-3xl font-black text-foreground">
                 ${((kpis?.rev_par_cents ?? 0) / 100).toLocaleString("es-AR")}
               </p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">Ingreso por habitación disponible</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">Ingreso por habitación disponible</p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Ocupación</p>
+            <div className="rounded-2xl border border-border bg-muted p-4">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Ocupación</p>
               <p className={`mt-2 text-3xl font-black ${occupancyTone}`}>{(kpis?.occupancy_rate ?? 0).toFixed(1)}%</p>
-              <p className="mt-1 text-xs font-semibold text-slate-500">Umbrales: bajo &lt;65, medio 65-79, alto ≥80</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">Umbrales: bajo &lt;65, medio 65-79, alto ≥80</p>
             </div>
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
             {dailyPriorities.map((priority) => (
-              <div key={priority.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={priority.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <p className="text-sm font-black text-slate-900">{priority.title}</p>
+                  <p className="text-sm font-black text-foreground">{priority.title}</p>
                   <span
                     className={`rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-widest ${priorityTone(
                       priority.severity,
@@ -333,12 +333,12 @@ export const DashboardHomeView = ({
                     {priority.severity}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500">{priority.description}</p>
+                <p className="text-xs font-medium text-muted-foreground">{priority.description}</p>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className="mt-4 rounded-xl border-slate-200 bg-white text-slate-800"
+                  className="mt-4 rounded-xl border-border bg-card text-foreground"
                   onClick={() => onRevenueCtaClick(priority)}
                 >
                   {priority.actionLabel}
@@ -350,12 +350,12 @@ export const DashboardHomeView = ({
       </Card>
 
       {featureFlags?.automation_alerts_enabled ? (
-        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="border-b border-slate-100">
+        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-card">
+          <CardHeader className="border-b border-border">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Automation & Alerts</CardTitle>
-                <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                <CardTitle className="text-xl font-black text-foreground tracking-tight">Automation & Alerts</CardTitle>
+                <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                   SLA housekeeping, pricing asistido y excepciones operativas
                 </p>
               </div>
@@ -366,7 +366,7 @@ export const DashboardHomeView = ({
           </CardHeader>
           <CardContent className="space-y-4 p-6">
             {automationInsights.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm font-semibold text-slate-500">
+              <div className="rounded-xl border border-dashed border-border bg-muted p-6 text-center text-sm font-semibold text-muted-foreground">
                 Sin alertas de automatización para este momento.
               </div>
             ) : (
@@ -382,7 +382,7 @@ export const DashboardHomeView = ({
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="mt-4 border-white/70 bg-white text-slate-800"
+                      className="mt-4 border-white/70 bg-card text-foreground"
                       onClick={() => onAutomationAction(insight)}
                     >
                       {insight.actionLabel}
@@ -402,10 +402,10 @@ export const DashboardHomeView = ({
       ) : null}
 
       <div className="grid gap-8 md:grid-cols-2">
-        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white p-6">
+        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-card p-6">
           <div className="flex flex-col mb-6">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">Tendencia de Ingresos</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Últimos 30 días</p>
+            <h3 className="text-lg font-black text-foreground tracking-tight">Tendencia de Ingresos</h3>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Últimos 30 días</p>
           </div>
           <div className="h-[250px] w-full">
             {loading ? (
@@ -448,10 +448,10 @@ export const DashboardHomeView = ({
           </div>
         </Card>
 
-        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-white p-6">
+        <Card className="border-none shadow-2xl shadow-slate-200/60 rounded-3xl overflow-hidden bg-card p-6">
           <div className="flex flex-col mb-6">
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">Tasa de Ocupación</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Ocupación diaria (%)</p>
+            <h3 className="text-lg font-black text-foreground tracking-tight">Tasa de Ocupación</h3>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Ocupación diaria (%)</p>
           </div>
           <div className="h-[250px] w-full">
             {loading ? (
@@ -502,7 +502,7 @@ export const DashboardHomeView = ({
             </div>
             <CardHeader>
               <CardTitle className="text-lg font-black tracking-tight">Cierre de Caja</CardTitle>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Balance del Turno Actual</p>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Balance del Turno Actual</p>
             </CardHeader>
             <CardContent className="space-y-6 relative z-10">
               <div className="space-y-1">
@@ -516,11 +516,11 @@ export const DashboardHomeView = ({
 
               <div className="grid grid-cols-2 gap-4 py-4 border-y border-white/10">
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Efectivo</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Efectivo</p>
                   <p className="text-lg font-bold text-white">${((balance?.cash_amount_cents || 0) / 100).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase">Tarjeta</p>
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase">Tarjeta</p>
                   <p className="text-lg font-bold text-white">${((balance?.card_amount_cents || 0) / 100).toLocaleString()}</p>
                 </div>
               </div>
@@ -528,7 +528,7 @@ export const DashboardHomeView = ({
               <Button
                 onClick={onCloseCash}
                 disabled={isClosing || (balance?.total_amount_cents || 0) === 0}
-                className="w-full h-12 bg-white text-slate-900 hover:bg-slate-100 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl"
+                className="w-full h-12 bg-card text-foreground hover:bg-slate-100 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-xl"
               >
                 {isClosing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Finalizar Turno y Cerrar Caja"}
               </Button>
@@ -538,13 +538,13 @@ export const DashboardHomeView = ({
 
         <div className="lg:col-span-2 space-y-6">
           <div>
-            <h3 className="text-lg font-black text-slate-900 tracking-tight">Alertas de Hoy</h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Llegadas y Salidas</p>
+            <h3 className="text-lg font-black text-foreground tracking-tight">Alertas de Hoy</h3>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">Llegadas y Salidas</p>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">
                 Check-ins ({kpis?.arrivals_today.length || 0})
               </span>
               {loading ? (
@@ -552,7 +552,7 @@ export const DashboardHomeView = ({
                   .fill(0)
                   .map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)
               ) : kpis?.arrivals_today.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs font-bold text-slate-400">
+                <div className="p-4 bg-muted rounded-xl border border-dashed border-border text-center text-xs font-bold text-muted-foreground">
                   Sin llegadas hoy
                 </div>
               ) : (
@@ -563,7 +563,7 @@ export const DashboardHomeView = ({
             </div>
 
             <div className="space-y-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] ml-1">
                 Check-outs ({kpis?.departures_today.length || 0})
               </span>
               {loading ? (
@@ -571,7 +571,7 @@ export const DashboardHomeView = ({
                   .fill(0)
                   .map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)
               ) : kpis?.departures_today.length === 0 ? (
-                <div className="p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-center text-xs font-bold text-slate-400">
+                <div className="p-4 bg-muted rounded-xl border border-dashed border-border text-center text-xs font-bold text-muted-foreground">
                   Sin salidas hoy
                 </div>
               ) : (
@@ -585,23 +585,23 @@ export const DashboardHomeView = ({
 
         <div className="lg:col-span-3">
           <Card className="border-none shadow-2xl shadow-slate-200/60 overflow-hidden rounded-3xl h-full">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-6 px-8">
+            <CardHeader className="bg-muted/50 border-b border-border py-6 px-8">
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Últimas Reservas</CardTitle>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest mt-1">Actividad reciente</p>
+                  <CardTitle className="text-xl font-black text-foreground tracking-tight">Últimas Reservas</CardTitle>
+                  <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mt-1">Actividad reciente</p>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-xl font-bold text-xs uppercase tracking-widest border-slate-200 bg-white"
+                  className="rounded-xl font-bold text-xs uppercase tracking-widest border-border bg-card"
                   onClick={onNavigateBookings}
                 >
                   Ver todo
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0 text-slate-900 bg-white">
+            <CardContent className="p-0 text-foreground bg-card">
               <BookingList />
             </CardContent>
           </Card>

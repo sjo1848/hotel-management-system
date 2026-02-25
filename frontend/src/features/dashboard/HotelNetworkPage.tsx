@@ -229,11 +229,11 @@ const HotelNetworkPage = () => {
             <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
               <Globe className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">HQ Multi-Hotel</h2>
+            <h2 className="text-3xl font-black text-foreground tracking-tight leading-none">HQ Multi-Hotel</h2>
           </div>
-          <p className="text-slate-500 font-medium mt-2">Consolidado por cadena con benchmark y drill-down por propiedad.</p>
+          <p className="text-muted-foreground font-medium mt-2">Consolidado por cadena con benchmark y drill-down por propiedad.</p>
           {flags ? (
-            <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+            <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
               Plan actual tenant: {flags.plan_tier}
             </p>
           ) : null}
@@ -248,7 +248,7 @@ const HotelNetworkPage = () => {
         </Button>
       </div>
 
-      <Card className="border-none shadow-xl shadow-slate-200/60 rounded-3xl bg-white">
+      <Card className="border-none shadow-xl shadow-slate-200/60 rounded-3xl bg-card">
         <CardContent className="grid gap-4 p-6 md:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="range-start">Desde</Label>
@@ -262,7 +262,7 @@ const HotelNetworkPage = () => {
             <Label htmlFor="hotel-filter">Propiedad</Label>
             <select
               id="hotel-filter"
-              className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
+              className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm text-foreground"
               value={selectedHotelId}
               onChange={(event) => setSelectedHotelId(event.target.value)}
             >
@@ -278,7 +278,7 @@ const HotelNetworkPage = () => {
             <Button
               type="button"
               variant="outline"
-              className="w-full border-slate-200 bg-white text-slate-700"
+              className="w-full border-border bg-card text-foreground"
               onClick={() => void refetchNetwork()}
             >
               Aplicar filtros
@@ -299,38 +299,38 @@ const HotelNetworkPage = () => {
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-4">
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="p-5">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Hoteles</p>
-                <p className="mt-2 text-3xl font-black text-slate-900">{summary.total_hotels}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Hoteles</p>
+                <p className="mt-2 text-3xl font-black text-foreground">{summary.total_hotels}</p>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="p-5">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Ingresos red</p>
-                <p className="mt-2 text-3xl font-black text-slate-900">
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ingresos red</p>
+                <p className="mt-2 text-3xl font-black text-foreground">
                   ${(summary.total_revenue_cents / 100).toLocaleString("es-AR")}
                 </p>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="p-5">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Reservas activas</p>
-                <p className="mt-2 text-3xl font-black text-slate-900">{summary.total_active_bookings}</p>
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Reservas activas</p>
+                <p className="mt-2 text-3xl font-black text-foreground">{summary.total_active_bookings}</p>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="p-5">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Ocupación promedio</p>
-                <p className="mt-2 text-3xl font-black text-slate-900">{summary.average_occupancy_rate.toFixed(1)}%</p>
+                <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Ocupación promedio</p>
+                <p className="mt-2 text-3xl font-black text-foreground">{summary.average_occupancy_rate.toFixed(1)}%</p>
               </CardContent>
             </Card>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <Card className="rounded-3xl border border-slate-200 bg-white lg:col-span-2">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="text-xl font-black text-slate-900 tracking-tight">Benchmark entre propiedades</CardTitle>
+            <Card className="rounded-3xl border border-border bg-card lg:col-span-2">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="text-xl font-black text-foreground tracking-tight">Benchmark entre propiedades</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 p-5">
                 {visibleHotels.map((hotel) => (
@@ -338,12 +338,12 @@ const HotelNetworkPage = () => {
                     key={hotel.hotel_id}
                     type="button"
                     onClick={() => setSelectedHotelId(hotel.hotel_id)}
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left transition hover:bg-white hover:shadow-md"
+                    className="w-full rounded-2xl border border-border bg-muted p-4 text-left transition hover:bg-card hover:shadow-md"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-black text-slate-900">{hotel.hotel_name}</p>
-                        <p className="mt-1 text-xs font-medium text-slate-500">
+                        <p className="text-sm font-black text-foreground">{hotel.hotel_name}</p>
+                        <p className="mt-1 text-xs font-medium text-muted-foreground">
                           {hotel.address || "Dirección no registrada"}
                         </p>
                       </div>
@@ -351,7 +351,7 @@ const HotelNetworkPage = () => {
                         ${(hotel.revenue_cents / 100).toLocaleString("es-AR")}
                       </Badge>
                     </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold text-slate-600">
+                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-semibold text-muted-foreground">
                       <span>Plan: {hotel.plan_tier}</span>
                       <span>Occ: {hotel.occupancy_rate.toFixed(1)}%</span>
                       <span>ADR: ${(hotel.adr_cents / 100).toLocaleString("es-AR")}</span>
@@ -362,40 +362,40 @@ const HotelNetworkPage = () => {
               </CardContent>
             </Card>
 
-            <Card className="rounded-3xl border border-slate-200 bg-white">
-              <CardHeader className="border-b border-slate-100">
-                <CardTitle className="text-lg font-black text-slate-900">Drill-down</CardTitle>
+            <Card className="rounded-3xl border border-border bg-card">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="text-lg font-black text-foreground">Drill-down</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 p-5">
                 {selectedHotelDetail ? (
                   <>
                     <div>
-                      <p className="text-sm font-black text-slate-900">{selectedHotelDetail.hotel_name}</p>
-                      <p className="mt-1 text-xs text-slate-500">{selectedHotelDetail.address || "Sin dirección"}</p>
-                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                      <p className="text-sm font-black text-foreground">{selectedHotelDetail.hotel_name}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{selectedHotelDetail.address || "Sin dirección"}</p>
+                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted-foreground">
                         Plan: {selectedHotelDetail.plan_tier}
                       </p>
                     </div>
                     <div className="grid grid-cols-2 gap-3 text-xs">
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="font-black uppercase tracking-widest text-slate-400">Ocupación</p>
-                        <p className="mt-1 text-lg font-black text-slate-900">
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="font-black uppercase tracking-widest text-muted-foreground">Ocupación</p>
+                        <p className="mt-1 text-lg font-black text-foreground">
                           {selectedHotelDetail.occupancy_rate.toFixed(1)}%
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="font-black uppercase tracking-widest text-slate-400">Reservas</p>
-                        <p className="mt-1 text-lg font-black text-slate-900">{selectedHotelDetail.active_bookings_count}</p>
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="font-black uppercase tracking-widest text-muted-foreground">Reservas</p>
+                        <p className="mt-1 text-lg font-black text-foreground">{selectedHotelDetail.active_bookings_count}</p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="font-black uppercase tracking-widest text-slate-400">ADR</p>
-                        <p className="mt-1 text-lg font-black text-slate-900">
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="font-black uppercase tracking-widest text-muted-foreground">ADR</p>
+                        <p className="mt-1 text-lg font-black text-foreground">
                           ${(selectedHotelDetail.adr_cents / 100).toLocaleString("es-AR")}
                         </p>
                       </div>
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="font-black uppercase tracking-widest text-slate-400">RevPAR</p>
-                        <p className="mt-1 text-lg font-black text-slate-900">
+                      <div className="rounded-xl bg-muted p-3">
+                        <p className="font-black uppercase tracking-widest text-muted-foreground">RevPAR</p>
+                        <p className="mt-1 text-lg font-black text-foreground">
                           ${(selectedHotelDetail.rev_par_cents / 100).toLocaleString("es-AR")}
                         </p>
                       </div>
@@ -404,7 +404,7 @@ const HotelNetworkPage = () => {
                       <Label htmlFor="plan-tier">Plan comercial</Label>
                       <select
                         id="plan-tier"
-                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-800"
+                        className="h-10 w-full rounded-md border border-border bg-card px-3 text-sm text-foreground"
                         value={planDraft}
                         onChange={(event) =>
                           setPlanDraft(event.target.value as "BASIC" | "PRO" | "ENTERPRISE")
@@ -418,7 +418,7 @@ const HotelNetworkPage = () => {
                       <Button
                         type="button"
                         variant="outline"
-                        className="w-full border-slate-200"
+                        className="w-full border-border"
                         disabled={selectedHotelId === "all" || planUpdateLoading}
                         onClick={() => void handleUpdatePlanTier()}
                       >
@@ -441,23 +441,23 @@ const HotelNetworkPage = () => {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="flex items-center gap-3 p-5">
                 <TrendingUp className="h-5 w-5 text-emerald-600" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Top revenue</p>
-                  <p className="text-sm font-black text-slate-900">
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Top revenue</p>
+                  <p className="text-sm font-black text-foreground">
                     {topByRevenue ? `${topByRevenue.hotel_name} · $${(topByRevenue.revenue_cents / 100).toLocaleString("es-AR")}` : "Sin datos"}
                   </p>
                 </div>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl border border-slate-200 bg-white">
+            <Card className="rounded-2xl border border-border bg-card">
               <CardContent className="flex items-center gap-3 p-5">
                 <LineChart className="h-5 w-5 text-indigo-600" />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-slate-400">Top ocupación</p>
-                  <p className="text-sm font-black text-slate-900">
+                  <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">Top ocupación</p>
+                  <p className="text-sm font-black text-foreground">
                     {topByOccupancy ? `${topByOccupancy.hotel_name} · ${topByOccupancy.occupancy_rate.toFixed(1)}%` : "Sin datos"}
                   </p>
                 </div>
@@ -468,7 +468,7 @@ const HotelNetworkPage = () => {
       )}
 
       <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <SheetContent className="bg-white">
+        <SheetContent className="bg-card">
           <SheetHeader className="border-b pb-6">
             <SheetTitle className="text-2xl font-black">Nueva Propiedad</SheetTitle>
             <SheetDescription>Registra un nuevo hotel en la red global.</SheetDescription>
