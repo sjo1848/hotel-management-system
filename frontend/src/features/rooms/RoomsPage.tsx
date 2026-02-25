@@ -34,7 +34,7 @@ const getStatusColor = (status: string) => {
     case "Available": return "bg-emerald-500";
     case "Occupied": return "bg-red-500";
     case "Dirty": return "bg-amber-500";
-    case "Maintenance": return "bg-slate-500";
+    case "Maintenance": return "bg-muted-foreground";
     default: return "bg-slate-300";
   }
 };
@@ -122,8 +122,8 @@ const RoomsPage = () => {
             {item.room_number}
           </div>
           <div>
-            <div className="font-medium text-slate-900">Habitación {item.room_number}</div>
-            <div className="text-xs text-slate-500">{item.room_type}</div>
+            <div className="font-medium text-foreground">Habitación {item.room_number}</div>
+            <div className="text-xs text-muted-foreground">{item.room_type}</div>
           </div>
         </div>
       ),
@@ -135,7 +135,7 @@ const RoomsPage = () => {
     },
     {
       header: "Precio / Noche",
-      cell: (item) => <span className="font-mono text-slate-700">${(item.price_cents / 100).toLocaleString()}</span>,
+      cell: (item) => <span className="font-mono text-foreground">${(item.price_cents / 100).toLocaleString()}</span>,
     },
     {
       header: "Estado",
@@ -196,20 +196,20 @@ const RoomsPage = () => {
             <div className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/20">
               <DoorClosed className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+            <h2 className="text-2xl font-bold tracking-tight text-foreground">
               Habitaciones
             </h2>
           </div>
-          <p className="text-slate-500 text-sm mt-1 ml-11">
+          <p className="text-muted-foreground text-sm mt-1 ml-11">
             Vista general del estado de ocupación y limpieza.
           </p>
         </div>
 
-        <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200">
+        <div className="flex items-center bg-muted p-1 rounded-lg border border-border">
           <Button
             variant="ghost"
             size="sm"
-            className={cn("h-8 px-3 rounded-md transition-all", viewMode === "grid" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900")}
+            className={cn("h-8 px-3 rounded-md transition-all", viewMode === "grid" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
             onClick={() => setViewMode("grid")}
           >
             <Grid className="w-4 h-4 mr-2" />
@@ -218,7 +218,7 @@ const RoomsPage = () => {
           <Button
             variant="ghost"
             size="sm"
-            className={cn("h-8 px-3 rounded-md transition-all", viewMode === "list" ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-900")}
+            className={cn("h-8 px-3 rounded-md transition-all", viewMode === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}
             onClick={() => setViewMode("list")}
           >
             <List className="w-4 h-4 mr-2" />
@@ -265,11 +265,11 @@ const RoomsPage = () => {
       )}
 
       {rooms.length === 0 && !loading && (
-        <div className="flex flex-col items-center justify-center py-20 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 animate-in fade-in zoom-in duration-500">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
+        <div className="flex flex-col items-center justify-center py-20 bg-muted border-2 border-dashed border-border rounded-2xl text-muted-foreground animate-in fade-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-card rounded-full flex items-center justify-center shadow-sm mb-4">
             <DoorClosed className="w-10 h-10 opacity-20" />
           </div>
-          <h3 className="text-lg font-bold text-slate-700">No hay habitaciones disponibles</h3>
+          <h3 className="text-lg font-bold text-foreground">No hay habitaciones disponibles</h3>
           <p className="text-sm max-w-[300px] text-center mt-1">
             Intentá con otro rango de fechas o revisá el estado de limpieza.
           </p>
@@ -304,7 +304,7 @@ const RoomsPage = () => {
             {rooms.map((room) => (
               <div
                 key={room.id}
-                className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
+                className="bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group relative overflow-hidden"
               >
                 <div className={cn(
                   "absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full opacity-10 blur-xl group-hover:scale-150 transition-transform duration-500",
@@ -317,8 +317,8 @@ const RoomsPage = () => {
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-slate-100 rounded-full">
-                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted rounded-full">
+                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -342,14 +342,14 @@ const RoomsPage = () => {
                 </div>
 
                 <div className="space-y-1 mb-4">
-                  <h3 className="font-bold text-slate-800">{room.room_type}</h3>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider">Status: {room.status}</p>
+                  <h3 className="font-bold text-foreground">{room.room_type}</h3>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Status: {room.status}</p>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between pt-4 border-t border-border">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-slate-400 uppercase font-bold">Precio</span>
-                    <span className="font-mono font-medium text-slate-700">${(room.price_cents / 100).toLocaleString()}</span>
+                    <span className="text-[10px] text-muted-foreground uppercase font-bold">Precio</span>
+                    <span className="font-mono font-medium text-foreground">${(room.price_cents / 100).toLocaleString()}</span>
                   </div>
                   {room.status === "Available" ? (
                     <Button
@@ -371,10 +371,10 @@ const RoomsPage = () => {
 
             {/* Add New Room Card */}
             <div
-              className="border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center text-slate-400 hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
+              className="border-2 border-dashed border-border rounded-xl p-5 flex flex-col items-center justify-center text-muted-foreground hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5 transition-all cursor-pointer group h-full min-h-[180px]"
               onClick={() => setIsCreateOpen(true)}
             >
-              <div className="w-12 h-12 rounded-full bg-slate-50 group-hover:bg-white flex items-center justify-center mb-3 transition-colors shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-muted group-hover:bg-card flex items-center justify-center mb-3 transition-colors shadow-sm">
                 <Plus className="w-6 h-6" />
               </div>
               <span className="font-medium text-sm">Añadir Habitación</span>
@@ -386,7 +386,7 @@ const RoomsPage = () => {
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-slate-50 rounded-xl border border-slate-100 p-5 h-[180px] animate-pulse" />
+            <div key={i} className="bg-muted rounded-xl border border-border p-5 h-[180px] animate-pulse" />
           ))}
         </div>
       )}

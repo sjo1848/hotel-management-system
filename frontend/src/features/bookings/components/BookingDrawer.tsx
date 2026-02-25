@@ -155,7 +155,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[420px] overflow-y-auto bg-white border-l shadow-2xl">
+      <SheetContent className="sm:max-w-[420px] overflow-y-auto bg-card border-l border-border shadow-2xl">
         <SheetHeader>
           <div className="flex justify-between items-center mb-2">
             <Badge variant="outline" className="text-[10px] uppercase tracking-tighter">Paso {step} de 3</Badge>
@@ -174,25 +174,25 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
           {/* PASO 1: RESUMEN */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-3">
+              <div className="p-4 bg-muted rounded-xl border border-border space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">Check-in:</span>
-                  <span className="font-bold text-slate-900">{dates?.from}</span>
+                  <span className="text-muted-foreground font-medium">Check-in:</span>
+                  <span className="font-bold text-foreground">{dates?.from}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">Check-out:</span>
-                  <span className="font-bold text-slate-900">{dates?.to}</span>
+                  <span className="text-muted-foreground font-medium">Check-out:</span>
+                  <span className="font-bold text-foreground">{dates?.to}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-500 font-medium">Noches:</span>
-                  <span className="font-bold text-slate-900">{nights}</span>
+                  <span className="text-muted-foreground font-medium">Noches:</span>
+                  <span className="font-bold text-foreground">{nights}</span>
                 </div>
-                <div className="border-t border-slate-200 pt-3 mt-1 flex justify-between items-end">
-                  <span className="text-xs text-slate-400 uppercase font-bold">Total Estimado</span>
+                <div className="border-t border-border pt-3 mt-1 flex justify-between items-end">
+                  <span className="text-xs text-muted-foreground uppercase font-bold">Total Estimado</span>
                   <span className="text-xl font-black text-indigo-600">${total.toLocaleString("es-AR")}</span>
                 </div>
               </div>
-              <div className="text-xs text-slate-400 italic">
+              <div className="text-xs text-muted-foreground italic">
                 * El precio incluye impuestos y cargos base del hotel.
               </div>
             </div>
@@ -203,7 +203,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               <div className="grid gap-2 relative">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="search-guest" className="text-xs font-bold uppercase text-slate-500">Buscar Huésped Existente</Label>
+                  <Label htmlFor="search-guest" className="text-xs font-bold uppercase text-muted-foreground">Buscar Huésped Existente</Label>
                   {selectedGuestId && (
                     <button 
                       type="button" 
@@ -215,13 +215,13 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                   )}
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="search-guest"
                     placeholder="Nombre o Email..."
                     className={cn(
                       "pl-10 h-11 rounded-xl transition-all",
-                      selectedGuestId ? "bg-indigo-50 border-indigo-200" : "bg-white"
+                      selectedGuestId ? "bg-indigo-50 border-indigo-200" : "bg-card"
                     )}
                     value={searchTerm}
                     onChange={(e) => {
@@ -236,16 +236,16 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                 {showGuestList && filteredGuests.length > 0 && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowGuestList(false)} />
-                    <div className="absolute top-full left-0 w-full bg-white border rounded-xl shadow-2xl z-50 mt-2 max-h-48 overflow-y-auto p-1 border-slate-100 animate-in fade-in zoom-in duration-200">
+                    <div className="absolute top-full left-0 w-full bg-card border rounded-xl shadow-2xl z-50 mt-2 max-h-48 overflow-y-auto p-1 border-border animate-in fade-in zoom-in duration-200">
                       {filteredGuests.map(guest => (
                         <button
                           key={guest.id}
                           type="button"
-                          className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-slate-50 last:border-0"
+                          className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-border last:border-0"
                           onClick={() => handleSelectGuest(guest)}
                         >
-                          <span className="text-sm font-bold text-slate-800">{guest.full_name}</span>
-                          <span className="text-xs text-slate-500">{guest.email}</span>
+                          <span className="text-sm font-bold text-foreground">{guest.full_name}</span>
+                          <span className="text-xs text-muted-foreground">{guest.email}</span>
                         </button>
                       ))}
                     </div>
@@ -253,7 +253,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                 )}
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="space-y-4 pt-4 border-t border-border">
                 <div className="flex items-center gap-2 text-indigo-600 mb-2">
                   <UserPlus className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">
@@ -267,7 +267,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     id="guest_name"
                     name="guest_name"
                     placeholder="Juan Pérez"
-                    className="h-11 rounded-xl bg-white border-slate-300 text-slate-900"
+                    className="h-11 rounded-xl bg-card border-border text-foreground"
                     value={formData.guest_name}
                     onChange={(e) => setFormData(prev => ({ ...prev, guest_name: e.target.value }))}
                     required
@@ -282,7 +282,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     name="guest_email"
                     type="email"
                     placeholder="juan@ejemplo.com"
-                    className="h-11 rounded-xl bg-white border-slate-300 text-slate-900"
+                    className="h-11 rounded-xl bg-card border-border text-foreground"
                     value={formData.guest_email}
                     onChange={(e) => setFormData(prev => ({ ...prev, guest_email: e.target.value }))}
                     required
@@ -302,15 +302,15 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Huésped:</span>
+                      <span className="text-muted-foreground">Huésped:</span>
                       <span className="font-bold">{formData.guest_name}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Email:</span>
-                      <span className="font-medium text-slate-700">{formData.guest_email}</span>
+                      <span className="text-muted-foreground">Email:</span>
+                      <span className="font-medium text-foreground">{formData.guest_email}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-500">Estancia:</span>
+                      <span className="text-muted-foreground">Estancia:</span>
                       <span className="font-medium">{nights} noches</span>
                     </div>
                   </div>

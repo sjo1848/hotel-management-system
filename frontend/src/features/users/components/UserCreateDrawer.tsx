@@ -71,10 +71,10 @@ const UserCreateDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl">
+      <SheetContent className="sm:max-w-[440px] bg-card border-l border-border shadow-2xl">
         <SheetHeader className="pb-6 border-b">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
-            <UserPlus className="w-6 h-6 text-slate-900" />
+            <UserPlus className="w-6 h-6 text-foreground" />
             Nuevo Operador
           </SheetTitle>
           <SheetDescription>
@@ -86,21 +86,21 @@ const UserCreateDrawer = ({
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="username" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-slate-400" /> Nombre de Usuario
+                <User className="w-4 h-4 text-muted-foreground" /> Nombre de Usuario
               </Label>
               <Input
                 id="username"
                 placeholder="Ej: jdoe_recepcion"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-muted border-border focus:bg-card transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="password" className="flex items-center gap-2">
-                <Lock className="w-4 h-4 text-slate-400" /> Contraseña Temporal
+                <Lock className="w-4 h-4 text-muted-foreground" /> Contraseña Temporal
               </Label>
               <Input
                 id="password"
@@ -108,14 +108,14 @@ const UserCreateDrawer = ({
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="bg-muted border-border focus:bg-card transition-colors"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-slate-400" /> Rol del Sistema
+                <Shield className="w-4 h-4 text-muted-foreground" /> Rol del Sistema
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -124,7 +124,7 @@ const UserCreateDrawer = ({
                   className={`p-3 rounded-xl border text-left transition-all ${
                     formData.role === 'ops' 
                       ? 'border-slate-900 bg-slate-900 text-white shadow-lg' 
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-border bg-card text-muted-foreground hover:border-border'
                   }`}
                 >
                   <p className="font-bold text-xs uppercase tracking-wider">Operador</p>
@@ -136,7 +136,7 @@ const UserCreateDrawer = ({
                   className={`p-3 rounded-xl border text-left transition-all ${
                     formData.role === 'admin' 
                       ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg' 
-                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                      : 'border-border bg-card text-muted-foreground hover:border-border'
                   }`}
                 >
                   <p className="font-bold text-xs uppercase tracking-wider">Admin</p>
