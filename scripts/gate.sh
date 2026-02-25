@@ -66,6 +66,60 @@ ensure_backend_runner() {
   fi
 }
 
+run_perf_smoke_gate() {
+  if ! command -v curl >/dev/null 2>&1; then
+    echo "curl is required for auth refresh perf gate." >&2
+    return 1
+  fi
+
+  local compose_started=false
+
+  wait_backend_health() {
+    local max_attempts="${1:-45}"
+    local code
+    local attempt
+    for attempt in $(seq 1 "$max_attempts"); do
+      code="$(curl -sS -o /dev/null -w "%{http_code}" http://localhost:3001/health || true)"
+      if [[ "$code" == "200" ]]; then
+        return 0
+      fi
+      sleep 2
+    done
+    return 1
+  }
+
+  if ! wait_backend_health 3; then
+    if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+      docker compose up -d db backend >/dev/null 2>&1 || true
+      compose_started=true
+      if ! wait_backend_health 45; then
+        echo "backend did not become healthy for perf smoke gate." >&2
+        return 1
+      fi
+    else
+      echo "backend is not healthy and docker is unavailable for perf smoke gate." >&2
+      return 1
+    fi
+  fi
+
+  ./scripts/perf-baseline.sh \
+    --requests "${HMS_PERF_SMOKE_REQUESTS:-4}" \
+    --concurrency "${HMS_PERF_SMOKE_CONCURRENCY:-1}" \
+    --warmup "${HMS_PERF_SMOKE_WARMUP:-0}" \
+    --slo-p95-sec "${HMS_PERF_SMOKE_P95:-1.0}" \
+    --slo-error-rate "${HMS_PERF_SMOKE_ERROR_RATE:-0.05}" \
+    --report /tmp/hms_perf_gate_local.md
+
+  ./scripts/check-auth-refresh-slo.sh \
+    --report /tmp/hms_perf_gate_local.md \
+    --max-p95 "${HMS_AUTH_REFRESH_MAX_P95:-0.25}" \
+    --max-error-rate "${HMS_AUTH_REFRESH_MAX_ERROR_RATE:-0.005}"
+
+  if [[ "$compose_started" == "true" ]]; then
+    docker compose stop backend db >/dev/null 2>&1 || true
+  fi
+}
+
 echo "=============================="
 echo " HMS GATE (LOCAL) — START"
 echo "=============================="
@@ -125,6 +179,8 @@ if [[ "$FULL" == "true" ]]; then
   ./scripts/observability-smoke.sh --runner "$QA_RUNNER"
   echo "==> backend coverage thresholds"
   ./scripts/backend-coverage-threshold.sh
+  echo "==> auth refresh slo runtime gate (local full)"
+  run_perf_smoke_gate
 fi
 
 run_frontend_gates
