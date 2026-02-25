@@ -160,6 +160,16 @@ echo "==> auth refresh slo contract gate"
 echo "==> ops slo contract gate"
 ./scripts/check-ops-slo-contract.sh
 
+echo "==> release ops runtime slo evidence gate"
+./scripts/check-release-ops-slo.sh \
+  --events-file "${RELEASE_EVENTS_FILE:-scripts/backups/release-events.jsonl}" \
+  --window-days "${RELEASE_OPS_WINDOW_DAYS:-30}" \
+  --min-sample-size "${RELEASE_OPS_MIN_SAMPLE_SIZE:-10}" \
+  --max-cfr-percent "${RELEASE_OPS_MAX_CFR_PERCENT:-10}" \
+  --max-rollback-percent "${RELEASE_OPS_MAX_ROLLBACK_PERCENT:-5}" \
+  --max-mttr-minutes "${RELEASE_OPS_MAX_MTTR_MINUTES:-30}" \
+  --report /tmp/hms_release_ops_slo_local.md
+
 echo "==> business kpi contract gate"
 ./scripts/check-business-kpi-contract.sh
 

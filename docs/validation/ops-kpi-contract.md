@@ -34,7 +34,7 @@ Last updated: 2026-02-24 UTC
 - Source: CI/CD deployment runs
 - Window: per sprint
 - Threshold: `change_failure_rate <= 10%`
-- Validation command: `./scripts/check-ops-slo-contract.sh`
+- Validation command: `./scripts/check-release-ops-slo.sh --fail-on-threshold`
 - Owner: DevOps/SRE
 
 ### M5. rollback_rate
@@ -42,7 +42,7 @@ Last updated: 2026-02-24 UTC
 - Source: deployment + rollback drill logs
 - Window: per sprint
 - Threshold: `rollback_rate <= 5%`
-- Validation command: `./scripts/check-ops-slo-contract.sh`
+- Validation command: `./scripts/check-release-ops-slo.sh --fail-on-threshold`
 - Owner: DevOps/SRE
 
 ### M6. mttr_prod
@@ -50,7 +50,7 @@ Last updated: 2026-02-24 UTC
 - Source: alertmanager + incident timeline
 - Window: monthly
 - Threshold: `mttr_prod < 30 min`
-- Validation command: `./scripts/check-ops-slo-contract.sh`
+- Validation command: `./scripts/check-release-ops-slo.sh --fail-on-threshold`
 - Owner: SRE + On-call lead
 
 ## Business KPI contract
