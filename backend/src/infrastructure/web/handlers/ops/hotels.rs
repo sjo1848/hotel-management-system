@@ -25,7 +25,12 @@ pub async fn get_feature_flags_handler(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let user_id = Uuid::parse_str(&claims.sub).ok();
     let flags = state.hotel_service.get_feature_flags(hotel_id).await?;
+    state
+        .audit_service
+        .record(Some(hotel_id), user_id, "feature_flags_read", None)
+        .await;
     Ok(Json(json!(flags)))
 }
 
@@ -154,11 +159,23 @@ pub async fn update_hotel_plan_handler(
     Path(hotel_id): Path<Uuid>,
     Json(payload): Json<UpdateHotelPlanRequest>,
 ) -> Result<Json<Value>, DomainError> {
-    let _ = claims;
+    let actor_user_id = Uuid::parse_str(&claims.sub).ok();
     validate_non_empty_trimmed("plan_tier", &payload.plan_tier)?;
+    let previous_flags = state.hotel_service.get_feature_flags(hotel_id).await?;
     let flags = state
         .hotel_service
         .update_plan_tier(hotel_id, payload.plan_tier)
         .await?;
+    let action = if previous_flags.plan_tier.eq_ignore_ascii_case("PRO")
+        && flags.plan_tier.eq_ignore_ascii_case("ENTERPRISE")
+    {
+        "plan_upgrade_pro_to_enterprise".to_string()
+    } else {
+        format!("plan_tier_updated:{}", flags.plan_tier.to_lowercase())
+    };
+    state
+        .audit_service
+        .record(Some(hotel_id), actor_user_id, &action, None)
+        .await;
     Ok(Json(json!(flags)))
 }

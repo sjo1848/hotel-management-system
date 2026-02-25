@@ -38,6 +38,7 @@ require_file scripts/validate-prod-env.sh
 require_file scripts/validate-env-profile.sh
 require_file scripts/deploy-with-rollback.sh
 require_file scripts/check-release-ops-slo.sh
+require_file scripts/check-business-kpi-runtime.sh
 require_file "$ENV_FILE"
 
 if [[ "$PROFILE" != "auto" && "$PROFILE" != "dev" && "$PROFILE" != "staging" && "$PROFILE" != "prod" ]]; then
@@ -82,9 +83,21 @@ echo "[INFO] computing release ops runtime metrics (CFR/rollback/MTTR)"
   --fail-on-threshold \
   --report /tmp/hms_release_ops_slo_readiness.md
 
+echo "[INFO] computing business KPI runtime metrics"
+./scripts/check-business-kpi-runtime.sh \
+  --runner "${HMS_KPI_RUNNER:-auto}" \
+  --window-hq-days "${HMS_KPI_HQ_WINDOW_DAYS:-7}" \
+  --window-flags-days "${HMS_KPI_FLAGS_WINDOW_DAYS:-7}" \
+  --window-upgrade-days "${HMS_KPI_UPGRADE_WINDOW_DAYS:-30}" \
+  --min-hq-activation-rate "${HMS_KPI_HQ_MIN_RATE:-60}" \
+  --min-feature-usage-rate "${HMS_KPI_FLAGS_MIN_RATE:-70}" \
+  --min-plan-upgrade-rate "${HMS_KPI_UPGRADE_MIN_RATE:-5}" \
+  --report /tmp/hms_business_kpi_runtime_readiness.md
+
 echo "[OK] prod deploy readiness checks passed"
 echo "[OK] resolved compose written: /tmp/hms-prod-compose.resolved.yml"
 echo "[OK] release ops report written: /tmp/hms_release_ops_slo_readiness.md"
+echo "[OK] business KPI report written: /tmp/hms_business_kpi_runtime_readiness.md"
 
 echo "Next command:"
 echo "  ./scripts/deploy-with-rollback.sh --env-file $ENV_FILE --profile $RUNTIME_PROFILE"
