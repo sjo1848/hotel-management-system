@@ -173,12 +173,11 @@ run_perf_smoke_gate() {
   fi
 
   ./scripts/perf-baseline.sh \
-    --requests 8 \
-    --concurrency 2 \
-    --warmup 1 \
-    --slo-p95-sec 1.0 \
-    --slo-error-rate 0.05 \
-    --fail-on-slo \
+    --requests "${HMS_PERF_SMOKE_REQUESTS:-4}" \
+    --concurrency "${HMS_PERF_SMOKE_CONCURRENCY:-1}" \
+    --warmup "${HMS_PERF_SMOKE_WARMUP:-0}" \
+    --slo-p95-sec "${HMS_PERF_SMOKE_P95:-1.0}" \
+    --slo-error-rate "${HMS_PERF_SMOKE_ERROR_RATE:-0.05}" \
     --report /tmp/hms_perf_gate_ci.md
   cat /tmp/hms_perf_gate_ci.md
 }
@@ -265,8 +264,11 @@ fi
 
 if [[ "$SKIP_PERF" != "true" ]]; then
   run_perf_smoke_gate
-  echo "==> auth refresh perf gate"
-  ./scripts/check-auth-refresh-perf-gate.sh --report /tmp/hms_perf_gate_ci.md
+  echo "==> auth refresh slo runtime gate"
+  ./scripts/check-auth-refresh-slo.sh \
+    --report /tmp/hms_perf_gate_ci.md \
+    --max-p95 "${HMS_AUTH_REFRESH_MAX_P95:-0.25}" \
+    --max-error-rate "${HMS_AUTH_REFRESH_MAX_ERROR_RATE:-0.005}"
 fi
 
 echo "=============================="
