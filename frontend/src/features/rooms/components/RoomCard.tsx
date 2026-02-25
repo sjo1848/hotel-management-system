@@ -22,15 +22,15 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
   const total = nights > 0 ? pricePerNight * nights : 0;
   
   return (
-    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 group bg-white hover:-translate-y-1 transition-all duration-300">
-      <div className="relative h-56 bg-slate-100 overflow-hidden">
+    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 group bg-card hover:-translate-y-1 transition-all duration-300">
+      <div className="relative h-56 bg-muted overflow-hidden">
         <img
           src={`https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000`}
           alt={room.room_type}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <Badge className="absolute top-4 right-4 bg-white text-slate-900 border-none font-bold uppercase text-[10px] tracking-widest shadow-lg">
+        <Badge className="absolute top-4 right-4 bg-card text-foreground border-none font-bold uppercase text-[10px] tracking-widest shadow-lg">
           {room.status}
         </Badge>
         <div className="absolute bottom-4 left-4 text-white opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
@@ -42,39 +42,39 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
       <CardHeader className="space-y-4">
         <div className="flex justify-between items-start">
           <div className="space-y-1">
-            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+            <CardTitle className="text-2xl font-black text-foreground tracking-tight leading-none">
               Habs. {room.room_number}
             </CardTitle>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+              <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted px-2 py-0.5 rounded">
                 {room.room_type}
               </span>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-black text-slate-900 tracking-tighter">
+            <div className="text-2xl font-black text-foreground tracking-tighter">
               ${pricePerNight.toLocaleString("es-AR")}
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block -mt-1">/ noche</span>
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest block -mt-1">/ noche</span>
           </div>
         </div>
         
         {nights > 0 && (
-          <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estancia {nights} noches</span>
-            <span className="text-sm font-black text-slate-900">${total.toLocaleString("es-AR")}</span>
+          <div className="flex items-center justify-between p-3 bg-muted rounded-xl border border-border">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Estancia {nights} noches</span>
+            <span className="text-sm font-black text-foreground">${total.toLocaleString("es-AR")}</span>
           </div>
         )}
       </CardHeader>
 
       <CardContent>
-        <div className="flex justify-between items-center py-2 border-t border-slate-100">
+        <div className="flex justify-between items-center py-2 border-t border-border">
           <div className="flex gap-4">
-            <div className="flex items-center gap-1.5 text-slate-500">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
               <Users className="w-4 h-4" />
               <span className="text-xs font-bold">2 Pers</span>
             </div>
-            <div className="flex items-center gap-1.5 text-slate-500">
+            <div className="flex items-center gap-1.5 text-muted-foreground">
               <Wifi className="w-4 h-4" />
               <span className="text-xs font-bold">Fibra</span>
             </div>
@@ -90,7 +90,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
         <Button
           className={`w-full h-12 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
             disabled 
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed" 
+              ? "bg-muted text-muted-foreground cursor-not-allowed" 
               : "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-200"
           }`}
           disabled={disabled}

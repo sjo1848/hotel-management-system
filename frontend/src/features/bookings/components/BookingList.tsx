@@ -89,7 +89,7 @@ const BookingList = () => {
     return (
       <div className="p-10 flex flex-col items-center justify-center space-y-4">
         <CheckCircle2 className="w-8 h-8 text-slate-200 animate-pulse" />
-        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Actualizando reservas...</span>
+        <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Actualizando reservas...</span>
       </div>
     );
   }
@@ -98,7 +98,7 @@ const BookingList = () => {
     return (
       <div className="p-10 flex flex-col items-center justify-center text-center">
         <AlertCircle className="w-10 h-10 text-slate-200 mb-2" />
-        <p className="text-sm font-bold text-slate-500">No hay actividad reciente</p>
+        <p className="text-sm font-bold text-muted-foreground">No hay actividad reciente</p>
       </div>
     );
   }
@@ -108,39 +108,39 @@ const BookingList = () => {
       <div className="overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent border-slate-100 bg-slate-50/50">
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Huésped</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Fechas</TableHead>
-              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Monto</TableHead>
+            <TableRow className="hover:bg-transparent border-border bg-muted/50">
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Huésped</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Estado</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Fechas</TableHead>
+              <TableHead className="py-4 px-6 text-[10px] font-black uppercase tracking-widest text-muted-foreground text-right">Monto</TableHead>
               <TableHead className="py-4 px-6"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {bookings.map((booking) => (
-              <TableRow key={booking.id} className="border-slate-50 hover:bg-slate-50/50 transition-colors group">
+              <TableRow key={booking.id} className="border-border hover:bg-muted/50 transition-colors group">
                 <TableCell className="py-4 px-6">
-                  <div className="font-bold text-slate-900">{booking.guest_name}</div>
-                  <div className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
+                  <div className="font-bold text-foreground">{booking.guest_name}</div>
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Hab {booking.room_id.slice(0,4)}</div>
                 </TableCell>
                 <TableCell className="py-4 px-6">
                   {getStatusBadge(booking.status)}
                 </TableCell>
                 <TableCell className="py-4 px-6">
-                  <div className="text-xs font-bold text-slate-600">{booking.check_in}</div>
-                  <div className="text-[10px] text-slate-400 font-medium">al {booking.check_out}</div>
+                  <div className="text-xs font-bold text-muted-foreground">{booking.check_in}</div>
+                  <div className="text-[10px] text-muted-foreground font-medium">al {booking.check_out}</div>
                 </TableCell>
                 <TableCell className="py-4 px-6 text-right">
-                  <div className="font-mono font-bold text-slate-900">${(booking.total_price_cents / 100).toLocaleString()}</div>
+                  <div className="font-mono font-bold text-foreground">${(booking.total_price_cents / 100).toLocaleString()}</div>
                 </TableCell>
                 <TableCell className="py-4 px-6 text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-white hover:shadow-md">
-                        <MoreVertical className="w-4 h-4 text-slate-400" />
+                      <Button variant="ghost" size="icon" className="rounded-full opacity-0 group-hover:opacity-100 transition-all hover:bg-card hover:shadow-md">
+                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-xl">
+                    <DropdownMenuContent align="end" className="rounded-xl border-border shadow-xl">
                       <DropdownMenuItem 
                         className="text-xs font-bold"
                         onClick={() => {

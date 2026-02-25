@@ -26,9 +26,8 @@ done
 
 run_frontend_gates() {
   echo "==> frontend gates"
-  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
-    if docker compose config --services 2>/dev/null | grep -qx frontend; then
-      docker compose up -d frontend >/dev/null 2>&1 || true
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if docker compose up -d frontend >/dev/null 2>&1; then
       echo "==> using docker compose frontend"
       docker compose exec -T frontend npm run lint
       docker compose exec -T frontend npm run test -- --run
@@ -36,7 +35,7 @@ run_frontend_gates() {
       ./scripts/frontend-perf-budget.sh
       return 0
     fi
-    echo "==> docker compose running but no frontend service; fallback to host"
+    echo "==> docker compose frontend unavailable; fallback to host"
   else
     echo "==> docker not available; running frontend on host"
   fi
@@ -51,7 +50,7 @@ run_frontend_gates() {
 }
 
 resolve_qa_runner() {
-  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     if docker compose config --services 2>/dev/null | grep -qx backend; then
       echo "docker"
       return 0

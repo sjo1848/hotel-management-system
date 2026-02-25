@@ -52,8 +52,8 @@ resolve_runner() {
     return
   fi
 
-  if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
-    if docker compose ps --services 2>/dev/null | grep -qx backend; then
+  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    if docker compose config --services 2>/dev/null | grep -qx backend; then
       echo "docker"
       return
     fi
