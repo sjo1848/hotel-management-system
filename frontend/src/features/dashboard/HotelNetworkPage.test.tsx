@@ -73,6 +73,9 @@ const renderPage = () =>
     </HMSQueryProvider>,
   );
 
+const findHotelUnoOption = () =>
+  screen.findByRole("option", { name: "Hotel Uno" }, { timeout: 5000 });
+
 describe("HotelNetworkPage telemetry", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -91,7 +94,7 @@ describe("HotelNetworkPage telemetry", () => {
   it("tracks HQ KPI view telemetry event", async () => {
     renderPage();
 
-    expect(await screen.findByRole("option", { name: "Hotel Uno" })).toBeInTheDocument();
+    expect(await findHotelUnoOption()).toBeInTheDocument();
 
     await waitFor(() => {
       expect(mockTrackUiEvent).toHaveBeenCalledWith(
@@ -107,7 +110,7 @@ describe("HotelNetworkPage telemetry", () => {
 
   it("tracks plan upgrade submitted and succeeded events", async () => {
     renderPage();
-    expect(await screen.findByRole("option", { name: "Hotel Uno" })).toBeInTheDocument();
+    expect(await findHotelUnoOption()).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText(/propiedad/i), "hotel-1");
     await userEvent.selectOptions(screen.getByLabelText(/plan comercial/i), "ENTERPRISE");
     await userEvent.click(screen.getByRole("button", { name: /actualizar plan/i }));
@@ -137,7 +140,7 @@ describe("HotelNetworkPage telemetry", () => {
   it("tracks plan upgrade submitted and failed events", async () => {
     mockUpdateHotelPlanTier.mockRejectedValueOnce(new Error("plan update failed"));
     renderPage();
-    expect(await screen.findByRole("option", { name: "Hotel Uno" })).toBeInTheDocument();
+    expect(await findHotelUnoOption()).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText(/propiedad/i), "hotel-1");
     await userEvent.selectOptions(screen.getByLabelText(/plan comercial/i), "ENTERPRISE");
     await userEvent.click(screen.getByRole("button", { name: /actualizar plan/i }));

@@ -386,6 +386,36 @@
     background-color: hsl(var(--card));
   }
 
+  [data-theme="balanced"] .bg-slate-900,
+  [data-theme="balanced"] .bg-slate-950 {
+    background-color: hsl(223 22% 18%);
+  }
+
+  [data-theme="dark"] .bg-slate-900,
+  [data-theme="dark"] .bg-slate-950 {
+    background-color: hsl(223 22% 14%);
+  }
+
+  [data-theme="balanced"] .bg-slate-800,
+  [data-theme="dark"] .bg-slate-800 {
+    background-color: hsl(223 20% 22%);
+  }
+
+  [data-theme="balanced"] .hover\:bg-slate-100:hover,
+  [data-theme="dark"] .hover\:bg-slate-100:hover {
+    background-color: hsl(var(--muted));
+  }
+
+  [data-theme="balanced"] .hover\:bg-slate-800:hover,
+  [data-theme="dark"] .hover\:bg-slate-800:hover {
+    background-color: hsl(223 20% 24%);
+  }
+
+  [data-theme="balanced"] .text-white,
+  [data-theme="dark"] .text-white {
+    color: hsl(210 36% 96%);
+  }
+
   [data-theme="balanced"] .hover\:text-slate-900:hover,
   [data-theme="dark"] .hover\:text-slate-900:hover {
     color: hsl(var(--foreground));
