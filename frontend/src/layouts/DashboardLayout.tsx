@@ -168,8 +168,12 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Collapse Toggle Button */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute right-3 top-6 h-8 w-8 rounded-full bg-secondary text-secondary-foreground border border-secondary/40 flex items-center justify-center shadow-lg shadow-[hsl(var(--shadow-ambient)/0.35)] hover:scale-105 transition-transform z-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn(
+            "app-sidebar-toggle absolute top-1/2 z-50 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full text-secondary-foreground transition-transform duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:flex",
+            isCollapsed ? "-right-5" : "-right-4",
+          )}
           aria-label={isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"}
+          aria-pressed={!isCollapsed}
         >
           {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

@@ -104,27 +104,27 @@
   }
 
   [data-theme="balanced"] {
-    --background: 214 18% 93%;
-    --foreground: 222 28% 16%;
-    --card: 0 0% 98%;
-    --card-foreground: 222 28% 16%;
-    --popover: 0 0% 98%;
-    --popover-foreground: 222 28% 16%;
-    --primary: 223 34% 16%;
+    --background: 214 16% 90%;
+    --foreground: 222 30% 15%;
+    --card: 214 22% 96%;
+    --card-foreground: 222 30% 15%;
+    --popover: 214 22% 96%;
+    --popover-foreground: 222 30% 15%;
+    --primary: 223 36% 18%;
     --primary-foreground: 210 36% 96%;
-    --secondary: 36 56% 47%;
+    --secondary: 37 60% 49%;
     --secondary-foreground: 220 32% 12%;
-    --muted: 213 16% 87%;
-    --muted-foreground: 217 12% 36%;
-    --accent: 213 18% 83%;
-    --accent-foreground: 222 28% 16%;
+    --muted: 214 14% 82%;
+    --muted-foreground: 217 14% 34%;
+    --accent: 214 18% 78%;
+    --accent-foreground: 222 30% 15%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 15% 77%;
-    --input: 214 15% 77%;
-    --ring: 36 56% 47%;
+    --border: 214 14% 70%;
+    --input: 214 14% 70%;
+    --ring: 37 60% 49%;
 
-    --shell-main-bg: 214 18% 92%;
+    --shell-main-bg: 214 16% 89%;
     --shell-sidebar-bg: 224 22% 15%;
     --shell-sidebar-fg: 210 36% 96%;
     --shell-sidebar-muted: 217 16% 73%;
@@ -133,20 +133,20 @@
     --shell-sidebar-active: 224 18% 25%;
     --shell-sidebar-border: 224 14% 31%;
     --shell-sidebar-footer: 223 19% 18%;
-    --shell-header-bg: 0 0% 98%;
-    --shell-search-bg: 0 0% 98%;
-    --shell-search-border: 214 14% 74%;
-    --shell-search-icon: 217 12% 40%;
+    --shell-header-bg: 214 22% 95%;
+    --shell-search-bg: 214 24% 95%;
+    --shell-search-border: 214 14% 66%;
+    --shell-search-icon: 217 13% 35%;
     --shadow-ambient: 222 30% 18%;
 
-    --login-bg: 223 26% 14%;
+    --login-bg: 223 22% 17%;
     --login-fg: 210 30% 94%;
-    --login-overlay-from: 223 27% 12%;
-    --login-overlay-via: 223 24% 10%;
-    --login-overlay-to: 223 22% 8%;
-    --login-card-bg: 223 20% 15%;
+    --login-overlay-from: 223 24% 15%;
+    --login-overlay-via: 223 21% 13%;
+    --login-overlay-to: 223 19% 11%;
+    --login-card-bg: 223 19% 17%;
     --login-card-border: 217 14% 31%;
-    --login-input-bg: 223 17% 20%;
+    --login-input-bg: 223 16% 22%;
     --login-input-border: 218 13% 36%;
     --login-input-text: 210 28% 94%;
     --login-input-placeholder: 217 11% 66%;
@@ -303,11 +303,29 @@
   .drawer-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .drawer-scrollbar::-webkit-scrollbar {
     width: 0;
     height: 0;
+  }
+
+  .app-sidebar-toggle {
+    background: linear-gradient(
+      140deg,
+      hsl(var(--secondary)) 0%,
+      hsl(var(--secondary) / 0.86) 100%
+    );
+    border: 1px solid hsl(var(--secondary) / 0.58);
+    box-shadow:
+      0 8px 18px hsl(var(--shadow-ambient) / 0.3),
+      0 0 0 1px hsl(var(--background) / 0.08);
+  }
+
+  .app-sidebar-toggle:hover {
+    transform: translateY(-50%) translateX(2px) scale(1.05);
   }
 
   .login-shell {
