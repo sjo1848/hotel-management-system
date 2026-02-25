@@ -27,6 +27,7 @@ pub async fn root_handler() -> Json<Value> {
     tag = "Análisis"
 )]
 pub async fn track_ui_telemetry_handler(
+    State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Json(payload): Json<UiTelemetryEventRequest>,
 ) -> Result<Json<Value>, DomainError> {
@@ -56,6 +57,14 @@ pub async fn track_ui_telemetry_handler(
         "event" => payload.event.clone()
     )
     .increment(1);
+
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).ok();
+    let user_id = Uuid::parse_str(&claims.sub).ok();
+    let action = format!("ui_event:{}", payload.event);
+    state
+        .audit_service
+        .record(hotel_id, user_id, &action, None)
+        .await;
 
     tracing::info!(
         event = %payload.event,

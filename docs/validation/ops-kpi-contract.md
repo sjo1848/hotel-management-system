@@ -60,7 +60,7 @@ Last updated: 2026-02-24 UTC
 - Source: UI telemetry event stream
 - Window: trailing 7 days
 - Threshold: `kpi_hq_activation_rate >= 60%`
-- Validation command: `./scripts/check-business-kpi-contract.sh`
+- Validation command: `./scripts/check-business-kpi-runtime.sh --fail-on-threshold`
 - Owner: Product Analytics
 
 ### B2. kpi_feature_flags_usage_rate
@@ -68,7 +68,7 @@ Last updated: 2026-02-24 UTC
 - Source: feature flags API usage telemetry
 - Window: trailing 7 days
 - Threshold: `kpi_feature_flags_usage_rate >= 70%`
-- Validation command: `./scripts/check-business-kpi-contract.sh`
+- Validation command: `./scripts/check-business-kpi-runtime.sh --fail-on-threshold`
 - Owner: Product Analytics
 
 ### B3. kpi_plan_upgrade_rate
@@ -76,7 +76,7 @@ Last updated: 2026-02-24 UTC
 - Source: plan update telemetry events + billing records
 - Window: trailing 30 days
 - Threshold: `kpi_plan_upgrade_rate >= 5%`
-- Validation command: `./scripts/check-business-kpi-contract.sh`
+- Validation command: `./scripts/check-business-kpi-runtime.sh --fail-on-threshold`
 - Owner: Product + Revenue Ops
 
 ### B4. kpi_critical_task_time_p95

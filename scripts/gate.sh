@@ -173,6 +173,17 @@ echo "==> release ops runtime slo evidence gate"
 echo "==> business kpi contract gate"
 ./scripts/check-business-kpi-contract.sh
 
+echo "==> business kpi runtime evidence gate"
+./scripts/check-business-kpi-runtime.sh \
+  --runner "${HMS_KPI_RUNNER:-auto}" \
+  --window-hq-days "${HMS_KPI_HQ_WINDOW_DAYS:-7}" \
+  --window-flags-days "${HMS_KPI_FLAGS_WINDOW_DAYS:-7}" \
+  --window-upgrade-days "${HMS_KPI_UPGRADE_WINDOW_DAYS:-30}" \
+  --min-hq-activation-rate "${HMS_KPI_HQ_MIN_RATE:-60}" \
+  --min-feature-usage-rate "${HMS_KPI_FLAGS_MIN_RATE:-70}" \
+  --min-plan-upgrade-rate "${HMS_KPI_UPGRADE_MIN_RATE:-5}" \
+  --report /tmp/hms_business_kpi_runtime_local.md
+
 echo "==> rbac drift check (fe/be capability matrix)"
 ./scripts/check-rbac-drift.sh
 
