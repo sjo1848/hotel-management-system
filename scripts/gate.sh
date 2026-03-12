@@ -25,6 +25,21 @@ while [[ $# -gt 0 ]]; do
 done
 
 run_frontend_gates() {
+  run_frontend_in_named_container() {
+    local container_name="$1"
+    local workdir
+    echo "==> using docker exec ${container_name} fallback"
+    workdir="$(docker inspect -f '{{.Config.WorkingDir}}' "$container_name" 2>/dev/null || true)"
+    if [[ -z "$workdir" ]]; then
+      workdir="/app"
+    fi
+    docker start "$container_name" >/dev/null 2>&1 || true
+    docker exec "$container_name" sh -lc "cd \"$workdir\" && npm run lint"
+    docker exec "$container_name" sh -lc "cd \"$workdir\" && npm run test -- --run"
+    docker exec "$container_name" sh -lc "cd \"$workdir\" && npm run build"
+    ./scripts/frontend-perf-budget.sh
+  }
+
   echo "==> frontend gates"
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     if docker compose up -d frontend >/dev/null 2>&1; then
@@ -33,6 +48,10 @@ run_frontend_gates() {
       docker compose exec -T frontend npm run test -- --run
       docker compose exec -T frontend npm run build
       ./scripts/frontend-perf-budget.sh
+      return 0
+    fi
+    if docker ps -a --format "{{.Names}}" | grep -qx "hms-frontend"; then
+      run_frontend_in_named_container "hms-frontend"
       return 0
     fi
     echo "==> docker compose frontend unavailable; fallback to host"

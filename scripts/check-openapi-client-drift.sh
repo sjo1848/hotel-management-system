@@ -19,7 +19,24 @@ fi
 tmp_file="$(mktemp)"
 trap 'rm -f "$tmp_file"' EXIT
 
-"$GENERATOR_SCRIPT" "$tmp_file"
+MAX_ATTEMPTS="${HMS_OPENAPI_CLIENT_DRIFT_RETRIES:-3}"
+RETRY_DELAY_SEC="${HMS_OPENAPI_CLIENT_DRIFT_RETRY_DELAY_SEC:-2}"
+
+attempt=1
+while true; do
+  if "$GENERATOR_SCRIPT" "$tmp_file"; then
+    break
+  fi
+
+  if [[ "$attempt" -ge "$MAX_ATTEMPTS" ]]; then
+    echo "OpenAPI client drift check: generation failed after ${MAX_ATTEMPTS} attempts." >&2
+    exit 1
+  fi
+
+  echo "OpenAPI client drift check: generation failed (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${RETRY_DELAY_SEC}s..." >&2
+  attempt=$((attempt + 1))
+  sleep "$RETRY_DELAY_SEC"
+done
 
 if ! cmp -s "$tmp_file" "$TARGET_FILE"; then
   echo "OpenAPI frontend client drift detected: $TARGET_FILE is out of sync." >&2

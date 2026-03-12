@@ -16,6 +16,17 @@ run_coverage_docker() {
     --coverage.reportsDirectory=coverage
 }
 
+run_coverage_named_container() {
+  local container_name="$1"
+  local workdir
+  workdir="$(docker inspect -f '{{.Config.WorkingDir}}' "$container_name" 2>/dev/null || true)"
+  if [[ -z "$workdir" ]]; then
+    workdir="/app"
+  fi
+  docker start "$container_name" >/dev/null 2>&1 || true
+  docker exec "$container_name" sh -lc "cd \"$workdir\" && npm run coverage -- --coverage.reporter=json-summary --coverage.reportsDirectory=coverage"
+}
+
 run_coverage_host() {
   (
     cd frontend
@@ -25,10 +36,13 @@ run_coverage_host() {
   )
 }
 
-if command -v docker >/dev/null 2>&1 && docker compose ps >/dev/null 2>&1; then
-  if docker compose ps --services 2>/dev/null | grep -qx frontend; then
+if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  if docker compose up -d frontend >/dev/null 2>&1; then
     echo "==> frontend coverage runner: docker"
     run_coverage_docker
+  elif docker ps -a --format "{{.Names}}" | grep -qx "hms-frontend"; then
+    echo "==> frontend coverage runner: docker exec fallback (hms-frontend)"
+    run_coverage_named_container "hms-frontend"
   else
     echo "==> frontend coverage runner: host (frontend service not found)"
     run_coverage_host
