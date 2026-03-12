@@ -29,6 +29,12 @@ export default defineConfig({
           if (id.includes("date-fns")) return "date";
           if (id.includes("lucide-react")) return "icons";
           if (id.includes("react-router")) return "router";
+          if (id.includes("@tanstack/react-query") || id.includes("axios")) {
+            return "data";
+          }
+          if (id.includes("@radix-ui/") || id.includes("react-day-picker")) {
+            return "ui-kit";
+          }
           return "vendor";
         },
       },
