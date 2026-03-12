@@ -64,6 +64,8 @@ resolve_runner() {
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
     if docker compose config --services 2>/dev/null | grep -qx db; then
       docker_ready=true
+    elif docker ps -a --format "{{.Names}}" | grep -qx "hms-db"; then
+      docker_ready=true
     fi
   fi
 
@@ -114,6 +116,10 @@ run_sql() {
     set +e
     result="$(docker compose exec -T db psql -U admin -d hms_core -tA -c "$sql" 2>/dev/null)"
     status=$?
+    if [[ "$status" -ne 0 ]] && docker ps -a --format "{{.Names}}" | grep -qx "hms-db"; then
+      result="$(docker exec hms-db psql -U admin -d hms_core -tA -c "$sql" 2>/dev/null)"
+      status=$?
+    fi
     set -e
   else
     set +e
