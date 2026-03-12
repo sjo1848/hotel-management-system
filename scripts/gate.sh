@@ -105,7 +105,7 @@ run_perf_smoke_gate() {
   ./scripts/perf-baseline.sh \
     --requests "${HMS_PERF_SMOKE_REQUESTS:-4}" \
     --concurrency "${HMS_PERF_SMOKE_CONCURRENCY:-1}" \
-    --warmup "${HMS_PERF_SMOKE_WARMUP:-0}" \
+    --warmup "${HMS_PERF_SMOKE_WARMUP:-1}" \
     --slo-p95-sec "${HMS_PERF_SMOKE_P95:-1.0}" \
     --slo-error-rate "${HMS_PERF_SMOKE_ERROR_RATE:-0.05}" \
     --report /tmp/hms_perf_gate_local.md

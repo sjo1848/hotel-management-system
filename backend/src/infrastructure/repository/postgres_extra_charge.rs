@@ -44,7 +44,8 @@ impl ExtraChargeRepository for PostgresExtraChargeRepository {
     ) -> Result<Vec<ExtraCharge>, String> {
         let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
         let records = sqlx::query(
-            "SELECT id, hotel_id, booking_id, description, amount_cents, category, created_at 
+            "SELECT id, hotel_id, booking_id, description, amount_cents, category,
+                    (created_at AT TIME ZONE 'UTC') AS created_at
              FROM extra_charges 
              WHERE hotel_id = $1 AND booking_id = $2 
              ORDER BY created_at ASC",

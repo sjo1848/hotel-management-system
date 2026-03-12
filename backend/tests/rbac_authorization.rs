@@ -7,16 +7,18 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
     booking_transaction_service::BookingTransactionService,
-    cash_closure_service::CashClosureService, guest_service::GuestService,
-    hotel_service::HotelService, housekeeping_service::HousekeepingService,
-    invoice_service::InvoiceService, reporting_service::ReportingService,
+    cash_closure_service::CashClosureService, front_desk_service::FrontDeskService,
+    guest_service::GuestService, hotel_service::HotelService,
+    housekeeping_service::HousekeepingService, invoice_service::InvoiceService,
+    reporting_service::ReportingService, room_hold_service::RoomHoldService,
     room_service::RoomService, user_service::UserService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
     AuditRepository, BookingRepository, BookingTransactionRepository, CashClosureRepository,
     ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
-    RefreshTokenRepository, RoomRepository, UserRepository,
+    PaymentEntryRepository, RefreshTokenRepository, RoomHoldRepository, RoomRepository,
+    UserRepository,
 };
 use hms_backend::domain::security::{PasswordHasher, TokenSigner};
 use hms_backend::infrastructure::repository::{
@@ -26,7 +28,9 @@ use hms_backend::infrastructure::repository::{
     postgres_cash_closure::PostgresCashClosureRepository,
     postgres_extra_charge::PostgresExtraChargeRepository, postgres_guest::PostgresGuestRepository,
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
-    postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
+    postgres_payment_entry::PostgresPaymentEntryRepository,
+    postgres_refresh_token::PostgresRefreshTokenRepository,
+    postgres_room_hold::PostgresRoomHoldRepository, postgres_user::PostgresUserRepository,
 };
 use hms_backend::infrastructure::web::jwt::JwtTokenSigner;
 use hms_backend::infrastructure::web::jwt::{encode_token, Claims};
@@ -130,6 +134,200 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         &ops_token,
         None,
         false,
+        StatusCode::OK,
+    )
+    .await;
+
+    // Exercise critical booking handlers used by front desk flows.
+    let booking_room_id = Uuid::new_v4();
+    let booking_reassign_room_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO rooms (id, hotel_id, room_number, room_type, status, price_cents)
+         VALUES ($1, $2, $3, $4, $5, $6), ($7, $2, $8, $9, $10, $11)",
+    )
+    .bind(booking_room_id)
+    .bind(hotel_id)
+    .bind("RBAC-101")
+    .bind("Standard")
+    .bind("AVAILABLE")
+    .bind(12_000_i64)
+    .bind(booking_reassign_room_id)
+    .bind("RBAC-102")
+    .bind("Standard Plus")
+    .bind("AVAILABLE")
+    .bind(13_500_i64)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let booking_guest_name = format!("RBAC Booking {}", Uuid::new_v4());
+    assert_status(
+        &app,
+        Method::POST,
+        "/api/v1/bookings",
+        &admin_token,
+        Some(format!(
+            r#"{{"room_id":"{}","guest_name":"{}","check_in":"2026-03-10","check_out":"2026-03-12"}}"#,
+            booking_room_id, booking_guest_name
+        )),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    let booking_id: Uuid = sqlx::query_scalar(
+        "SELECT id
+         FROM bookings
+         WHERE hotel_id = $1 AND guest_name = $2
+         ORDER BY created_at DESC
+         LIMIT 1",
+    )
+    .bind(hotel_id)
+    .bind(&booking_guest_name)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/bookings?start=2026-03-01&end=2026-03-31",
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/front-desk/board?date=2026-03-10",
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/bookings/{booking_id}"),
+        &admin_token,
+        Some(format!(
+            r#"{{"room_id":"{}","operational_note":"Reasignacion operativa QA","front_desk":{{"check_in_reference":"CHK-123","check_in_guests_count":2,"check_in_document_verified":true,"check_in_contact_confirmed":true,"check_in_stay_confirmed":true}}}}"#,
+            booking_reassign_room_id
+        )),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/bookings/{booking_id}"),
+        &admin_token,
+        Some(
+            r#"{"status":"CheckedIn","operational_note":"Check in operativo QA","front_desk":{"check_in_reference":"CHK-456","check_in_guests_count":2,"check_in_document_verified":true,"check_in_contact_confirmed":true,"check_in_stay_confirmed":true}}"#
+                .to_string(),
+        ),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::POST,
+        &format!("/api/v1/bookings/{booking_id}/extra-charges"),
+        &admin_token,
+        Some(
+            r#"{"description":"Minibar nocturno","amount_cents":1800,"category":"MINIBAR"}"#
+                .to_string(),
+        ),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::GET,
+        &format!("/api/v1/bookings/{booking_id}/extra-charges"),
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::POST,
+        &format!("/api/v1/bookings/{booking_id}/payments"),
+        &admin_token,
+        Some(
+            r#"{"amount_cents":1000,"payment_method":"CASH","payment_reference":"POS-001","note":"Cobro parcial QA"}"#
+                .to_string(),
+        ),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::POST,
+        &format!("/api/v1/bookings/{booking_id}/settle-payment"),
+        &admin_token,
+        Some(r#"{"payment_method":"CARD","payment_reference":"POS-002"}"#.to_string()),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::GET,
+        &format!("/api/v1/bookings/{booking_id}/payments"),
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+    assert_status(
+        &app,
+        Method::GET,
+        &format!("/api/v1/bookings/{booking_id}/invoice"),
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/invoices",
+        &admin_token,
+        None,
+        false,
+        StatusCode::OK,
+    )
+    .await;
+
+    assert_status(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/bookings/{booking_id}"),
+        &admin_token,
+        Some(
+            r#"{"status":"CheckedOut","operational_note":"Checkout operativo QA","front_desk":{"check_out_payment_policy":"settled","check_out_reference":"CHECKOUT-001","check_out_charges_reviewed":true,"check_out_room_release_confirmed":true,"check_out_housekeeping_handoff":true}}"#
+                .to_string(),
+        ),
+        true,
         StatusCode::OK,
     )
     .await;
@@ -351,6 +549,10 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         as Arc<dyn CashClosureRepository>;
     let invoice_repo =
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let payment_entry_repo = Arc::new(PostgresPaymentEntryRepository::new(pool.clone()))
+        as Arc<dyn PaymentEntryRepository>;
+    let room_hold_repo =
+        Arc::new(PostgresRoomHoldRepository::new(pool.clone())) as Arc<dyn RoomHoldRepository>;
     let hotel_repo =
         Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
     let password_hasher = Arc::new(ArgonPasswordHasher) as Arc<dyn PasswordHasher>;
@@ -362,16 +564,26 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
+    let room_hold_service = Arc::new(RoomHoldService::new(
+        room_hold_repo.clone(),
+        room_repo.clone(),
+    ));
     let booking_service = Arc::new(BookingService::new(
         booking_repo.clone(),
         room_repo.clone(),
         guest_repo.clone(),
         room_service.clone(),
+        room_hold_service.clone(),
         audit_service.clone(),
         invoice_repo.clone(),
     ));
     let booking_transaction_service =
         Arc::new(BookingTransactionService::new(booking_transaction_repo));
+    let front_desk_service = Arc::new(FrontDeskService::new(
+        booking_repo.clone(),
+        room_repo.clone(),
+        room_hold_service.clone(),
+    ));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
@@ -379,17 +591,24 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     let billing_service = Arc::new(BillingService::new(
         extra_charge_repo.clone(),
         booking_repo.clone(),
+        invoice_repo.clone(),
+        payment_entry_repo.clone(),
     ));
     let cash_closure_service = Arc::new(CashClosureService::new(
         cash_closure_repo.clone(),
         invoice_repo.clone(),
+        payment_entry_repo.clone(),
     ));
     let housekeeping_service = Arc::new(HousekeepingService::new(
         room_repo.clone(),
+        booking_repo.clone(),
         room_service.clone(),
         audit_service.clone(),
     ));
-    let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
+    let invoice_service = Arc::new(InvoiceService::new(
+        invoice_repo.clone(),
+        payment_entry_repo.clone(),
+    ));
     let user_service = Arc::new(UserService::new(user_repo.clone(), password_hasher.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
@@ -403,10 +622,12 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     Arc::new(AppState {
         booking_service,
         booking_transaction_service,
+        front_desk_service,
         analytics_service,
         reporting_service,
         guest_service,
         room_service,
+        room_hold_service,
         hotel_service,
         billing_service,
         cash_closure_service,
