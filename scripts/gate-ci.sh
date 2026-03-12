@@ -206,6 +206,9 @@ echo "=============================="
 echo " HMS GATE (CI) — START"
 echo "=============================="
 
+echo "==> baseline fingerprint (origin/main lock)"
+./scripts/check-baseline-fingerprint.sh
+
 echo "==> backend fast CI"
 ./scripts/ci-backend.sh
 

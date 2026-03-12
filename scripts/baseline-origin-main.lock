@@ -1,0 +1,5 @@
+# HMS baseline fingerprint lock
+# Update intentionally when changing the audited baseline.
+BASELINE_REF="origin/main"
+BASELINE_SHA="c6fa685f4e7bf5993788f90396136c7ebcdcf0c4"
+BASELINE_COMMIT_DATE="2026-02-25 19:22:44 -0300"

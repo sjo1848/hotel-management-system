@@ -146,6 +146,9 @@ echo "=============================="
 echo "==> frontend preflight (rollup fallback)"
 ./scripts/frontend-runner-preflight.sh
 
+echo "==> baseline fingerprint (origin/main lock)"
+./scripts/check-baseline-fingerprint.sh
+
 echo "==> backend fast CI (fmt/clippy/unit + openapi_contract)"
 ./scripts/ci-backend.sh
 
