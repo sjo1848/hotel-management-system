@@ -231,7 +231,7 @@ echo "==> frontend session coverage gate"
 if [[ "$FULL" == "true" || "${HMS_E2E_FLAKY_CHECK:-false}" == "true" ]]; then
   echo "==> frontend e2e flaky rate gate"
   ./scripts/check-e2e-flaky-rate.sh \
-    --runner "${HMS_E2E_FLAKY_RUNNER:-pw-container}" \
+    --runner "${HMS_E2E_FLAKY_RUNNER:-docker}" \
     --runs "${HMS_E2E_FLAKY_RUNS:-30}" \
     --max-failure-rate "${HMS_E2E_FLAKY_MAX_FAILURE_RATE:-1}" \
     --report /tmp/hms_e2e_flaky_report.md \

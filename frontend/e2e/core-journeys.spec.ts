@@ -1,11 +1,16 @@
 import { expect, test } from "@playwright/test";
 
-const hotelId = process.env.E2E_HOTEL_ID ?? "Hotel Sede Central";
+const hotelId = process.env.E2E_HOTEL_ID ?? "00000000-0000-0000-0000-000000000001";
 const username = process.env.E2E_USERNAME ?? "admin";
 const password = process.env.E2E_PASSWORD ?? "admin123";
 
 async function login(page: import("@playwright/test").Page) {
-  await page.goto("/login");
+  await expect(async () => {
+    await page.goto("/login", { waitUntil: "domcontentloaded" });
+    await expect(page.getByLabel("Hotel (nombre o ID)")).toBeVisible();
+    await expect(page.getByLabel("Usuario Global")).toBeVisible();
+    await expect(page.getByLabel("Clave de Acceso")).toBeVisible();
+  }).toPass({ timeout: 30_000, intervals: [1_000, 2_000, 3_000] });
 
   await page.getByLabel("Hotel (nombre o ID)").fill(hotelId);
   await page.getByLabel("Usuario Global").fill(username);
@@ -70,5 +75,5 @@ test("rbac/admin journey: users and reports sections are reachable", async ({ pa
 
   await page.getByRole("link", { name: "Tendencias" }).click();
   await expect(page).toHaveURL(/\/reports$/);
-  await expect(page.getByText("Analítica Avanzada")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: /^Analítica Avanzada$/ })).toBeVisible();
 });

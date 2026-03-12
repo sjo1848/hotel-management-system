@@ -14,6 +14,16 @@ GREP_PATTERN="${HMS_E2E_FLAKY_GREP:-journey|lifecycle|billing|rbac}"
 REPORT_FILE="${HMS_E2E_FLAKY_REPORT:-/tmp/hms_e2e_flaky_report.md}"
 PW_IMAGE="${HMS_E2E_PW_IMAGE:-mcr.microsoft.com/playwright:v1.58.2-noble}"
 MANAGE_STACK=true
+DEFAULT_E2E_HOTEL_ID="00000000-0000-0000-0000-000000000001"
+
+if [[ -f .env ]]; then
+  # shellcheck disable=SC1091
+  source .env
+fi
+
+E2E_HOTEL_ID_VALUE="${E2E_HOTEL_ID:-$DEFAULT_E2E_HOTEL_ID}"
+E2E_USERNAME_VALUE="${E2E_USERNAME:-${ADMIN_USER:-admin}}"
+E2E_PASSWORD_VALUE="${E2E_PASSWORD:-${ADMIN_PASSWORD:-admin123}}"
 
 usage() {
   cat <<USAGE
@@ -94,6 +104,20 @@ wait_for_url() {
 if [[ "$RUNNER" == "docker" ]]; then
   wait_for_url "http://localhost:3001/health" 90 2
   wait_for_url "${BASE_URL%/}/login" 90 2
+  echo "==> Preparing frontend container runtime for E2E"
+  docker compose exec -T frontend sh -lc "
+    if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
+      echo '==> Installing chromium in frontend container for E2E'
+      apk add --no-cache chromium nss freetype harfbuzz ttf-freefont >/tmp/hms_e2e_chromium_install.log 2>&1 || {
+        cat /tmp/hms_e2e_chromium_install.log >&2
+        exit 1
+      }
+    fi
+    npx playwright install chromium >/tmp/hms_e2e_playwright_install.log 2>&1 || {
+      cat /tmp/hms_e2e_playwright_install.log >&2
+      exit 1
+    }
+  "
 elif [[ "$RUNNER" == "pw-container" ]]; then
   wait_for_url "http://localhost:3001/health" 90 2
   wait_for_url "${BASE_URL%/}/login" 90 2
@@ -119,18 +143,14 @@ run_once() {
   echo "==> E2E flaky run ${run_index}/${RUNS}"
   if [[ "$RUNNER" == "docker" ]]; then
     docker compose exec -T frontend sh -lc "
-      if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
-        echo '==> Installing chromium in frontend container for E2E'
-        apk add --no-cache chromium nss freetype harfbuzz ttf-freefont >/tmp/hms_e2e_chromium_install.log 2>&1 || {
-          cat /tmp/hms_e2e_chromium_install.log >&2
-          exit 1
-        }
-      fi
       BROWSER_BIN=\$(command -v chromium-browser || command -v chromium || true)
       if [ -z \"\$BROWSER_BIN\" ]; then
         echo 'chromium is required in frontend container for E2E (rebuild frontend image).' >&2
         exit 1
       fi
+      E2E_HOTEL_ID='${E2E_HOTEL_ID_VALUE}' \
+      E2E_USERNAME='${E2E_USERNAME_VALUE}' \
+      E2E_PASSWORD='${E2E_PASSWORD_VALUE}' \
       PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=\"\$BROWSER_BIN\" \
       PLAYWRIGHT_BASE_URL='${BASE_URL}' \
       npm run test:e2e -- --grep '${GREP_PATTERN}' --fail-on-flaky-tests
@@ -138,6 +158,9 @@ run_once() {
   elif [[ "$RUNNER" == "pw-container" ]]; then
     docker run --rm \
       --network host \
+      -e E2E_HOTEL_ID="${E2E_HOTEL_ID_VALUE}" \
+      -e E2E_USERNAME="${E2E_USERNAME_VALUE}" \
+      -e E2E_PASSWORD="${E2E_PASSWORD_VALUE}" \
       -v "$(pwd)/frontend:/work" \
       -w /work \
       "$PW_IMAGE" \
@@ -150,6 +173,9 @@ run_once() {
   else
     (
       cd frontend
+      E2E_HOTEL_ID="${E2E_HOTEL_ID_VALUE}" \
+      E2E_USERNAME="${E2E_USERNAME_VALUE}" \
+      E2E_PASSWORD="${E2E_PASSWORD_VALUE}" \
       PLAYWRIGHT_BASE_URL="${BASE_URL}" npm run test:e2e -- --grep "${GREP_PATTERN}" --fail-on-flaky-tests
     )
   fi
