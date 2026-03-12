@@ -288,6 +288,8 @@ if [[ "$SKIP_FRONTEND" != "true" ]]; then
   echo "==> frontend preflight (rollup fallback)"
   ./scripts/frontend-runner-preflight.sh
   run_frontend_gates
+  echo "==> frontend critical suite minimum gate"
+  ./scripts/check-frontend-critical-suite.sh
   echo "==> frontend session coverage gate"
   ./scripts/check-frontend-session-coverage.sh
   echo "==> frontend e2e flaky rate gate (mandatory)"

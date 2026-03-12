@@ -225,6 +225,9 @@ fi
 
 run_frontend_gates
 
+echo "==> frontend critical suite minimum gate"
+./scripts/check-frontend-critical-suite.sh
+
 echo "==> frontend session coverage gate"
 ./scripts/check-frontend-session-coverage.sh
 
