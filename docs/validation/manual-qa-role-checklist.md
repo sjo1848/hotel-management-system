@@ -9,6 +9,8 @@ Estandarizar una pasada manual de QA para validar HMS Elite en web y mobile con 
 - responsive en anchos reales
 - restricciones de acceso y UX base
 
+Para ejecutar la pasada paso a paso, usar el [Runbook de QA Manual V1](manual-qa-execution-runbook.md).
+
 ## Alcance
 Esta checklist no reemplaza:
 
