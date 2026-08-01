@@ -12,6 +12,37 @@ fn get_mapping<'a>(value: &'a Value, key: &str) -> &'a serde_yaml::Mapping {
         .unwrap_or_else(|| panic!("missing mapping key: {key}"))
 }
 
+fn assert_schema_required_fields(doc: &Value, schema_name: &str, expected: &[&str]) {
+    let components = get_mapping(doc, "components");
+    let schemas = components
+        .get("schemas")
+        .and_then(Value::as_mapping)
+        .expect("components.schemas must be present");
+    let schema = schemas
+        .get(schema_name)
+        .and_then(Value::as_mapping)
+        .unwrap_or_else(|| panic!("missing schema: {schema_name}"));
+    let required = schema
+        .get("required")
+        .and_then(Value::as_sequence)
+        .unwrap_or_else(|| panic!("schema {schema_name} must declare required fields"));
+    let properties = schema
+        .get("properties")
+        .and_then(Value::as_mapping)
+        .unwrap_or_else(|| panic!("schema {schema_name} must declare properties"));
+
+    for field in expected {
+        assert!(
+            required.contains(&Value::from(*field)),
+            "schema {schema_name} must require {field}"
+        );
+        assert!(
+            properties.contains_key(Value::from(*field)),
+            "schema {schema_name} must expose {field}"
+        );
+    }
+}
+
 #[test]
 fn openapi_server_matches_runtime() {
     let doc = openapi_doc();
@@ -73,6 +104,12 @@ fn openapi_covers_runtime_routes_and_methods() {
         ("/api/v1/rooms", "get"),
         ("/api/v1/rooms", "post"),
         ("/api/v1/rooms/available", "get"),
+        ("/api/v1/rooms/{id}", "get"),
+        ("/api/v1/rooms/{id}", "patch"),
+        ("/api/v1/rooms/{id}/holds", "get"),
+        ("/api/v1/rooms/{id}/holds", "post"),
+        ("/api/v1/rooms/{id}/holds/{hold_id}", "patch"),
+        ("/api/v1/rooms/{id}/holds/{hold_id}", "delete"),
         ("/api/v1/rooms/{id}/status", "patch"),
         ("/api/v1/bookings", "get"),
         ("/api/v1/bookings", "post"),
@@ -121,5 +158,51 @@ fn swagger_ui_uses_external_openapi_json_source() {
     assert!(
         routes_src.contains("external_url_unchecked(\"/api-docs/openapi.json\", ApiDoc::openapi_json())"),
         "Swagger wiring must use external_url_unchecked + openapi_json to prevent contract serialization drift"
+    );
+}
+
+#[test]
+fn core_operational_schemas_match_persisted_v1_fields() {
+    let doc = openapi_doc();
+
+    assert_schema_required_fields(
+        &doc,
+        "Room",
+        &[
+            "id",
+            "hotel_id",
+            "room_number",
+            "room_type",
+            "status",
+            "price_cents",
+        ],
+    );
+    assert_schema_required_fields(
+        &doc,
+        "Booking",
+        &[
+            "id",
+            "hotel_id",
+            "room_id",
+            "guest_id",
+            "guest_name",
+            "check_in",
+            "check_out",
+            "total_price_cents",
+            "status",
+            "operational_data",
+        ],
+    );
+    assert_schema_required_fields(
+        &doc,
+        "Guest",
+        &[
+            "id",
+            "hotel_id",
+            "full_name",
+            "email",
+            "phone",
+            "created_at",
+        ],
     );
 }

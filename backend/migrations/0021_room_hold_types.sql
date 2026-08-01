@@ -1,0 +1,6 @@
+ALTER TABLE room_holds
+ADD COLUMN hold_type VARCHAR(32) NOT NULL DEFAULT 'COMMERCIAL';
+
+ALTER TABLE room_holds
+ADD CONSTRAINT room_hold_valid_type
+CHECK (hold_type IN ('VIP', 'MAINTENANCE', 'OWNER', 'COMPLIANCE', 'COMMERCIAL', 'OTHER'));

@@ -61,6 +61,7 @@ const TapeChart = () => {
       if (booking.status === 'CheckedIn') statusColor = 'bg-emerald-500 text-white border-emerald-600';
       if (booking.status === 'CheckedOut') statusColor = 'bg-slate-400 text-white border-slate-500';
       if (booking.status === 'Cancelled') statusColor = 'bg-rose-200 text-rose-700 border-rose-300 line-through';
+      if (booking.status === 'NoShow') statusColor = 'bg-amber-200 text-amber-800 border-amber-300 line-through';
 
       return { 
         isBooked: true, 
@@ -78,44 +79,44 @@ const TapeChart = () => {
     setStartDate(prev => addDays(prev, days));
   };
 
-  if (loading) return <div className='p-20 flex justify-center bg-white h-full w-full items-center rounded-xl border shadow-sm'><Loader2 className='animate-spin w-8 h-8 text-primary' /></div>;
+  if (loading) return <div className='flex h-full w-full items-center justify-center rounded-3xl border border-border bg-card/95 p-10 shadow-sm sm:p-20'><Loader2 className='h-8 w-8 animate-spin text-primary' /></div>;
 
   return (
     <div className='flex flex-col h-full space-y-4'>
-      <div className='flex justify-between items-center bg-white p-4 rounded-xl border shadow-sm'>
-        <h2 className='text-xl font-bold text-slate-800 capitalize'>
+      <div className='flex flex-col gap-3 rounded-3xl border border-border bg-card/95 p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between'>
+        <h2 className='text-lg font-bold capitalize text-foreground sm:text-xl'>
           {format(startDate, 'MMMM yyyy', { locale: es })}
         </h2>
-        <div className='flex gap-2 bg-slate-100 p-1 rounded-lg'>
-          <Button variant='ghost' size='sm' onClick={() => moveDate(-7)} className='hover:bg-white shadow-none'><ChevronLeft className='w-4 h-4' /></Button>
-          <Button variant='ghost' size='sm' onClick={() => setStartDate(startOfToday())} className='hover:bg-white shadow-sm font-semibold'>Hoy</Button>
-          <Button variant='ghost' size='sm' onClick={() => moveDate(7)} className='hover:bg-white shadow-none'><ChevronRight className='w-4 h-4' /></Button>
+        <div className='flex w-full justify-between gap-2 rounded-2xl border border-border bg-muted/50 p-1 sm:w-auto sm:justify-start'>
+          <Button variant='ghost' size='sm' onClick={() => moveDate(-7)} className='shadow-none hover:bg-background/80'><ChevronLeft className='w-4 h-4' /></Button>
+          <Button variant='ghost' size='sm' onClick={() => setStartDate(startOfToday())} className='font-semibold shadow-sm hover:bg-background/80'>Hoy</Button>
+          <Button variant='ghost' size='sm' onClick={() => moveDate(7)} className='shadow-none hover:bg-background/80'><ChevronRight className='w-4 h-4' /></Button>
         </div>
       </div>
 
-      <Card className='overflow-x-auto border-none rounded-xl shadow-xl bg-white'>
+      <Card className='overflow-x-auto rounded-3xl border border-border bg-card/95 shadow-xl'>
         <table className='w-full border-collapse min-w-[800px]'>
           <thead>
             <tr>
-              <th className='p-4 border-b border-r bg-slate-50 w-[200px] text-left font-bold text-slate-600 sticky left-0 z-30 shadow-[2px_0_10px_rgba(0,0,0,0.05)]'>
+              <th className='sticky left-0 z-30 w-[200px] border-b border-r border-border bg-muted/70 p-4 text-left font-bold text-muted-foreground shadow-[2px_0_12px_rgba(0,0,0,0.12)]'>
                 Habitación
               </th>
               {dateRange.map((date, i) => (
-                <th key={i} className={`p-2 border-b min-w-[65px] text-center border-r border-slate-100 last:border-r-0 ${isSameDay(date, startOfToday()) ? 'bg-orange-50' : 'bg-slate-50'}`}>
-                  <div className={`text-[10px] font-black uppercase ${isSameDay(date, startOfToday()) ? 'text-orange-600' : 'text-slate-400'}`}>{format(date, 'EEE', { locale: es })}</div>
-                  <div className={`text-sm font-bold ${isSameDay(date, startOfToday()) ? 'text-orange-700' : 'text-slate-600'}`}>{format(date, 'd')}</div>
+                <th key={i} className={`min-w-[65px] border-b border-r border-border p-2 text-center last:border-r-0 ${isSameDay(date, startOfToday()) ? 'bg-primary/10' : 'bg-muted/60'}`}>
+                  <div className={`text-[10px] font-black uppercase ${isSameDay(date, startOfToday()) ? 'text-primary' : 'text-muted-foreground'}`}>{format(date, 'EEE', { locale: es })}</div>
+                  <div className={`text-sm font-bold ${isSameDay(date, startOfToday()) ? 'text-foreground' : 'text-foreground/80'}`}>{format(date, 'd')}</div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className='bg-white'>
+          <tbody className='bg-card/80'>
             {rooms.map((room) => (
-              <tr key={room.id} className='hover:bg-slate-50 transition-colors group'>
-                <td className='p-4 border-b border-r font-bold text-slate-700 sticky left-0 bg-white z-20 shadow-[2px_0_10px_rgba(0,0,0,0.05)] group-hover:bg-slate-50 transition-colors'>
+              <tr key={room.id} className='group transition-colors hover:bg-muted/30'>
+                <td className='sticky left-0 z-20 border-b border-r border-border bg-card p-4 font-bold text-foreground shadow-[2px_0_12px_rgba(0,0,0,0.12)] transition-colors group-hover:bg-muted/30'>
                   <div className='flex items-center justify-between'>
                     <div className='flex flex-col'>
                       <span>{room.room_number}</span>
-                      <span className='text-[10px] text-slate-400 font-medium uppercase tracking-wider'>{room.room_type}</span>
+                      <span className='text-[10px] font-medium uppercase tracking-wider text-muted-foreground'>{room.room_type}</span>
                     </div>
                     <div className="flex gap-1">
                       {room.status === 'Dirty' && (
@@ -131,7 +132,7 @@ const TapeChart = () => {
                 {dateRange.map((date, i) => {
                   const status = getBookingStatus(room.id, date);
                   return (
-                    <td key={i} className={`p-0 border-b border-r border-slate-100 relative h-16 text-center align-middle ${isSameDay(date, startOfToday()) ? 'bg-orange-50/20' : ''}`}>
+                    <td key={i} className={`relative h-16 border-b border-r border-border p-0 text-center align-middle ${isSameDay(date, startOfToday()) ? 'bg-primary/5' : ''}`}>
                       {status && (
                         <div 
                           className={`

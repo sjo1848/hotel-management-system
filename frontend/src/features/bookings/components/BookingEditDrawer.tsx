@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, CheckCircle2, LogOut, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -15,7 +15,7 @@ import { updateBooking, getBookings } from "../services/bookingService";
 import roomService from "@/features/rooms/services/roomService";
 import extraChargeService from "../services/extraChargeService";
 import { useToast } from "@/components/ui/toast";
-import { Booking, Room, BookingStatus, ExtraCharge } from "@/types/domain";
+import { Booking, Room, ExtraCharge } from "@/types/domain";
 import { Plus, Coffee, Beer, WashingMachine, Utensils, Tag } from "lucide-react";
 
 type BookingEditDrawerProps = {
@@ -109,7 +109,7 @@ const BookingEditDrawer = ({
   if (!booking && !loading && isOpen && bookingId) {
       return (
         <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="bg-card">
+            <SheetContent className="w-full border-l border-border bg-card shadow-2xl sm:max-w-[440px]">
                 <div className="p-10 text-center">No se encontró la reserva</div>
             </SheetContent>
         </Sheet>
@@ -117,48 +117,6 @@ const BookingEditDrawer = ({
   }
 
   if (!booking) return null;
-
-  const handleStatusChange = async (newStatus: BookingStatus) => {
-    if (newStatus === 'CheckedIn' && room?.status === 'Dirty') {
-      toast({
-        title: "Habitación Sucia",
-        description: "No se puede realizar el check-in. La habitación debe estar limpia primero.",
-        variant: "error",
-      });
-      return;
-    }
-
-    if (newStatus === 'CheckedIn' && room?.status === 'Maintenance') {
-      toast({
-        title: "En Mantenimiento",
-        description: "No se puede realizar el check-in. La habitación está bloqueada.",
-        variant: "error",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      await updateBooking(booking.id, { status: newStatus });
-      toast({
-        title: "Estado actualizado",
-        description: `La reserva ahora está ${newStatus.toLowerCase()}.`,
-        variant: "success",
-      });
-      
-      if (newStatus === 'CheckedIn' || newStatus === 'CheckedOut') {
-        setShowSuccess(newStatus as any);
-        onSuccess();
-      } else {
-        onSuccess();
-        onClose();
-      }
-    } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -189,11 +147,11 @@ const BookingEditDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-card border-l border-border shadow-2xl overflow-y-auto">
+      <SheetContent className="w-full overflow-hidden border-l border-border bg-card p-0 shadow-2xl sm:max-w-[440px]">
         {showSuccess ? (
-          <div className="flex flex-col items-center justify-center h-full py-12 text-center space-y-6 animate-in zoom-in fade-in duration-500">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-emerald-100' : 'bg-blue-100'}`}>
-              <CheckCircle2 className={`w-12 h-12 ${showSuccess === 'CheckedIn' ? 'text-emerald-600' : 'text-blue-600'}`} />
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center space-y-6 px-4 py-10 text-center animate-in zoom-in fade-in duration-500 sm:px-6 sm:py-12">
+            <div className={`flex h-24 w-24 items-center justify-center rounded-full shadow-xl ${showSuccess === 'CheckedIn' ? 'bg-primary/12 text-primary' : 'bg-secondary/18 text-secondary-foreground'}`}>
+              <CheckCircle2 className="h-12 w-12" />
             </div>
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-foreground">
@@ -209,7 +167,7 @@ const BookingEditDrawer = ({
             <div className="flex flex-col w-full gap-3 pt-6">
               {showSuccess === 'CheckedOut' && (
                 <Button 
-                  className="bg-slate-900 text-white rounded-xl h-12 gap-2"
+                  className="h-12 gap-2 rounded-xl bg-primary text-primary-foreground"
                   onClick={() => {
                     onClose();
                     onViewDetails?.();
@@ -220,7 +178,7 @@ const BookingEditDrawer = ({
               )}
               <Button 
                 variant="outline" 
-                className="rounded-xl h-12"
+                className="h-12 rounded-xl"
                 onClick={onClose}
               >
                 Cerrar Panel
@@ -228,22 +186,22 @@ const BookingEditDrawer = ({
             </div>
           </div>
         ) : (
-          <>
-            <SheetHeader className="pb-6 border-b">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
               <SheetTitle className="text-2xl font-bold">Gestionar Reserva</SheetTitle>
               <SheetDescription>
                 ID: <span className="font-mono text-xs">{booking.id.slice(0,8)}</span>
               </SheetDescription>
             </SheetHeader>
 
-            <div className="py-6 space-y-6">
+            <div className="min-h-0 flex-1 overflow-y-auto space-y-6 px-4 py-5 sm:px-6 sm:py-6">
               {/* Room Status Warning */}
               {room?.status === 'Dirty' && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3">
-                  <AlertTriangle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <div className="flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 p-4">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
                   <div>
-                    <p className="text-sm font-black text-rose-900 leading-tight">Habitación Sucia</p>
-                    <p className="text-xs font-medium text-rose-700 mt-1">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
+                    <p className="text-sm font-black leading-tight text-destructive">Habitación Sucia</p>
+                    <p className="mt-1 text-xs font-medium text-destructive">Debe marcarse como limpia en Housekeeping antes del check-in.</p>
                   </div>
                 </div>
               )}
@@ -251,35 +209,17 @@ const BookingEditDrawer = ({
               {/* Quick Actions */}
               <div className="space-y-3">
                 <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acciones Rápidas</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {booking.status === 'Confirmed' && (
-                    <Button 
-                      onClick={() => handleStatusChange('CheckedIn')}
-                      disabled={loading}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-2" /> Check-in
-                    </Button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(booking.status === 'Confirmed' || booking.status === 'CheckedIn') && (
+                    <p className="text-xs text-muted-foreground">
+                      El check-in y checkout se completan desde el centro operativo para validar sus checklists.
+                    </p>
                   )}
-                  {booking.status === 'CheckedIn' && (
-                    <Button 
-                      onClick={() => handleStatusChange('CheckedOut')}
-                      disabled={loading}
-                      className="bg-slate-600 hover:bg-slate-700 text-white"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" /> Check-out
-                    </Button>
-                  )}
-                  {booking.status !== 'Cancelled' && booking.status !== 'CheckedOut' && (
-                    <Button 
-                      variant="outline"
-                      onClick={() => handleStatusChange('Cancelled')}
-                      disabled={loading}
-                      className="border-rose-200 text-rose-600 hover:bg-rose-50"
-                    >
-                      <XCircle className="w-4 h-4 mr-2" /> Cancelar
-                    </Button>
-                  )}
+                  {booking.status === 'Confirmed' ? (
+                    <p className="text-xs text-muted-foreground">
+                      Cancelacion, no-show y llegada tardia se registran con motivo desde el centro operativo.
+                    </p>
+                  ) : null}
                 </div>
               </div>
 
@@ -290,7 +230,7 @@ const BookingEditDrawer = ({
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-7 text-indigo-600 font-bold text-[10px] uppercase"
+                    className="h-7 text-[10px] font-bold uppercase text-primary"
                     onClick={() => setIsAddingExtra(!isAddingExtra)}
                   >
                     <Plus className="w-3 h-3 mr-1" /> Añadir
@@ -347,7 +287,7 @@ const BookingEditDrawer = ({
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label htmlFor="edit-check-in">Check-in</Label>
                       <Input
@@ -378,14 +318,14 @@ const BookingEditDrawer = ({
                   </div>
                 </div>
 
-                <SheetFooter className="pt-6">
-                  <Button type="submit" disabled={loading} className="w-full bg-slate-900 rounded-xl h-12">
+                <SheetFooter className="border-t pt-6">
+                  <Button type="submit" disabled={loading} className="h-12 w-full rounded-xl bg-primary">
                     {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Guardar Cambios"}
                   </Button>
                 </SheetFooter>
               </form>
             </div>
-          </>
+          </div>
         )}
       </SheetContent>
     </Sheet>

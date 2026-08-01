@@ -4,6 +4,7 @@ billing.balance.read
 billing.close_cash.write
 billing.invoice.read
 billing.invoices.read
+bookings.checkout.override
 bookings.extra_charges.read
 bookings.extra_charges.write
 bookings.read

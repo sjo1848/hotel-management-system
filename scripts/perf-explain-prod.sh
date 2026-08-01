@@ -128,7 +128,7 @@ WHERE r.hotel_id = '$HOTEL_ID'::uuid
         AND b.room_id = r.id
         AND b.check_in < '$END_DATE'::date
         AND b.check_out > '$START_DATE'::date
-        AND b.status != 'CANCELLED'
+        AND b.status NOT IN ('CANCELLED', 'NO_SHOW')
   );
 SQL
 
@@ -137,7 +137,7 @@ SELECT EXISTS (
     SELECT 1 FROM bookings
     WHERE hotel_id = '$HOTEL_ID'::uuid
       AND room_id = '$ROOM_ID'::uuid
-      AND status != 'CANCELLED'
+      AND status NOT IN ('CANCELLED', 'NO_SHOW')
       AND check_in < '$END_DATE'::date
       AND check_out > '$START_DATE'::date
 ) AS has_overlap;
@@ -147,7 +147,7 @@ cat > "$RUN_DIR/queries/revenue_report.sql" <<SQL
 SELECT check_in AS date, SUM(total_price_cents)::BIGINT AS revenue_cents
 FROM bookings
 WHERE hotel_id = '$HOTEL_ID'::uuid
-  AND status != 'CANCELLED'
+  AND status NOT IN ('CANCELLED', 'NO_SHOW')
   AND check_in >= '$START_DATE'::date
   AND check_in <= '$END_DATE'::date
 GROUP BY check_in

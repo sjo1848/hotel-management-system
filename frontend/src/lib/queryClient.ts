@@ -48,7 +48,7 @@ export const queryClient = new QueryClient({
 });
 
 export const invalidateResourceKey = async (queryKey: string) => {
-  queryClient.removeQueries({
+  await queryClient.invalidateQueries({
     queryKey: toResourceQueryKey(queryKey),
     exact: true,
   });

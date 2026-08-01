@@ -35,14 +35,13 @@ async fn room_service_creates_room(pool: sqlx::PgPool) {
     assert_eq!(room.room_type, room_type);
     assert_eq!(room.price_cents, price_cents);
 
-    // Verify it exists in DB
-    let found = service
-        .room_repo
-        .find_by_id(hotel_id, room.id)
-        .await
-        .unwrap()
-        .unwrap();
+    // Verify the application read path is tenant-scoped and returns the room.
+    let found = service.get_room(hotel_id, room.id).await.unwrap();
     assert_eq!(found.room_number, room_number);
+
+    let other_hotel_id = Uuid::new_v4();
+    let cross_tenant_result = service.get_room(other_hotel_id, room.id).await;
+    assert!(cross_tenant_result.is_err());
 }
 
 #[sqlx::test]

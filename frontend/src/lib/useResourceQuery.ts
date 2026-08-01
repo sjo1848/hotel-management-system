@@ -41,7 +41,7 @@ export function useResourceQuery<T>({
   const queryClient = useQueryClient();
   const query = useQuery<T>({
     queryKey: toResourceQueryKey(queryKey),
-    queryFn,
+    queryFn: () => queryFn(),
     staleTime: staleTimeMs,
     enabled,
     retry,
@@ -52,8 +52,9 @@ export function useResourceQuery<T>({
   }, [query]);
 
   const invalidate = useCallback(() => {
-    queryClient.removeQueries({
+    void queryClient.invalidateQueries({
       queryKey: toResourceQueryKey(queryKey),
+      exact: true,
     });
   }, [queryClient, queryKey]);
 

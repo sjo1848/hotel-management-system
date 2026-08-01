@@ -10,6 +10,7 @@ import GuestCreateDrawer from "./components/GuestCreateDrawer";
 import GuestDetailsSheet from "./components/GuestDetailsSheet";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
+import { PageHeader } from "@/components/ui/page-header";
 
 const GuestsPage = () => {
   const { toast } = useToast();
@@ -35,12 +36,14 @@ const GuestsPage = () => {
       header: "Huésped",
       cell: (item) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 font-bold text-primary shadow-sm">
             {item.full_name.charAt(0)}
           </div>
           <div>
-            <div className="font-bold text-slate-900">{item.full_name}</div>
-            <div className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-0.5">ID: {item.id.slice(0, 8)}</div>
+            <div className="font-bold text-foreground">{item.full_name}</div>
+            <div className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+              ID: {item.id.slice(0, 8)}
+            </div>
           </div>
         </div>
       ),
@@ -49,11 +52,11 @@ const GuestsPage = () => {
       header: "Contacto",
       cell: (item) => (
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs text-slate-600">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Mail className="w-3 h-3" /> {item.email}
           </div>
           {item.phone && (
-            <div className="flex items-center gap-2 text-xs text-slate-600">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Phone className="w-3 h-3" /> {item.phone}
             </div>
           )}
@@ -63,7 +66,7 @@ const GuestsPage = () => {
     {
       header: "Miembro Desde",
       cell: (item) => (
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
+        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
           <Calendar className="w-3.5 h-3.5" />
           {item.created_at 
             ? format(new Date(item.created_at), "dd MMM, yyyy")
@@ -78,7 +81,7 @@ const GuestsPage = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-indigo-600 font-bold text-xs h-8"
+            className="h-8 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => {
               setSelectedGuest(item);
               setIsDetailsOpen(true);
@@ -94,44 +97,32 @@ const GuestsPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-600 rounded-lg shadow-lg shadow-indigo-500/20">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-              Directorio de Huéspedes
-            </h2>
-          </div>
-          <p className="text-slate-500 font-medium mt-2">
-            Historial y gestión de clientes del hotel.
-          </p>
-        </div>
+      <PageHeader
+        title="Directorio de Huéspedes"
+        description="Historial y gestión de clientes del hotel."
+        icon={<User className="h-5 w-5" />}
+        actions={
+          <Button
+            className="h-12 gap-2 rounded-xl bg-primary shadow-xl shadow-primary/15 transition-all active:scale-95"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Registrar Huésped
+          </Button>
+        }
+      />
 
-        <Button 
-          className="h-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          Registrar Huésped
-        </Button>
-      </div>
-
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-slate-200/50 overflow-hidden">
-        {guestsError && (
-          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
-            {getErrorMessage(guestsError, "No se pudo cargar la lista de huéspedes")}
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          data={guests}
-          isLoading={loading}
-          searchable
-          searchPlaceholder="Buscar por nombre o email..."
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={guests}
+        isLoading={loading}
+        error={guestsError ? getErrorMessage(guestsError, "No se pudo cargar la lista de huéspedes") : null}
+        onRetry={() => {
+          void refetchGuests();
+        }}
+        searchable
+        searchPlaceholder="Buscar por nombre o email..."
+      />
 
       <GuestCreateDrawer 
         isOpen={isCreateOpen}

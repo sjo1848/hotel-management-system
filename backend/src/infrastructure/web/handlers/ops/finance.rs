@@ -1,21 +1,31 @@
 use super::*;
 
+pub async fn list_cash_closures_handler(
+    State(state): State<Arc<AppState>>,
+    Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
+) -> Result<Json<Value>, DomainError> {
+    let operations = state.operations_context();
+    let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let closures = operations
+        .cash_closure_service
+        .list_closures(hotel_id)
+        .await?;
+
+    Ok(Json(json!(closures)))
+}
+
 pub async fn get_current_balance_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
 ) -> Result<Json<Value>, DomainError> {
     let operations = state.operations_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
-    let (total, cash, card) = operations
+    let balance = operations
         .cash_closure_service
         .get_current_balance(hotel_id)
         .await?;
 
-    Ok(Json(json!({
-        "total_amount_cents": total,
-        "cash_amount_cents": cash,
-        "card_amount_cents": card
-    })))
+    Ok(Json(json!(balance)))
 }
 
 #[tracing::instrument(
@@ -37,17 +47,49 @@ pub async fn close_cash_handler(
     span.record("tenant_id", hotel_id_str.as_str());
     span.record("user_id", user_id_str.as_str());
     if let Some(notes) = payload.notes.as_deref() {
-        validate_len_range("notes", notes, 0, 500)?;
+        validate_len_range("notes", notes, 6, 500)?;
+    }
+    if let Some(handoff_to) = payload.handoff_to.as_deref() {
+        validate_len_range("handoff_to", handoff_to, 2, 120)?;
+    }
+    if payload
+        .expected_cash_amount_cents
+        .is_some_and(|amount| amount < 0)
+        || payload
+            .counted_cash_amount_cents
+            .is_some_and(|amount| amount < 0)
+    {
+        return Err(DomainError::InvalidInput(
+            "Los montos de efectivo no pueden ser negativos".to_string(),
+        ));
     }
 
     let closure = operations
         .cash_closure_service
-        .close_cash(hotel_id, user_id, payload.notes)
+        .close_cash(
+            hotel_id,
+            user_id,
+            payload.notes,
+            payload.expected_cash_amount_cents,
+            payload.counted_cash_amount_cents,
+            payload.handoff_to,
+        )
         .await?;
 
+    let audit_action: String = format!(
+        "cash.closed closure={} expected={} counted={} diff={} handoff={}",
+        closure.id,
+        closure.cash_amount_cents,
+        closure.counted_cash_amount_cents,
+        closure.cash_difference_cents,
+        closure.handoff_to,
+    )
+    .chars()
+    .take(120)
+    .collect();
     state
         .audit_service
-        .record(Some(hotel_id), Some(user_id), "cash.closed", None)
+        .record(Some(hotel_id), Some(user_id), &audit_action, None)
         .await;
     tracing::info!(
         tenant_id = %closure.hotel_id,

@@ -100,5 +100,11 @@ run_sqlx_test_with_retry() {
 RUNNER_RESOLVED="$(resolve_runner)"
 echo "==> backend security regression runner: ${RUNNER_RESOLVED}"
 
+if [[ "$RUNNER_RESOLVED" == "docker" ]]; then
+  echo "==> ensuring backend test runner is available"
+  DATABASE_URL="${HMS_DOCKER_DATABASE_URL:-postgres://admin:password123@db:5432/hms_core}" \
+    docker compose up -d db backend >/dev/null
+fi
+
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "rbac_authorization"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "csrf_authn_security"

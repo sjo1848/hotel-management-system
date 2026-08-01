@@ -46,13 +46,20 @@ pub async fn seed_rooms_if_empty(room_repo: Arc<dyn RoomRepository>) {
 
     tracing::info!("Seeding initial rooms...");
     let rooms = vec![
-        ("101", "SINGLE", 5000),
-        ("102", "SINGLE", 5000),
-        ("103", "DOUBLE", 8000),
-        ("104", "DOUBLE", 8000),
-        ("201", "SUITE", 15000),
-        ("202", "SUITE", 15000),
-        ("301", "DELUXE", 25000),
+        ("101", "SINGLE", 2_500_000),
+        ("102", "SINGLE", 2_500_000),
+        ("103", "DOUBLE", 3_800_000),
+        ("104", "DOUBLE", 3_800_000),
+        ("105", "SINGLE", 2_700_000),
+        ("106", "DOUBLE", 4_000_000),
+        ("201", "SUITE", 6_500_000),
+        ("202", "SUITE", 6_500_000),
+        ("203", "DOUBLE", 4_200_000),
+        ("204", "SUITE", 6_800_000),
+        ("301", "DELUXE", 9_200_000),
+        ("302", "DELUXE", 9_800_000),
+        ("303", "FAMILY", 8_500_000),
+        ("401", "PRESIDENTIAL", 14_500_000),
     ];
 
     for (num, rtype, price) in rooms {

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { createUser, CreateUserPayload } from "../usersService";
-import { UserRole } from "@/types/domain";
+import { TenantUserRole } from "@/types/domain";
 import { getErrorMessage } from "@/api/errors";
 
 type UserCreateDrawerProps = {
@@ -21,6 +21,17 @@ type UserCreateDrawerProps = {
   onClose: () => void;
   onSuccess: () => void;
 };
+
+const tenantRoles: Array<{
+  value: TenantUserRole;
+  label: string;
+  description: string;
+}> = [
+  { value: "receptionist", label: "Recepción", description: "Reservas, huéspedes y cobros" },
+  { value: "ops", label: "Operaciones", description: "Coordinación operativa del hotel" },
+  { value: "housekeeping", label: "Housekeeping", description: "Limpieza y mantenimiento" },
+  { value: "admin", label: "Administrador", description: "Configuración y accesos del hotel" },
+];
 
 const UserCreateDrawer = ({
   isOpen,
@@ -33,7 +44,7 @@ const UserCreateDrawer = ({
   const [formData, setFormData] = useState<CreateUserPayload>({
     username: "",
     password: "",
-    role: "ops" as UserRole,
+    role: "ops",
   });
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -50,7 +61,7 @@ const UserCreateDrawer = ({
       
       toast({
         title: "Usuario creado",
-        description: `El operador ${formData.username} ha sido registrado exitosamente.`,
+        description: `${formData.username} fue registrado correctamente.`,
         variant: "success",
       });
       
@@ -71,18 +82,20 @@ const UserCreateDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-card border-l border-border shadow-2xl">
-        <SheetHeader className="pb-6 border-b">
+      <SheetContent className="w-full overflow-hidden border-l border-border bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-[440px]">
+        <div className="flex min-h-0 flex-1 flex-col">
+        <SheetHeader className="border-b border-border px-4 py-5 sm:px-6 sm:py-6">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
             <UserPlus className="w-6 h-6 text-foreground" />
-            Nuevo Operador
+            Nuevo usuario
           </SheetTitle>
           <SheetDescription>
             Registra un nuevo usuario y asigna su rol en el sistema.
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="username" className="flex items-center gap-2">
@@ -93,7 +106,7 @@ const UserCreateDrawer = ({
                 placeholder="Ej: jdoe_recepcion"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                className="bg-muted border-border focus:bg-card transition-colors"
+                className="bg-muted/50 border-border focus:bg-background transition-colors"
                 required
               />
             </div>
@@ -108,7 +121,7 @@ const UserCreateDrawer = ({
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="bg-muted border-border focus:bg-card transition-colors"
+                className="bg-muted/50 border-border focus:bg-background transition-colors"
                 required
               />
             </div>
@@ -117,45 +130,39 @@ const UserCreateDrawer = ({
               <Label className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-muted-foreground" /> Rol del Sistema
               </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'ops' })}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    formData.role === 'ops' 
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-lg' 
-                      : 'border-border bg-card text-muted-foreground hover:border-border'
-                  }`}
-                >
-                  <p className="font-bold text-xs uppercase tracking-wider">Operador</p>
-                  <p className="text-[10px] opacity-70">Acceso a gestión diaria</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, role: 'admin' })}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    formData.role === 'admin' 
-                      ? 'border-indigo-600 bg-indigo-600 text-white shadow-lg' 
-                      : 'border-border bg-card text-muted-foreground hover:border-border'
-                  }`}
-                >
-                  <p className="font-bold text-xs uppercase tracking-wider">Admin</p>
-                  <p className="text-[10px] opacity-70">Control total del sistema</p>
-                </button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {tenantRoles.map((role) => (
+                  <button
+                    key={role.value}
+                    type="button"
+                    aria-pressed={formData.role === role.value}
+                    onClick={() => setFormData({ ...formData, role: role.value })}
+                    className={`rounded-xl border p-3 text-left transition-all ${
+                      formData.role === role.value
+                        ? "border-primary/20 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/20 hover:bg-muted/40"
+                    }`}
+                  >
+                    <p className="text-xs font-bold uppercase tracking-wider">{role.label}</p>
+                    <p className="text-[10px] opacity-70">{role.description}</p>
+                  </button>
+                ))}
               </div>
             </div>
           </div>
+          </div>
 
-          <SheetFooter className="pt-6 border-t">
+          <SheetFooter className="border-t border-border bg-background/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
             <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 shadow-lg transition-all active:scale-[0.98]"
+                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Operador"}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar usuario"}
             </Button>
           </SheetFooter>
         </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

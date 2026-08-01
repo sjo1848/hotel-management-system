@@ -155,8 +155,9 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[420px] overflow-y-auto bg-card border-l border-border shadow-2xl">
-        <SheetHeader>
+      <SheetContent className="w-full overflow-hidden border-l border-border bg-card p-0 shadow-2xl sm:max-w-[420px]">
+        <div className="flex min-h-0 flex-1 flex-col">
+        <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
           <div className="flex justify-between items-center mb-2">
             <Badge variant="outline" className="text-[10px] uppercase tracking-tighter">Paso {step} de 3</Badge>
           </div>
@@ -170,7 +171,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="grid gap-6 py-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           {/* PASO 1: RESUMEN */}
           {step === 1 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
@@ -189,7 +191,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                 </div>
                 <div className="border-t border-border pt-3 mt-1 flex justify-between items-end">
                   <span className="text-xs text-muted-foreground uppercase font-bold">Total Estimado</span>
-                  <span className="text-xl font-black text-indigo-600">${total.toLocaleString("es-AR")}</span>
+                  <span className="text-xl font-black text-primary">${total.toLocaleString("es-AR")}</span>
                 </div>
               </div>
               <div className="text-xs text-muted-foreground italic">
@@ -208,7 +210,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     <button 
                       type="button" 
                       onClick={handleClearSelectedGuest}
-                      className="text-[10px] font-bold text-rose-600 hover:underline"
+                      className="text-[10px] font-bold text-destructive hover:underline"
                     >
                       Limpiar Selección
                     </button>
@@ -221,7 +223,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     placeholder="Nombre o Email..."
                     className={cn(
                       "pl-10 h-11 rounded-xl transition-all",
-                      selectedGuestId ? "bg-indigo-50 border-indigo-200" : "bg-card"
+                      selectedGuestId ? "bg-primary/10 border-primary/20" : "bg-card"
                     )}
                     value={searchTerm}
                     onChange={(e) => {
@@ -241,7 +243,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                         <button
                           key={guest.id}
                           type="button"
-                          className="w-full text-left p-3 hover:bg-indigo-50 rounded-lg transition-colors flex flex-col border-b border-border last:border-0"
+                          className="w-full text-left rounded-lg border-b border-border p-3 transition-colors last:border-0 hover:bg-primary/10"
                           onClick={() => handleSelectGuest(guest)}
                         >
                           <span className="text-sm font-bold text-foreground">{guest.full_name}</span>
@@ -254,7 +256,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
               </div>
 
               <div className="space-y-4 pt-4 border-t border-border">
-                <div className="flex items-center gap-2 text-indigo-600 mb-2">
+                <div className="mb-2 flex items-center gap-2 text-primary">
                   <UserPlus className="w-4 h-4" />
                   <span className="text-[10px] font-black uppercase tracking-widest">
                     {selectedGuestId ? "Detalles del Huésped Seleccionado" : "O registrar nuevo"}
@@ -296,8 +298,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
           {/* PASO 3: CONFIRMACIÓN */}
           {step === 3 && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-               <div className="rounded-2xl border-2 border-indigo-100 p-5 bg-indigo-50/30">
-                  <h4 className="text-sm font-bold text-indigo-900 mb-4 flex items-center gap-2">
+               <div className="rounded-2xl border border-primary/20 bg-primary/10 p-5">
+                  <h4 className="mb-4 flex items-center gap-2 text-sm font-bold text-primary">
                     <CheckCircle className="w-4 h-4" /> Resumen Final
                   </h4>
                   <div className="space-y-2 text-sm">
@@ -315,23 +317,24 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
                     </div>
                   </div>
                </div>
-               <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl">
-                  <div className="flex justify-between items-center font-black text-emerald-900">
+               <div className="rounded-xl border border-primary/20 bg-primary/10 p-4">
+                  <div className="flex items-center justify-between font-black text-primary">
                     <span>A PAGAR:</span>
                     <span className="text-2xl">${total.toLocaleString("es-AR")}</span>
                   </div>
                </div>
             </div>
           )}
+          </div>
 
-          <SheetFooter className="flex-row gap-3 sm:justify-between pt-4">
+          <SheetFooter className="gap-3 border-t bg-card/95 px-4 py-4 backdrop-blur sm:justify-between sm:px-6 sm:py-5">
             {step > 1 && (
               <Button
                 type="button"
                 variant="outline"
                 onClick={prevStep}
                 disabled={loading}
-                className="flex-1 rounded-xl h-12"
+                className="h-12 w-full rounded-xl sm:flex-1"
               >
                 Atrás
               </Button>
@@ -340,8 +343,8 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
               type="submit"
               disabled={loading}
               className={cn(
-                "rounded-xl h-12 shadow-lg transition-all",
-                step === 3 ? "bg-emerald-600 hover:bg-emerald-700 flex-[2]" : "bg-slate-900 flex-1"
+                "h-12 w-full rounded-xl shadow-lg transition-all sm:flex-1",
+                step === 3 ? "bg-primary hover:bg-primary/90 sm:flex-[2]" : "bg-primary"
               )}
             >
               {loading ? (
@@ -355,6 +358,7 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
             </Button>
           </SheetFooter>
         </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

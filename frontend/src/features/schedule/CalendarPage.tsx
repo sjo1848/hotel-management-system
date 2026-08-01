@@ -7,6 +7,7 @@ import { getBookings } from "@/features/bookings/services/bookingService";
 import { Room, Booking } from "@/types/domain";
 import TapeChart from "./TapeChart";
 import BookingDetailsSheet from "../bookings/components/BookingDetailsSheet";
+import { PageHeader } from "@/components/ui/page-header";
 
 const CalendarPage = () => {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -32,72 +33,63 @@ const CalendarPage = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
-              <CalendarDays className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-              Calendario Maestro
-            </h2>
+      <PageHeader
+        title="Calendario Maestro"
+        description="Vista de ocupación y disponibilidad en formato de cinta."
+        icon={<CalendarDays className="h-5 w-5" />}
+        actions={
+          <div className="flex w-full gap-2 sm:w-auto">
+            <Button variant="outline" size="sm" className="h-10 flex-1 sm:flex-none">
+              <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
+            </Button>
+            <Button variant="outline" size="sm" className="h-10 flex-1 sm:flex-none">
+              Siguiente <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
           </div>
-          <p className="text-slate-500 font-medium mt-2">
-            Vista de ocupación y disponibilidad en formato de cinta.
-          </p>
-        </div>
+        }
+      />
 
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
-            <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
-          </Button>
-          <Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200">
-            Siguiente <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4 sm:gap-6">
         {/* Sidebar Informativa */}
         <div className="xl:col-span-1 space-y-6">
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Estadísticas</CardTitle>
+          <Card className="overflow-hidden rounded-3xl border border-border bg-card/95 shadow-xl">
+            <CardHeader className="border-b border-border bg-muted/40 py-4 px-6">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Estadísticas</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <BedDouble className="w-4 h-4" />
                   <span className="text-sm font-bold">Total Habitaciones</span>
                 </div>
-                <span className="text-lg font-black text-slate-900">{rooms.length}</span>
+                <span className="text-lg font-black text-foreground">{rooms.length}</span>
               </div>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-600">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <CalendarDays className="w-4 h-4" />
                   <span className="text-sm font-bold">Reservas Activas</span>
                 </div>
-                <span className="text-lg font-black text-indigo-600">{bookings.length}</span>
+                <span className="text-lg font-black text-primary">{bookings.length}</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-slate-400">Leyenda</CardTitle>
+          <Card className="overflow-hidden rounded-3xl border border-border bg-card/95 shadow-xl">
+            <CardHeader className="border-b border-border bg-muted/40 py-4 px-6">
+              <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Leyenda</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-indigo-500 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase">Confirmada</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Confirmada</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-emerald-500 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase">Check-in</span>
+                <span className="text-xs font-bold text-muted-foreground uppercase">Check-in</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded bg-rose-200 shadow-sm" />
-                <span className="text-xs font-bold text-slate-600 uppercase text-rose-700">Cancelada</span>
+                <span className="text-xs font-bold uppercase text-rose-700 dark:text-rose-300">Cancelada</span>
               </div>
             </CardContent>
           </Card>

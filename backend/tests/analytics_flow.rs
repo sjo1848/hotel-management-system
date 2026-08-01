@@ -1,4 +1,6 @@
-use hms_backend::domain::models::{Booking, BookingStatus, Room, RoomStatus};
+use hms_backend::domain::models::{
+    Booking, BookingOperationalData, BookingStatus, Room, RoomStatus,
+};
 use hms_backend::domain::repositories::{BookingRepository, RoomRepository};
 use hms_backend::infrastructure::repository::postgres::PostgresRoomRepository;
 use hms_backend::infrastructure::repository::postgres_booking::PostgresBookingRepository;
@@ -43,6 +45,7 @@ async fn analytics_kpis_calculation_is_accurate(pool: sqlx::PgPool) {
         check_out: today + chrono::Duration::days(1),
         total_price_cents: 10000,
         status: BookingStatus::Confirmed,
+        operational_data: BookingOperationalData::default(),
     };
     booking_repo.save(booking).await.unwrap();
 

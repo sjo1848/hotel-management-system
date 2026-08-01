@@ -87,12 +87,12 @@ const RoomList = ({ searchDates }: { searchDates: SearchDates }) => {
     );
 
   if (error)
-    return <div className="text-red-500 text-center p-10">{error}</div>;
+    return <div className="p-10 text-center text-destructive">{error}</div>;
 
   return (
     <>
       {!searchDates?.from || !searchDates?.to ? (
-        <div className="border border-dashed border-amber-200 bg-amber-50/60 rounded-xl p-5 text-sm text-amber-700">
+        <div className="rounded-xl border border-dashed border-primary/20 bg-primary/10 p-5 text-sm text-primary">
           Seleccioná un rango de fechas para habilitar reservas y ver disponibilidad real.
         </div>
       ) : null}

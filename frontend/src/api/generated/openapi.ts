@@ -277,6 +277,262 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rooms/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtener habitación por ID */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Habitación encontrada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Room"];
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
+                403: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualizar habitación */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRoomRequest"];
+                };
+            };
+            responses: {
+                /** @description Habitación actualizada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Room"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                401: components["responses"]["ErrorResponse"];
+                403: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+                409: components["responses"]["ErrorResponse"];
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/rooms/{id}/holds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar bloqueos de una habitación */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bloqueos de la habitación */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RoomHold"][];
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        /** Crear bloqueo temporal de habitación */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRoomHoldRequest"];
+                };
+            };
+            responses: {
+                /** @description Bloqueo creado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RoomHold"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                401: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+                409: components["responses"]["ErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rooms/holds/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar bloqueos de habitaciones por rango */
+        get: {
+            parameters: {
+                query?: {
+                    start?: string;
+                    end?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bloqueos del rango consultado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RoomHoldBoardEntry"][];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                401: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rooms/{id}/holds/{hold_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Eliminar bloqueo temporal de habitación */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    hold_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Bloqueo eliminado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            status?: string;
+                        };
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Actualizar bloqueo temporal de habitación */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    hold_id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRoomHoldRequest"];
+                };
+            };
+            responses: {
+                /** @description Bloqueo actualizado */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RoomHold"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                401: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        trace?: never;
+    };
     "/api/v1/bookings": {
         parameters: {
             query?: never;
@@ -334,6 +590,45 @@ export interface paths {
                 409: components["responses"]["ErrorResponse"];
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/front-desk/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tablero operativo unificado de recepcion */
+        get: {
+            parameters: {
+                query?: {
+                    date?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Resumen operativo para front desk */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FrontDeskBoard"];
+                    };
+                };
+                401: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -780,6 +1075,49 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/rooms/bulk-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Actualizar estado operativo de varias habitaciones */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BulkUpdateRoomStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description Estados masivos actualizados */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BulkRoomStatusUpdateResult"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                401: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/bookings/{id}/extra-charges": {
         parameters: {
             query?: never;
@@ -954,6 +1292,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar cierres de caja */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cierres recientes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CashClosure"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/close-cash": {
         parameters: {
             query?: never;
@@ -963,7 +1337,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Cierre de caja */
+        /**
+         * Arqueo, cierre de caja y handoff de turno
+         * @description Cierra la ventana iniciada en el cierre anterior o en el primer cobro. Los campos de arqueo son aditivos; si se omiten, se conserva el comportamiento legacy usando el efectivo esperado y el siguiente turno.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -973,9 +1350,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": {
-                        notes?: string | null;
-                    };
+                    "application/json": components["schemas"]["CashClosureRequest"];
                 };
             };
             responses: {
@@ -988,6 +1363,7 @@ export interface paths {
                         "application/json": components["schemas"]["CashClosure"];
                     };
                 };
+                400: components["responses"]["ErrorResponse"];
             };
         };
         delete?: never;
@@ -1071,6 +1447,117 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bookings/{id}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar pagos registrados de una reserva */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Cobros registrados para la reserva */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PaymentEntry"][];
+                    };
+                };
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        put?: never;
+        /** Registrar un cobro parcial o total para una reserva */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegisterBookingPaymentRequest"];
+                };
+            };
+            responses: {
+                /** @description Cobro registrado y factura actualizada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invoice"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bookings/{id}/settle-payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Liquidar y cobrar una reserva */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SettleBookingPaymentRequest"];
+                };
+            };
+            responses: {
+                /** @description Factura liquidada y cobrada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invoice"];
+                    };
+                };
+                400: components["responses"]["ErrorResponse"];
+                404: components["responses"]["ErrorResponse"];
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/housekeeping/dirty": {
         parameters: {
             query?: never;
@@ -1095,6 +1582,44 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["Room"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/housekeeping/board": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tablero operativo de housekeeping */
+        get: {
+            parameters: {
+                query?: {
+                    date?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Tablero operativo por estado y salidas del dia */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["HousekeepingBoard"];
                     };
                 };
             };
@@ -1177,6 +1702,90 @@ export interface paths {
                         "application/json": {
                             status?: string;
                         };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/housekeeping/{id}/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Derivar habitación a mantenimiento */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["MarkMaintenanceRequest"];
+                };
+            };
+            responses: {
+                /** @description Habitación bloqueada por mantenimiento */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MaintenanceCase"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/housekeeping/{id}/dirty": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Devolver habitación a cola de limpieza */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["ResolveMaintenanceRequest"];
+                };
+            };
+            responses: {
+                /** @description Habitación devuelta a estado Dirty */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MaintenanceCase"];
                     };
                 };
             };
@@ -1333,28 +1942,226 @@ export interface components {
         LoginResponse: {
             access_token?: string;
             expires_in?: number;
-            role?: string;
+            /**
+             * @description Rol autenticado del usuario.
+             * @enum {string}
+             */
+            role?: "admin" | "saas_admin" | "ops" | "receptionist" | "housekeeping";
         };
         Room: {
             /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            hotel_id: string;
+            room_number: string;
+            room_type: string;
+            /** @enum {string} */
+            status: "Available" | "Occupied" | "Dirty" | "Cleaning" | "Maintenance";
+            price_cents: number;
+        };
+        RoomHold: {
+            /** Format: uuid */
             id?: string;
+            /** Format: uuid */
+            hotel_id?: string;
+            /** Format: uuid */
+            room_id?: string;
+            /** Format: date */
+            start_date?: string;
+            /** Format: date */
+            end_date?: string;
+            hold_type?: components["schemas"]["RoomHoldType"];
+            reason?: string;
+            /** Format: uuid */
+            created_by_user_id?: string | null;
+            /** Format: date-time */
+            created_at?: string | null;
+        };
+        /** @enum {string} */
+        RoomHoldType: "Vip" | "Maintenance" | "Owner" | "Compliance" | "Commercial" | "Other";
+        RoomHoldBoardEntry: {
+            /** Format: uuid */
+            hold_id?: string;
+            /** Format: uuid */
+            room_id?: string;
             room_number?: string;
             room_type?: string;
-            status?: string;
-            price_cents?: number;
+            /** Format: date */
+            start_date?: string;
+            /** Format: date */
+            end_date?: string;
+            hold_type?: components["schemas"]["RoomHoldType"];
+            reason?: string;
+            /** Format: date-time */
+            created_at?: string | null;
         };
         Booking: {
             /** Format: uuid */
-            id?: string;
+            id: string;
+            /** Format: uuid */
+            hotel_id: string;
+            /** Format: uuid */
+            room_id: string;
+            /** Format: uuid */
+            guest_id: string | null;
+            guest_name: string;
+            /** Format: date */
+            check_in: string;
+            /** Format: date */
+            check_out: string;
+            total_price_cents: number;
+            /** @enum {string} */
+            status: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow";
+            operational_data: components["schemas"]["BookingOperationalData"];
+        };
+        BookingOperationalData: {
+            check_in_guests_count?: number | null;
+            check_in_reference?: string | null;
+            check_in_document_verified?: boolean | null;
+            check_in_contact_confirmed?: boolean | null;
+            check_in_stay_confirmed?: boolean | null;
+            /** Format: date-time */
+            checked_in_at?: string | null;
+            /** Format: uuid */
+            checked_in_by_user_id?: string | null;
+            check_out_payment_policy?: string | null;
+            check_out_reference?: string | null;
+            check_out_charges_reviewed?: boolean | null;
+            check_out_room_release_confirmed?: boolean | null;
+            check_out_housekeeping_handoff?: boolean | null;
+            /** Format: date-time */
+            checked_out_at?: string | null;
+            /** Format: uuid */
+            checked_out_by_user_id?: string | null;
+            terminal_reason?: string | null;
+            /** Format: date-time */
+            terminal_recorded_at?: string | null;
+            /** Format: uuid */
+            terminal_recorded_by_user_id?: string | null;
+            /** Format: date-time */
+            late_arrival_eta?: string | null;
+            late_arrival_note?: string | null;
+            /** Format: date-time */
+            late_arrival_recorded_at?: string | null;
+            /** Format: uuid */
+            late_arrival_recorded_by_user_id?: string | null;
+        };
+        BulkRoomStatusUpdateResult: {
+            room_ids?: string[];
+            updated_count?: number;
+            /** @enum {string} */
+            status?: "Available" | "Occupied" | "Dirty" | "Cleaning" | "Maintenance";
+        };
+        HousekeepingBoardRoom: {
             /** Format: uuid */
             room_id?: string;
+            room_number?: string;
+            room_type?: string;
+            room_status?: string;
+            turnover_today?: boolean;
+            departure_guest_name?: string | null;
+            /** @enum {string|null} */
+            departure_booking_status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow" | null;
+            maintenance_case?: components["schemas"]["MaintenanceCase"] | null;
+        };
+        MaintenanceCase: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            hotel_id: string;
+            /** Format: uuid */
+            room_id: string;
+            /** @enum {string} */
+            status: "Open" | "Resolved";
+            /** @enum {string} */
+            priority: "Low" | "Medium" | "High" | "Urgent";
+            reason: string;
+            assigned_to: string;
+            /** Format: uuid */
+            reported_by_user_id: string | null;
+            /** Format: date-time */
+            reported_at: string;
+            resolution_note?: string | null;
+            /** Format: uuid */
+            resolved_by_user_id?: string | null;
+            /** Format: date-time */
+            resolved_at?: string | null;
+            /** @enum {string|null} */
+            return_status?: "Dirty" | null;
+        };
+        /** @description Los campos son opcionales por compatibilidad v1; clientes first-party envian evidencia explicita. */
+        MarkMaintenanceRequest: {
+            reason?: string;
+            /** @enum {string} */
+            priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+            assigned_to?: string;
+        };
+        /** @description Opcional por compatibilidad v1; la resolucion siempre retorna la habitacion a Dirty. */
+        ResolveMaintenanceRequest: {
+            resolution_note?: string;
+        };
+        HousekeepingDeparture: {
+            /** Format: uuid */
+            booking_id?: string;
+            /** Format: uuid */
+            room_id?: string;
+            room_number?: string;
+            room_type?: string;
+            room_status?: string;
+            guest_name?: string;
+            /** @enum {string} */
+            booking_status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow";
+        };
+        HousekeepingBoard: {
+            /** Format: date */
+            date?: string;
+            rooms?: components["schemas"]["HousekeepingBoardRoom"][];
+            departures_today?: components["schemas"]["HousekeepingDeparture"][];
+        };
+        FrontDeskBlocker: {
+            kind?: string;
+            title?: string;
+            detail?: string;
+        };
+        FrontDeskBoardEntry: {
+            /** Format: uuid */
+            booking_id?: string;
+            /** Format: uuid */
+            room_id?: string;
+            room_number?: string;
+            room_type?: string;
             guest_name?: string;
             /** Format: date */
             check_in?: string;
             /** Format: date */
             check_out?: string;
+            /** @enum {string} */
+            booking_status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow";
+            /** @enum {string} */
+            room_status?: "Available" | "Occupied" | "Dirty" | "Cleaning" | "Maintenance";
             total_price_cents?: number;
-            status?: string;
+            operational_data?: components["schemas"]["BookingOperationalData"];
+            blocker?: components["schemas"]["FrontDeskBlocker"] | null;
+        };
+        /** @enum {string} */
+        FrontDeskActionKind: "open-booking" | "prepare-check-in";
+        FrontDeskQueueItem: {
+            entry?: components["schemas"]["FrontDeskBoardEntry"];
+            lane?: string;
+            title?: string;
+            detail?: string;
+            primary_label?: string;
+            action_kind?: components["schemas"]["FrontDeskActionKind"];
+        };
+        FrontDeskBoard: {
+            /** Format: date */
+            date?: string;
+            arrivals_ready?: components["schemas"]["FrontDeskBoardEntry"][];
+            arrivals_blocked?: components["schemas"]["FrontDeskBoardEntry"][];
+            departures_today?: components["schemas"]["FrontDeskBoardEntry"][];
+            in_house?: components["schemas"]["FrontDeskBoardEntry"][];
+            holds_today?: components["schemas"]["RoomHoldBoardEntry"][];
+            action_queue?: components["schemas"]["FrontDeskQueueItem"][];
         };
         BookingAlert: {
             /** Format: uuid */
@@ -1362,7 +2169,7 @@ export interface components {
             guest_name?: string;
             room_number?: string;
             /** @enum {string} */
-            status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled";
+            status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow";
         };
         DashboardKpis: {
             revenue_month_cents?: number;
@@ -1390,6 +2197,8 @@ export interface components {
         CreateBookingRequest: {
             /** Format: uuid */
             room_id: string;
+            /** Format: uuid */
+            guest_id?: string | null;
             guest_name: string;
             /** Format: date */
             check_in: string;
@@ -1397,19 +2206,66 @@ export interface components {
             check_out: string;
         };
         UpdateBookingRequest: {
+            /** Format: uuid */
+            guest_id?: string | null;
             guest_name?: string;
+            /** Format: uuid */
+            room_id?: string;
             /** Format: date */
             check_in?: string;
             /** Format: date */
             check_out?: string;
-            status?: string;
+            /**
+             * @description Transicion fail-closed: Confirmed admite CheckedIn, Cancelled o NoShow; CheckedIn solo admite CheckedOut. Cancelled y NoShow exigen terminal_reason. Late arrival conserva Confirmed.
+             * @enum {string}
+             */
+            status?: "Confirmed" | "CheckedIn" | "CheckedOut" | "Cancelled" | "NoShow";
+            operational_note?: string;
+            front_desk?: components["schemas"]["BookingFrontDeskUpdateRequest"];
+        };
+        /** @description Evidencia operativa requerida para transiciones y excepciones de llegada. Checkout settled exige que la cuenta este completamente cobrada; pending-approved exige una referencia de al menos 6 caracteres y la capability bookings.checkout.override. */
+        BookingFrontDeskUpdateRequest: {
+            check_in_guests_count?: number;
+            check_in_reference?: string;
+            check_in_document_verified?: boolean;
+            check_in_contact_confirmed?: boolean;
+            check_in_stay_confirmed?: boolean;
+            /** @enum {string} */
+            check_out_payment_policy?: "settled" | "pending-approved";
+            check_out_reference?: string;
+            check_out_charges_reviewed?: boolean;
+            check_out_room_release_confirmed?: boolean;
+            check_out_housekeeping_handoff?: boolean;
+            terminal_reason?: string;
+            /** Format: date-time */
+            late_arrival_eta?: string;
+            late_arrival_note?: string;
+        };
+        SettleBookingPaymentRequest: {
+            payment_method: components["schemas"]["PaymentMethod"];
+            payment_reference?: string | null;
+        };
+        RegisterBookingPaymentRequest: {
+            amount_cents: number;
+            payment_method: components["schemas"]["PaymentMethod"];
+            payment_reference?: string | null;
+            note?: string | null;
+        };
+        BulkUpdateRoomStatusRequest: {
+            room_ids: string[];
+            /** @enum {string} */
+            status: "AVAILABLE" | "OCCUPIED" | "DIRTY" | "CLEANING" | "MAINTENANCE";
         };
         Guest: {
             /** Format: uuid */
-            id?: string;
-            full_name?: string;
-            email?: string;
-            phone?: string | null;
+            id: string;
+            /** Format: uuid */
+            hotel_id: string;
+            full_name: string;
+            email: string;
+            phone: string | null;
+            /** Format: date-time */
+            created_at: string | null;
         };
         CreateGuestRequest: {
             full_name: string;
@@ -1420,17 +2276,38 @@ export interface components {
             /** Format: uuid */
             id?: string;
             username?: string;
-            role?: string;
+            /**
+             * @description Rol tenant administrable.
+             * @enum {string}
+             */
+            role?: "admin" | "ops" | "receptionist" | "housekeeping";
         };
         CreateUserRequest: {
             username: string;
             password: string;
-            role: string;
+            /**
+             * @description Rol tenant provisionable; las identidades de plataforma se gestionan fuera de este endpoint.
+             * @enum {string}
+             */
+            role: "admin" | "ops" | "receptionist" | "housekeeping";
         };
         CreateRoomRequest: {
             room_number: string;
             room_type: string;
             price_cents: number;
+        };
+        UpdateRoomRequest: {
+            room_number: string;
+            room_type: string;
+            price_cents: number;
+        };
+        CreateRoomHoldRequest: {
+            /** Format: date */
+            start_date: string;
+            /** Format: date */
+            end_date: string;
+            hold_type: components["schemas"]["RoomHoldType"];
+            reason: string;
         };
         CreateHotelRequest: {
             name: string;
@@ -1503,6 +2380,21 @@ export interface components {
             total_amount_cents?: number;
             cash_amount_cents?: number;
             card_amount_cents?: number;
+            payment_count?: number;
+            /** Format: date-time */
+            opening_time?: string;
+            pending_amount_cents?: number;
+            pending_bookings_count?: number;
+        };
+        CashClosureRequest: {
+            /** @description Novedades y justificacion operativa para el siguiente turno. */
+            notes?: string | null;
+            /** @description Efectivo esperado mostrado al iniciar el arqueo; protege contra saldo stale. */
+            expected_cash_amount_cents?: number | null;
+            /** @description Efectivo fisico contado durante el arqueo. */
+            counted_cash_amount_cents?: number | null;
+            /** @description Turno o persona que recibe la caja. */
+            handoff_to?: string | null;
         };
         /** @enum {string} */
         InvoiceStatus: "PENDING" | "PAID" | "VOIDED";
@@ -1516,8 +2408,32 @@ export interface components {
             /** Format: uuid */
             booking_id?: string;
             amount_cents?: number;
+            paid_amount_cents?: number;
             status?: components["schemas"]["InvoiceStatus"];
             payment_method?: components["schemas"]["PaymentMethod"];
+            payment_reference?: string | null;
+            /** Format: date-time */
+            paid_at?: string | null;
+            /** Format: date-time */
+            created_at?: string;
+        };
+        PaymentEntry: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            hotel_id?: string;
+            /** Format: uuid */
+            invoice_id?: string;
+            /** Format: uuid */
+            booking_id?: string;
+            amount_cents?: number;
+            payment_method?: components["schemas"]["PaymentMethod"];
+            payment_reference?: string | null;
+            note?: string | null;
+            /** Format: uuid */
+            received_by_user_id?: string | null;
+            /** Format: date-time */
+            received_at?: string;
             /** Format: date-time */
             created_at?: string;
         };
@@ -1531,10 +2447,14 @@ export interface components {
             total_amount_cents?: number;
             cash_amount_cents?: number;
             card_amount_cents?: number;
+            payment_count?: number;
+            counted_cash_amount_cents?: number;
+            cash_difference_cents?: number;
             /** Format: date-time */
             opening_time?: string;
             /** Format: date-time */
             closing_time?: string;
+            handoff_to?: string;
             notes?: string | null;
         };
         RevenueReport: {

@@ -160,6 +160,207 @@ paths:
                   $ref: "#/components/schemas/Room"
         "401":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/{id}:
+    get:
+      summary: Obtener habitación por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Habitación encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    patch:
+      summary: Actualizar habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRoomRequest"
+      responses:
+        "200":
+          description: Habitación actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "403":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/{id}/holds:
+    get:
+      summary: Listar bloqueos de una habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Bloqueos de la habitación
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomHold"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    post:
+      summary: Crear bloqueo temporal de habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomHoldRequest"
+      responses:
+        "201":
+          description: Bloqueo creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomHold"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+        "409":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/holds/board:
+    get:
+      summary: Listar bloqueos de habitaciones por rango
+      parameters:
+        - in: query
+          name: start
+          required: false
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: end
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Bloqueos del rango consultado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoomHoldBoardEntry"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/{id}/holds/{hold_id}:
+    patch:
+      summary: Actualizar bloqueo temporal de habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: hold_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomHoldRequest"
+      responses:
+        "200":
+          description: Bloqueo actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoomHold"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    delete:
+      summary: Eliminar bloqueo temporal de habitación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: hold_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Bloqueo eliminado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings:
     get:
       summary: Listar reservas
@@ -192,6 +393,25 @@ paths:
         "400":
           $ref: "#/components/responses/ErrorResponse"
         "409":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/front-desk/board:
+    get:
+      summary: Tablero operativo unificado de recepcion
+      parameters:
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Resumen operativo para front desk
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FrontDeskBoard"
+        "401":
           $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings/{id}:
     patch:
@@ -433,6 +653,28 @@ paths:
                     type: string
         "404":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/rooms/bulk-status:
+    post:
+      summary: Actualizar estado operativo de varias habitaciones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BulkUpdateRoomStatusRequest"
+      responses:
+        "200":
+          description: Estados masivos actualizados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BulkRoomStatusUpdateResult"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/bookings/{id}/extra-charges:
     get:
       summary: Listar cargos extra por reserva
@@ -515,19 +757,31 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BillingBalance"
+  /api/v1/billing/closures:
+    get:
+      summary: Listar cierres de caja
+      responses:
+        "200":
+          description: Cierres recientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CashClosure"
   /api/v1/billing/close-cash:
     post:
-      summary: Cierre de caja
+      summary: Arqueo, cierre de caja y handoff de turno
+      description: >-
+        Cierra la ventana iniciada en el cierre anterior o en el primer cobro.
+        Los campos de arqueo son aditivos; si se omiten, se conserva el
+        comportamiento legacy usando el efectivo esperado y el siguiente turno.
       requestBody:
         required: false
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                notes:
-                  type: string
-                  nullable: true
+              $ref: "#/components/schemas/CashClosureRequest"
       responses:
         "200":
           description: Cierre registrado
@@ -535,6 +789,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CashClosure"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/invoices:
     get:
       summary: Listar facturas
@@ -566,6 +822,80 @@ paths:
                 $ref: "#/components/schemas/Invoice"
         "404":
           $ref: "#/components/responses/ErrorResponse"
+  /api/v1/bookings/{id}/payments:
+    get:
+      summary: Listar pagos registrados de una reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Cobros registrados para la reserva
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PaymentEntry"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+    post:
+      summary: Registrar un cobro parcial o total para una reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBookingPaymentRequest"
+      responses:
+        "200":
+          description: Cobro registrado y factura actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
+  /api/v1/bookings/{id}/settle-payment:
+    post:
+      summary: Liquidar y cobrar una reserva
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettleBookingPaymentRequest"
+      responses:
+        "200":
+          description: Factura liquidada y cobrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          $ref: "#/components/responses/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/ErrorResponse"
   /api/v1/housekeeping/dirty:
     get:
       summary: Listar habitaciones sucias
@@ -578,6 +908,23 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Room"
+  /api/v1/housekeeping/board:
+    get:
+      summary: Tablero operativo de housekeeping
+      parameters:
+        - in: query
+          name: date
+          required: false
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Tablero operativo por estado y salidas del dia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HousekeepingBoard"
   /api/v1/housekeeping/{id}/start:
     post:
       summary: Iniciar limpieza
@@ -618,6 +965,52 @@ paths:
                 properties:
                   status:
                     type: string
+  /api/v1/housekeeping/{id}/maintenance:
+    post:
+      summary: Derivar habitación a mantenimiento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MarkMaintenanceRequest"
+      responses:
+        "200":
+          description: Habitación bloqueada por mantenimiento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceCase"
+  /api/v1/housekeeping/{id}/dirty:
+    post:
+      summary: Devolver habitación a cola de limpieza
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveMaintenanceRequest"
+      responses:
+        "200":
+          description: Habitación devuelta a estado Dirty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceCase"
   /api/v1/reports/revenue:
     get:
       summary: Reporte de ingresos
@@ -753,10 +1146,16 @@ components:
           type: integer
         role:
           type: string
+          description: Rol autenticado del usuario.
+          enum: [admin, saas_admin, ops, receptionist, housekeeping]
     Room:
       type: object
+      required: [id, hotel_id, room_number, room_type, status, price_cents]
       properties:
         id:
+          type: string
+          format: uuid
+        hotel_id:
           type: string
           format: uuid
         room_number:
@@ -765,17 +1164,92 @@ components:
           type: string
         status:
           type: string
+          enum: [Available, Occupied, Dirty, Cleaning, Maintenance]
         price_cents:
           type: integer
-    Booking:
+    RoomHold:
       type: object
       properties:
         id:
           type: string
           format: uuid
+        hotel_id:
+          type: string
+          format: uuid
         room_id:
           type: string
           format: uuid
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        hold_type:
+          $ref: "#/components/schemas/RoomHoldType"
+        reason:
+          type: string
+        created_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    RoomHoldType:
+      type: string
+      enum:
+        - Vip
+        - Maintenance
+        - Owner
+        - Compliance
+        - Commercial
+        - Other
+    RoomHoldBoardEntry:
+      type: object
+      properties:
+        hold_id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        room_number:
+          type: string
+        room_type:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        hold_type:
+          $ref: "#/components/schemas/RoomHoldType"
+        reason:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+    Booking:
+      type: object
+      required: [id, hotel_id, room_id, guest_id, guest_name, check_in, check_out, total_price_cents, status, operational_data]
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        guest_id:
+          type: string
+          format: uuid
+          nullable: true
         guest_name:
           type: string
         check_in:
@@ -788,6 +1262,349 @@ components:
           type: integer
         status:
           type: string
+          enum: [Confirmed, CheckedIn, CheckedOut, Cancelled, NoShow]
+        operational_data:
+          $ref: "#/components/schemas/BookingOperationalData"
+    BookingOperationalData:
+      type: object
+      properties:
+        check_in_guests_count:
+          type: integer
+          nullable: true
+        check_in_reference:
+          type: string
+          nullable: true
+        check_in_document_verified:
+          type: boolean
+          nullable: true
+        check_in_contact_confirmed:
+          type: boolean
+          nullable: true
+        check_in_stay_confirmed:
+          type: boolean
+          nullable: true
+        checked_in_at:
+          type: string
+          format: date-time
+          nullable: true
+        checked_in_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        check_out_payment_policy:
+          type: string
+          nullable: true
+        check_out_reference:
+          type: string
+          nullable: true
+        check_out_charges_reviewed:
+          type: boolean
+          nullable: true
+        check_out_room_release_confirmed:
+          type: boolean
+          nullable: true
+        check_out_housekeeping_handoff:
+          type: boolean
+          nullable: true
+        checked_out_at:
+          type: string
+          format: date-time
+          nullable: true
+        checked_out_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        terminal_reason:
+          type: string
+          nullable: true
+        terminal_recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        terminal_recorded_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        late_arrival_eta:
+          type: string
+          format: date-time
+          nullable: true
+        late_arrival_note:
+          type: string
+          nullable: true
+        late_arrival_recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        late_arrival_recorded_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+    BulkRoomStatusUpdateResult:
+      type: object
+      properties:
+        room_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        updated_count:
+          type: integer
+        status:
+          type: string
+          enum:
+            - Available
+            - Occupied
+            - Dirty
+            - Cleaning
+            - Maintenance
+    HousekeepingBoardRoom:
+      type: object
+      properties:
+        room_id:
+          type: string
+          format: uuid
+        room_number:
+          type: string
+        room_type:
+          type: string
+        room_status:
+          type: string
+        turnover_today:
+          type: boolean
+        departure_guest_name:
+          type: string
+          nullable: true
+        departure_booking_status:
+          type: string
+          nullable: true
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
+            - NoShow
+        maintenance_case:
+          allOf:
+            - $ref: "#/components/schemas/MaintenanceCase"
+          nullable: true
+    MaintenanceCase:
+      type: object
+      required: [id, hotel_id, room_id, status, priority, reason, assigned_to, reported_by_user_id, reported_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Open, Resolved]
+        priority:
+          type: string
+          enum: [Low, Medium, High, Urgent]
+        reason:
+          type: string
+          minLength: 6
+          maxLength: 250
+        assigned_to:
+          type: string
+          minLength: 2
+          maxLength: 100
+        reported_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        reported_at:
+          type: string
+          format: date-time
+        resolution_note:
+          type: string
+          nullable: true
+          minLength: 6
+          maxLength: 250
+        resolved_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        return_status:
+          type: string
+          enum: [Dirty]
+          nullable: true
+    MarkMaintenanceRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 6
+          maxLength: 250
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        assigned_to:
+          type: string
+          minLength: 2
+          maxLength: 100
+      description: Los campos son opcionales por compatibilidad v1; clientes first-party envian evidencia explicita.
+    ResolveMaintenanceRequest:
+      type: object
+      properties:
+        resolution_note:
+          type: string
+          minLength: 6
+          maxLength: 250
+      description: Opcional por compatibilidad v1; la resolucion siempre retorna la habitacion a Dirty.
+    HousekeepingDeparture:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        room_number:
+          type: string
+        room_type:
+          type: string
+        room_status:
+          type: string
+        guest_name:
+          type: string
+        booking_status:
+          type: string
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
+            - NoShow
+    HousekeepingBoard:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        rooms:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousekeepingBoardRoom"
+        departures_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/HousekeepingDeparture"
+    FrontDeskBlocker:
+      type: object
+      properties:
+        kind:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+    FrontDeskBoardEntry:
+      type: object
+      properties:
+        booking_id:
+          type: string
+          format: uuid
+        room_id:
+          type: string
+          format: uuid
+        room_number:
+          type: string
+        room_type:
+          type: string
+        guest_name:
+          type: string
+        check_in:
+          type: string
+          format: date
+        check_out:
+          type: string
+          format: date
+        booking_status:
+          type: string
+          enum:
+            - Confirmed
+            - CheckedIn
+            - CheckedOut
+            - Cancelled
+            - NoShow
+        room_status:
+          type: string
+          enum:
+            - Available
+            - Occupied
+            - Dirty
+            - Cleaning
+            - Maintenance
+        total_price_cents:
+          type: integer
+        operational_data:
+          $ref: "#/components/schemas/BookingOperationalData"
+        blocker:
+          allOf:
+            - $ref: "#/components/schemas/FrontDeskBlocker"
+          nullable: true
+    FrontDeskActionKind:
+      type: string
+      enum:
+        - open-booking
+        - prepare-check-in
+    FrontDeskQueueItem:
+      type: object
+      properties:
+        entry:
+          $ref: "#/components/schemas/FrontDeskBoardEntry"
+        lane:
+          type: string
+        title:
+          type: string
+        detail:
+          type: string
+        primary_label:
+          type: string
+        action_kind:
+          $ref: "#/components/schemas/FrontDeskActionKind"
+    FrontDeskBoard:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        arrivals_ready:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontDeskBoardEntry"
+        arrivals_blocked:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontDeskBoardEntry"
+        departures_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontDeskBoardEntry"
+        in_house:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontDeskBoardEntry"
+        holds_today:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoomHoldBoardEntry"
+        action_queue:
+          type: array
+          items:
+            $ref: "#/components/schemas/FrontDeskQueueItem"
     BookingAlert:
       type: object
       properties:
@@ -805,6 +1622,7 @@ components:
             - CheckedIn
             - CheckedOut
             - Cancelled
+            - NoShow
     DashboardKpis:
       type: object
       properties:
@@ -858,6 +1676,10 @@ components:
         room_id:
           type: string
           format: uuid
+        guest_id:
+          type: string
+          format: uuid
+          nullable: true
         guest_name:
           type: string
         check_in:
@@ -869,8 +1691,15 @@ components:
     UpdateBookingRequest:
       type: object
       properties:
+        guest_id:
+          type: string
+          format: uuid
+          nullable: true
         guest_name:
           type: string
+        room_id:
+          type: string
+          format: uuid
         check_in:
           type: string
           format: date
@@ -879,10 +1708,105 @@ components:
           format: date
         status:
           type: string
+          description: >-
+            Transicion fail-closed: Confirmed admite CheckedIn, Cancelled o
+            NoShow; CheckedIn solo admite CheckedOut. Cancelled y NoShow exigen
+            terminal_reason. Late arrival conserva Confirmed.
+          enum: [Confirmed, CheckedIn, CheckedOut, Cancelled, NoShow]
+        operational_note:
+          type: string
+        front_desk:
+          $ref: "#/components/schemas/BookingFrontDeskUpdateRequest"
+    BookingFrontDeskUpdateRequest:
+      type: object
+      description: >-
+        Evidencia operativa requerida para transiciones y excepciones de llegada.
+        Checkout settled exige que la cuenta este completamente cobrada;
+        pending-approved exige una referencia de al menos 6 caracteres y la
+        capability bookings.checkout.override.
+      properties:
+        check_in_guests_count:
+          type: integer
+        check_in_reference:
+          type: string
+        check_in_document_verified:
+          type: boolean
+        check_in_contact_confirmed:
+          type: boolean
+        check_in_stay_confirmed:
+          type: boolean
+        check_out_payment_policy:
+          type: string
+          enum:
+            - settled
+            - pending-approved
+        check_out_reference:
+          type: string
+        check_out_charges_reviewed:
+          type: boolean
+        check_out_room_release_confirmed:
+          type: boolean
+        check_out_housekeeping_handoff:
+          type: boolean
+        terminal_reason:
+          type: string
+          minLength: 6
+          maxLength: 250
+        late_arrival_eta:
+          type: string
+          format: date-time
+        late_arrival_note:
+          type: string
+          minLength: 6
+          maxLength: 250
+    SettleBookingPaymentRequest:
+      type: object
+      required: [payment_method]
+      properties:
+        payment_method:
+          $ref: "#/components/schemas/PaymentMethod"
+        payment_reference:
+          type: string
+          nullable: true
+    RegisterBookingPaymentRequest:
+      type: object
+      required: [amount_cents, payment_method]
+      properties:
+        amount_cents:
+          type: integer
+        payment_method:
+          $ref: "#/components/schemas/PaymentMethod"
+        payment_reference:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+    BulkUpdateRoomStatusRequest:
+      type: object
+      required: [room_ids, status]
+      properties:
+        room_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        status:
+          type: string
+          enum:
+            - AVAILABLE
+            - OCCUPIED
+            - DIRTY
+            - CLEANING
+            - MAINTENANCE
     Guest:
       type: object
+      required: [id, hotel_id, full_name, email, phone, created_at]
       properties:
         id:
+          type: string
+          format: uuid
+        hotel_id:
           type: string
           format: uuid
         full_name:
@@ -891,6 +1815,10 @@ components:
           type: string
         phone:
           type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
           nullable: true
     CreateGuestRequest:
       type: object
@@ -913,6 +1841,8 @@ components:
           type: string
         role:
           type: string
+          description: Rol tenant administrable.
+          enum: [admin, ops, receptionist, housekeeping]
     CreateUserRequest:
       type: object
       required: [username, password, role]
@@ -923,6 +1853,8 @@ components:
           type: string
         role:
           type: string
+          description: Rol tenant provisionable; las identidades de plataforma se gestionan fuera de este endpoint.
+          enum: [admin, ops, receptionist, housekeeping]
     CreateRoomRequest:
       type: object
       required: [room_number, room_type, price_cents]
@@ -933,6 +1865,30 @@ components:
           type: string
         price_cents:
           type: integer
+    UpdateRoomRequest:
+      type: object
+      required: [room_number, room_type, price_cents]
+      properties:
+        room_number:
+          type: string
+        room_type:
+          type: string
+        price_cents:
+          type: integer
+    CreateRoomHoldRequest:
+      type: object
+      required: [start_date, end_date, hold_type, reason]
+      properties:
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+        hold_type:
+          $ref: "#/components/schemas/RoomHoldType"
+        reason:
+          type: string
     CreateHotelRequest:
       type: object
       required: [name]
@@ -1070,6 +2026,40 @@ components:
           type: integer
         card_amount_cents:
           type: integer
+        payment_count:
+          type: integer
+        opening_time:
+          type: string
+          format: date-time
+        pending_amount_cents:
+          type: integer
+        pending_bookings_count:
+          type: integer
+    CashClosureRequest:
+      type: object
+      properties:
+        notes:
+          type: string
+          minLength: 6
+          maxLength: 500
+          nullable: true
+          description: Novedades y justificacion operativa para el siguiente turno.
+        expected_cash_amount_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Efectivo esperado mostrado al iniciar el arqueo; protege contra saldo stale.
+        counted_cash_amount_cents:
+          type: integer
+          minimum: 0
+          nullable: true
+          description: Efectivo fisico contado durante el arqueo.
+        handoff_to:
+          type: string
+          minLength: 2
+          maxLength: 120
+          nullable: true
+          description: Turno o persona que recibe la caja.
     InvoiceStatus:
       type: string
       enum:
@@ -1096,10 +2086,54 @@ components:
           format: uuid
         amount_cents:
           type: integer
+        paid_amount_cents:
+          type: integer
         status:
           $ref: "#/components/schemas/InvoiceStatus"
         payment_method:
           $ref: "#/components/schemas/PaymentMethod"
+        payment_reference:
+          type: string
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+    PaymentEntry:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hotel_id:
+          type: string
+          format: uuid
+        invoice_id:
+          type: string
+          format: uuid
+        booking_id:
+          type: string
+          format: uuid
+        amount_cents:
+          type: integer
+        payment_method:
+          $ref: "#/components/schemas/PaymentMethod"
+        payment_reference:
+          type: string
+          nullable: true
+        note:
+          type: string
+          nullable: true
+        received_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        received_at:
+          type: string
+          format: date-time
         created_at:
           type: string
           format: date-time
@@ -1121,12 +2155,20 @@ components:
           type: integer
         card_amount_cents:
           type: integer
+        payment_count:
+          type: integer
+        counted_cash_amount_cents:
+          type: integer
+        cash_difference_cents:
+          type: integer
         opening_time:
           type: string
           format: date-time
         closing_time:
           type: string
           format: date-time
+        handoff_to:
+          type: string
         notes:
           type: string
           nullable: true

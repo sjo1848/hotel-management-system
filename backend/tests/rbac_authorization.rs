@@ -10,15 +10,15 @@ use hms_backend::application::{
     cash_closure_service::CashClosureService, front_desk_service::FrontDeskService,
     guest_service::GuestService, hotel_service::HotelService,
     housekeeping_service::HousekeepingService, invoice_service::InvoiceService,
-    reporting_service::ReportingService, room_hold_service::RoomHoldService,
-    room_service::RoomService, user_service::UserService,
+    maintenance_service::MaintenanceService, reporting_service::ReportingService,
+    room_hold_service::RoomHoldService, room_service::RoomService, user_service::UserService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
     AuditRepository, BookingRepository, BookingTransactionRepository, CashClosureRepository,
     ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
-    PaymentEntryRepository, RefreshTokenRepository, RoomHoldRepository, RoomRepository,
-    UserRepository,
+    MaintenanceCaseRepository, PaymentEntryRepository, RefreshTokenRepository, RoomHoldRepository,
+    RoomRepository, UserRepository,
 };
 use hms_backend::domain::security::{PasswordHasher, TokenSigner};
 use hms_backend::infrastructure::repository::{
@@ -28,6 +28,7 @@ use hms_backend::infrastructure::repository::{
     postgres_cash_closure::PostgresCashClosureRepository,
     postgres_extra_charge::PostgresExtraChargeRepository, postgres_guest::PostgresGuestRepository,
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
+    postgres_maintenance_case::PostgresMaintenanceCaseRepository,
     postgres_payment_entry::PostgresPaymentEntryRepository,
     postgres_refresh_token::PostgresRefreshTokenRepository,
     postgres_room_hold::PostgresRoomHoldRepository, postgres_user::PostgresUserRepository,
@@ -332,6 +333,87 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
     )
     .await;
 
+    // Only admin can authorize checkout with a pending balance.
+    let override_room_id = Uuid::new_v4();
+    let override_booking_id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO rooms (id, hotel_id, room_number, room_type, status, price_cents)
+         VALUES ($1, $2, $3, $4, $5, $6)",
+    )
+    .bind(override_room_id)
+    .bind(hotel_id)
+    .bind("RBAC-OVR")
+    .bind("Standard")
+    .bind("OCCUPIED")
+    .bind(10_000_i64)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO bookings (
+            id, hotel_id, room_id, guest_name, check_in, check_out,
+            total_price_cents, status
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    )
+    .bind(override_booking_id)
+    .bind(hotel_id)
+    .bind(override_room_id)
+    .bind("RBAC Override Guest")
+    .bind(chrono::NaiveDate::from_ymd_opt(2026, 3, 20).unwrap())
+    .bind(chrono::NaiveDate::from_ymd_opt(2026, 3, 22).unwrap())
+    .bind(20_000_i64)
+    .bind("CHECKED_IN")
+    .execute(&pool)
+    .await
+    .unwrap();
+    let pending_override_payload = r#"{"status":"CheckedOut","front_desk":{"check_out_payment_policy":"pending-approved","check_out_reference":"OVERRIDE-RBAC-001","check_out_charges_reviewed":true,"check_out_room_release_confirmed":true,"check_out_housekeeping_handoff":true}}"#;
+
+    assert_status(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/bookings/{override_booking_id}"),
+        &reception_token,
+        Some(pending_override_payload.to_string()),
+        true,
+        StatusCode::FORBIDDEN,
+    )
+    .await;
+    let denied_booking_status: String =
+        sqlx::query_scalar("SELECT status FROM bookings WHERE hotel_id = $1 AND id = $2")
+            .bind(hotel_id)
+            .bind(override_booking_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(denied_booking_status, "CHECKED_IN");
+
+    assert_status(
+        &app,
+        Method::PATCH,
+        &format!("/api/v1/bookings/{override_booking_id}"),
+        &admin_token,
+        Some(pending_override_payload.to_string()),
+        true,
+        StatusCode::OK,
+    )
+    .await;
+    let override_audit: (Uuid, String) = sqlx::query_as(
+        "SELECT user_id, action
+         FROM audit_events
+         WHERE hotel_id = $1
+           AND action LIKE 'CO_OVERRIDE booking=%'
+         ORDER BY created_at DESC
+         LIMIT 1",
+    )
+    .bind(hotel_id)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(override_audit.0, admin_id);
+    assert!(override_audit.1.contains(&override_booking_id.to_string()));
+    assert!(override_audit.1.contains("due=20000"));
+    assert!(override_audit.1.contains("ref=OVERRIDE-RBAC-001"));
+
     // Ops can read tenant-scoped audit events.
     assert_status(
         &app,
@@ -372,6 +454,126 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
         }),
         "audit response leaked events from another tenant"
     );
+
+    // Tenant admin cannot cross into SaaS network scope.
+    assert_status(
+        &app,
+        Method::GET,
+        "/api/v1/hotels",
+        &admin_token,
+        None,
+        false,
+        StatusCode::FORBIDDEN,
+    )
+    .await;
+    assert_status(
+        &app,
+        Method::POST,
+        "/api/v1/hotels",
+        &admin_token,
+        Some(r#"{"name":"Forbidden tenant admin hotel","address":"N/A"}"#.to_string()),
+        true,
+        StatusCode::FORBIDDEN,
+    )
+    .await;
+
+    // Tenant admin cannot provision a platform principal through /users.
+    let escalated_username = format!("saas-escalation-{}", Uuid::new_v4());
+    assert_status(
+        &app,
+        Method::POST,
+        "/api/v1/users",
+        &admin_token,
+        Some(format!(
+            r#"{{"username":"{}","password":"test-password-123","role":"saas_admin"}}"#,
+            escalated_username
+        )),
+        true,
+        StatusCode::BAD_REQUEST,
+    )
+    .await;
+    let escalated_user_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*)::BIGINT FROM users WHERE hotel_id = $1 AND username = $2",
+    )
+    .bind(hotel_id)
+    .bind(&escalated_username)
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(escalated_user_count, 0);
+
+    // Tenant user management exposes every operational role, canonicalizes it,
+    // attributes the audit to the admin, and keeps platform identities isolated.
+    for (input_role, stored_role) in [
+        ("admin", "admin"),
+        ("ops", "ops"),
+        (" Receptionist ", "receptionist"),
+        ("housekeeping", "housekeeping"),
+    ] {
+        let username = format!("wf005-{}-{}", stored_role, Uuid::new_v4());
+        assert_status(
+            &app,
+            Method::POST,
+            "/api/v1/users",
+            &admin_token,
+            Some(format!(
+                r#"{{"username":"{}","password":"test-password-123","role":"{}"}}"#,
+                username, input_role
+            )),
+            true,
+            StatusCode::OK,
+        )
+        .await;
+
+        let created_user: (Uuid, String) =
+            sqlx::query_as("SELECT id, role FROM users WHERE hotel_id = $1 AND username = $2")
+                .bind(hotel_id)
+                .bind(&username)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(created_user.1, stored_role);
+
+        let audit_actor: Uuid = sqlx::query_scalar(
+            "SELECT user_id FROM audit_events
+             WHERE hotel_id = $1 AND action LIKE $2
+             ORDER BY created_at DESC LIMIT 1",
+        )
+        .bind(hotel_id)
+        .bind(format!(
+            "user.created: {} role={}%",
+            created_user.0, stored_role
+        ))
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+        assert_eq!(audit_actor, admin_id);
+    }
+
+    let tenant_users = get_json(&app, "/api/v1/users", &admin_token).await;
+    assert!(tenant_users
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|user| user.get("role").and_then(Value::as_str) != Some("saas_admin")));
+    assert_status(
+        &app,
+        Method::DELETE,
+        &format!("/api/v1/users/{}", saas_admin_id),
+        &admin_token,
+        None,
+        true,
+        StatusCode::FORBIDDEN,
+    )
+    .await;
+    let platform_user_still_exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE hotel_id = $1 AND id = $2)")
+            .bind(hotel_id)
+            .bind(saas_admin_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(platform_user_still_exists);
 
     // SaaS admin can list hotels.
     assert_status(
@@ -604,6 +806,10 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         booking_repo.clone(),
         room_service.clone(),
         audit_service.clone(),
+        Arc::new(MaintenanceService::new(
+            Arc::new(PostgresMaintenanceCaseRepository::new(pool.clone()))
+                as Arc<dyn MaintenanceCaseRepository>,
+        )),
     ));
     let invoice_service = Arc::new(InvoiceService::new(
         invoice_repo.clone(),

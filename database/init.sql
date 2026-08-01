@@ -30,5 +30,14 @@
 \ir ../backend/migrations/0017_rls_bypass_default_false.sql
 \ir ../backend/migrations/0018_refresh_token_lookup_without_rls_bypass.sql
 \ir ../backend/migrations/0019_hotel_plan_tier_and_automation_flags.sql
+\ir ../backend/migrations/0020_room_holds.sql
+\ir ../backend/migrations/0021_room_hold_types.sql
+\ir ../backend/migrations/0022_booking_operational_fields.sql
+\ir ../backend/migrations/0023_invoice_payment_settlement.sql
+\ir ../backend/migrations/0024_payment_entries_and_cash_shift.sql
+\ir ../backend/migrations/0025_cash_shift_handoff.sql
+\ir ../backend/migrations/0026_booking_arrival_exceptions.sql
+\ir ../backend/migrations/0027_maintenance_cases.sql
+\ir ../backend/migrations/0028_maintenance_legacy_backfill.sql
 
 \echo '[hms] migraciones SQLx aplicadas desde database/init.sql (compat shim).'

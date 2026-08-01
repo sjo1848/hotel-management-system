@@ -97,6 +97,56 @@ describe("App route guards", () => {
     expect(await screen.findByText("UsersPage")).toBeInTheDocument();
   });
 
+  it("routes receptionist home to bookings", async () => {
+    setRoute("/");
+    authState.status = "authenticated";
+    authState.user = { role: "receptionist" };
+
+    renderApp();
+
+    expect(await screen.findByText("BookingsPage")).toBeInTheDocument();
+  });
+
+  it("routes housekeeping home to housekeeping board", async () => {
+    setRoute("/");
+    authState.status = "authenticated";
+    authState.user = { role: "housekeeping" };
+
+    renderApp();
+
+    expect(await screen.findByText("HousekeepingPage")).toBeInTheDocument();
+  });
+
+  it("routes saas admin home to network", async () => {
+    setRoute("/");
+    authState.status = "authenticated";
+    authState.user = { role: "saas_admin" };
+
+    renderApp();
+
+    expect(await screen.findByText("NetworkPage")).toBeInTheDocument();
+  });
+
+  it("blocks tenant admin from the SaaS network route", async () => {
+    setRoute("/network");
+    authState.status = "authenticated";
+    authState.user = { role: "admin" };
+
+    renderApp();
+
+    expect(await screen.findByText("AccessDeniedPage")).toBeInTheDocument();
+  });
+
+  it("keeps admin home on dashboard", async () => {
+    setRoute("/");
+    authState.status = "authenticated";
+    authState.user = { role: "admin" };
+
+    renderApp();
+
+    expect(await screen.findByText("DashboardPage")).toBeInTheDocument();
+  });
+
   it("renders not found page for unknown route", async () => {
     setRoute("/non-existent");
 

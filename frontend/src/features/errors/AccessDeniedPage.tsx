@@ -6,24 +6,24 @@ const AccessDeniedPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="max-w-md w-full text-center space-y-8 animate-in fade-in zoom-in duration-500">
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-8">
+      <div className="w-full max-w-md space-y-8 rounded-[2rem] border border-border bg-card/95 p-8 text-center shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-500">
         <div className="flex justify-center">
           <div className="relative">
-            <div className="w-32 h-32 bg-amber-100 rounded-full flex items-center justify-center text-amber-700 shadow-inner">
+            <div className="flex h-32 w-32 items-center justify-center rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-inner dark:text-amber-300">
               <ShieldAlert className="w-16 h-16" />
             </div>
-            <div className="absolute -top-2 -right-2 bg-white px-3 py-1 rounded-full border border-slate-200 shadow-sm text-xs font-black text-slate-800 uppercase tracking-widest">
+            <div className="absolute -right-2 -top-2 rounded-full border border-border bg-background px-3 py-1 text-xs font-black uppercase tracking-widest text-foreground shadow-sm">
               Error 403
             </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-3xl font-black tracking-tight text-foreground">
             Acceso denegado
           </h1>
-          <p className="text-slate-500 text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Tu rol actual no tiene permisos para ver esta sección.
           </p>
         </div>
@@ -31,7 +31,7 @@ const AccessDeniedPage = () => {
         <div className="flex flex-col gap-3">
           <Button
             onClick={() => navigate("/")}
-            className="h-12 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg transition-all"
+            className="h-12 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Volver al Inicio
@@ -39,7 +39,7 @@ const AccessDeniedPage = () => {
           <Button
             variant="ghost"
             onClick={() => window.history.back()}
-            className="h-12 text-slate-500 hover:text-slate-800"
+            className="h-12 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
           >
             Regresar a la página anterior
           </Button>

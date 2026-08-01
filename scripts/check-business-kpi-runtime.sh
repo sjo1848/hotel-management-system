@@ -61,7 +61,7 @@ resolve_runner() {
   local docker_ready=false
   local host_ready=false
 
-  if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+  if command -v docker >/dev/null 2>&1; then
     if docker compose config --services 2>/dev/null | grep -qx db; then
       docker_ready=true
     fi

@@ -1,5 +1,5 @@
 use crate::domain::errors::DomainError;
-use crate::domain::models::{Booking, BookingStatus};
+use crate::domain::models::{Booking, BookingOperationalUpdate, BookingStatus};
 use crate::domain::repositories::BookingTransactionRepository;
 use chrono::NaiveDate;
 use std::sync::Arc;
@@ -22,9 +22,12 @@ impl BookingTransactionService {
         actor_user_id: Option<Uuid>,
         guest_id: Option<Uuid>,
         guest_name: Option<String>,
+        room_id: Option<Uuid>,
         check_in: Option<NaiveDate>,
         check_out: Option<NaiveDate>,
         status: Option<BookingStatus>,
+        operational_note: Option<String>,
+        operational_update: Option<BookingOperationalUpdate>,
     ) -> Result<Booking, DomainError> {
         self.repository
             .update_booking_transactional(
@@ -33,9 +36,12 @@ impl BookingTransactionService {
                 actor_user_id,
                 guest_id,
                 guest_name,
+                room_id,
                 check_in,
                 check_out,
                 status,
+                operational_note,
+                operational_update,
             )
             .await
     }

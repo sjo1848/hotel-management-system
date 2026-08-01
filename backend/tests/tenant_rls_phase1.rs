@@ -11,6 +11,7 @@ async fn rls_phase1_policies_exist_for_critical_tables(pool: sqlx::PgPool) {
         ("bookings", "bookings_tenant_isolation"),
         ("refresh_tokens", "refresh_tokens_tenant_isolation"),
         ("invoices", "invoices_tenant_isolation"),
+        ("maintenance_cases", "maintenance_cases_tenant_isolation"),
     ];
 
     for (table, policy) in checks {

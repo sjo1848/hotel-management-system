@@ -28,6 +28,17 @@ impl UserService {
             .map_err(DomainError::InfrastructureError)
     }
 
+    pub async fn find_user(
+        &self,
+        hotel_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<User>, DomainError> {
+        self.user_repo
+            .find_by_id(hotel_id, user_id)
+            .await
+            .map_err(DomainError::InfrastructureError)
+    }
+
     pub async fn create_user(
         &self,
         hotel_id: Uuid,

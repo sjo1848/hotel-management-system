@@ -81,7 +81,6 @@ describe("DashboardHome", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     invalidateResource("dashboard:home");
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     vi.spyOn(console, "error").mockImplementation(() => {});
 
     mockGetDashboardKpis
@@ -111,6 +110,10 @@ describe("DashboardHome", () => {
       total_amount_cents: 15000,
       cash_amount_cents: 10000,
       card_amount_cents: 5000,
+      payment_count: 2,
+      opening_time: "2026-03-08T08:00:00Z",
+      pending_amount_cents: 2500,
+      pending_bookings_count: 1,
     });
     mockGetFeatureFlags.mockResolvedValue({
       hotel_id: "00000000-0000-0000-0000-000000000001",
@@ -121,31 +124,48 @@ describe("DashboardHome", () => {
       advanced_analytics_enabled: false,
     });
     mockGetDirtyRooms.mockResolvedValue([]);
-    mockCloseCash.mockResolvedValue({});
+    mockCloseCash.mockResolvedValue({ cash_difference_cents: 0 });
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("refreshes dashboard data after close cash without hard reload", async () => {
-    renderDashboard();
+  it(
+    "refreshes dashboard data after close cash without hard reload",
+    async () => {
+      renderDashboard();
 
-    await waitFor(() => {
-      expect(mockGetDashboardKpis).toHaveBeenCalledTimes(1);
-    });
+      await waitFor(() => {
+        expect(mockGetDashboardKpis).toHaveBeenCalledTimes(1);
+      });
 
-    const closeButton = screen.getByRole("button", { name: /finalizar turno y cerrar caja/i });
-    await userEvent.click(closeButton);
+      const closeButton = screen.getByRole("button", { name: /finalizar turno y cerrar caja/i });
+      await userEvent.click(closeButton);
+      await userEvent.type(screen.getByLabelText(/entregar a/i), "Turno noche · Martina");
+      await userEvent.type(screen.getByLabelText(/notas de entrega/i), "Sin novedades pendientes");
+      await userEvent.click(screen.getByRole("button", { name: /confirmar arqueo y cerrar/i }));
 
-    await waitFor(() => {
-      expect(mockCloseCash).toHaveBeenCalledTimes(1);
-      expect(mockGetDashboardKpis).toHaveBeenCalledTimes(2);
-    });
-    expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_success", {
-      total_amount_cents: 15000,
-    });
-  });
+      await waitFor(() => {
+        expect(mockCloseCash).toHaveBeenCalledTimes(1);
+        expect(mockCloseCash).toHaveBeenCalledWith({
+          expected_cash_amount_cents: 10000,
+          counted_cash_amount_cents: 10000,
+          handoff_to: "Turno noche · Martina",
+          notes: "Sin novedades pendientes",
+        });
+        expect(mockGetDashboardKpis).toHaveBeenCalledTimes(2);
+      });
+
+      await waitFor(() => {
+        expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_success", {
+          total_amount_cents: 15000,
+          cash_difference_cents: 0,
+        });
+      });
+    },
+    10_000,
+  );
 
   it("shows retry UI when initial dashboard load fails", async () => {
     mockGetDashboardKpis.mockReset();
@@ -189,6 +209,9 @@ describe("DashboardHome", () => {
 
     const closeButton = screen.getByRole("button", { name: /finalizar turno y cerrar caja/i });
     await userEvent.click(closeButton);
+    await userEvent.type(screen.getByLabelText(/entregar a/i), "Turno noche");
+    await userEvent.type(screen.getByLabelText(/notas de entrega/i), "Diferencia a revisar");
+    await userEvent.click(screen.getByRole("button", { name: /confirmar arqueo y cerrar/i }));
 
     await waitFor(() => {
       expect(mockCloseCash).toHaveBeenCalledTimes(1);

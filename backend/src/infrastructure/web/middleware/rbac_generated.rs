@@ -9,6 +9,7 @@ pub const ALL_CAPABILITIES: &[&str] = &[
     "billing.close_cash.write",
     "billing.invoice.read",
     "billing.invoices.read",
+    "bookings.checkout.override",
     "bookings.extra_charges.read",
     "bookings.extra_charges.write",
     "bookings.read",
@@ -32,8 +33,6 @@ pub const ALL_CAPABILITIES: &[&str] = &[
 ];
 
 pub const ADMIN_CAPABILITIES: &[&str] = &[
-    "saas.hotels.read",
-    "saas.hotels.write",
     "rooms.read",
     "rooms.write",
     "rooms.search",
@@ -41,6 +40,7 @@ pub const ADMIN_CAPABILITIES: &[&str] = &[
     "bookings.read",
     "bookings.write",
     "bookings.update",
+    "bookings.checkout.override",
     "bookings.extra_charges.read",
     "bookings.extra_charges.write",
     "guests.read",

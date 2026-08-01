@@ -6,16 +6,18 @@ use hms_backend::application::{
     analytics_service::AnalyticsService, audit_service::AuditService, auth_service::AuthService,
     billing_service::BillingService, booking_service::BookingService,
     booking_transaction_service::BookingTransactionService,
-    cash_closure_service::CashClosureService, guest_service::GuestService,
-    hotel_service::HotelService, housekeeping_service::HousekeepingService,
-    invoice_service::InvoiceService, reporting_service::ReportingService,
-    room_service::RoomService, user_service::UserService,
+    cash_closure_service::CashClosureService, front_desk_service::FrontDeskService,
+    guest_service::GuestService, hotel_service::HotelService,
+    housekeeping_service::HousekeepingService, invoice_service::InvoiceService,
+    maintenance_service::MaintenanceService, reporting_service::ReportingService,
+    room_hold_service::RoomHoldService, room_service::RoomService, user_service::UserService,
 };
 use hms_backend::config::AppConfig;
 use hms_backend::domain::repositories::{
     AuditRepository, BookingRepository, BookingTransactionRepository, CashClosureRepository,
     ExtraChargeRepository, GuestRepository, HotelRepository, InvoiceRepository,
-    RefreshTokenRepository, RoomRepository, UserRepository,
+    MaintenanceCaseRepository, PaymentEntryRepository, RefreshTokenRepository, RoomHoldRepository,
+    RoomRepository, UserRepository,
 };
 use hms_backend::domain::security::{PasswordHasher, TokenSigner};
 use hms_backend::infrastructure::repository::{
@@ -25,7 +27,10 @@ use hms_backend::infrastructure::repository::{
     postgres_cash_closure::PostgresCashClosureRepository,
     postgres_extra_charge::PostgresExtraChargeRepository, postgres_guest::PostgresGuestRepository,
     postgres_hotel::PostgresHotelRepository, postgres_invoice::PostgresInvoiceRepository,
-    postgres_refresh_token::PostgresRefreshTokenRepository, postgres_user::PostgresUserRepository,
+    postgres_maintenance_case::PostgresMaintenanceCaseRepository,
+    postgres_payment_entry::PostgresPaymentEntryRepository,
+    postgres_refresh_token::PostgresRefreshTokenRepository,
+    postgres_room_hold::PostgresRoomHoldRepository, postgres_user::PostgresUserRepository,
 };
 use hms_backend::infrastructure::web::jwt::JwtTokenSigner;
 use hms_backend::infrastructure::web::passwords::{hash_password, ArgonPasswordHasher};
@@ -225,6 +230,10 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
         as Arc<dyn CashClosureRepository>;
     let invoice_repo =
         Arc::new(PostgresInvoiceRepository::new(pool.clone())) as Arc<dyn InvoiceRepository>;
+    let payment_entry_repo = Arc::new(PostgresPaymentEntryRepository::new(pool.clone()))
+        as Arc<dyn PaymentEntryRepository>;
+    let room_hold_repo =
+        Arc::new(PostgresRoomHoldRepository::new(pool.clone())) as Arc<dyn RoomHoldRepository>;
     let hotel_repo =
         Arc::new(PostgresHotelRepository::new(pool.clone())) as Arc<dyn HotelRepository>;
     let password_hasher = Arc::new(ArgonPasswordHasher) as Arc<dyn PasswordHasher>;
@@ -236,16 +245,26 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
 
     let audit_service = Arc::new(AuditService::new(audit_repo.clone()));
     let room_service = Arc::new(RoomService::new(room_repo.clone()));
+    let room_hold_service = Arc::new(RoomHoldService::new(
+        room_hold_repo.clone(),
+        room_repo.clone(),
+    ));
     let booking_service = Arc::new(BookingService::new(
         booking_repo.clone(),
         room_repo.clone(),
         guest_repo.clone(),
         room_service.clone(),
+        room_hold_service.clone(),
         audit_service.clone(),
         invoice_repo.clone(),
     ));
     let booking_transaction_service =
         Arc::new(BookingTransactionService::new(booking_transaction_repo));
+    let front_desk_service = Arc::new(FrontDeskService::new(
+        booking_repo.clone(),
+        room_repo.clone(),
+        room_hold_service.clone(),
+    ));
     let analytics_service = Arc::new(AnalyticsService::new(booking_repo.clone()));
     let reporting_service = Arc::new(ReportingService::new(booking_repo.clone()));
     let guest_service = Arc::new(GuestService::new(guest_repo.clone()));
@@ -253,17 +272,28 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     let billing_service = Arc::new(BillingService::new(
         extra_charge_repo.clone(),
         booking_repo.clone(),
+        invoice_repo.clone(),
+        payment_entry_repo.clone(),
     ));
     let cash_closure_service = Arc::new(CashClosureService::new(
         cash_closure_repo.clone(),
         invoice_repo.clone(),
+        payment_entry_repo.clone(),
     ));
     let housekeeping_service = Arc::new(HousekeepingService::new(
         room_repo.clone(),
+        booking_repo.clone(),
         room_service.clone(),
         audit_service.clone(),
+        Arc::new(MaintenanceService::new(
+            Arc::new(PostgresMaintenanceCaseRepository::new(pool.clone()))
+                as Arc<dyn MaintenanceCaseRepository>,
+        )),
     ));
-    let invoice_service = Arc::new(InvoiceService::new(invoice_repo.clone()));
+    let invoice_service = Arc::new(InvoiceService::new(
+        invoice_repo.clone(),
+        payment_entry_repo.clone(),
+    ));
     let user_service = Arc::new(UserService::new(user_repo.clone(), password_hasher.clone()));
     let auth_service = Arc::new(AuthService::new(
         user_repo.clone(),
@@ -277,10 +307,12 @@ fn build_state(pool: sqlx::PgPool, config: AppConfig) -> Arc<AppState> {
     Arc::new(AppState {
         booking_service,
         booking_transaction_service,
+        front_desk_service,
         analytics_service,
         reporting_service,
         guest_service,
         room_service,
+        room_hold_service,
         hotel_service,
         billing_service,
         cash_closure_service,

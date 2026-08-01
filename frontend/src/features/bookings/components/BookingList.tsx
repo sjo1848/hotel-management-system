@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getBookings, updateBooking } from '../services/bookingService';
+import { getBookings } from '../services/bookingService';
 import { Booking } from '@/types/domain';
 import { useToast } from '@/components/ui/toast';
 import BookingEditDrawer from './BookingEditDrawer';
@@ -51,25 +51,6 @@ const BookingList = () => {
     fetchBookings();
   }, []);
 
-  const handleCancel = async (booking: Booking) => {
-    if (booking.status === 'Cancelled') return;
-
-    try {
-      await updateBooking(booking.id, { status: 'Cancelled' });
-      toast({
-        title: 'Reserva cancelada',
-        variant: 'success',
-      });
-      fetchBookings();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: String(error),
-        variant: 'error',
-      });
-    }
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'Confirmed':
@@ -80,6 +61,8 @@ const BookingList = () => {
         return <Badge variant="neutral">Finalizada</Badge>;
       case 'Cancelled':
         return <Badge variant="destructive">Cancelada</Badge>;
+      case 'NoShow':
+        return <Badge variant="warning">No-show</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -88,7 +71,7 @@ const BookingList = () => {
   if (loading) {
     return (
       <div className="p-10 flex flex-col items-center justify-center space-y-4">
-        <CheckCircle2 className="w-8 h-8 text-slate-200 animate-pulse" />
+        <CheckCircle2 className="h-8 w-8 animate-pulse text-primary/40" />
         <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">Actualizando reservas...</span>
       </div>
     );
@@ -97,7 +80,7 @@ const BookingList = () => {
   if (bookings.length === 0) {
     return (
       <div className="p-10 flex flex-col items-center justify-center text-center">
-        <AlertCircle className="w-10 h-10 text-slate-200 mb-2" />
+        <AlertCircle className="mb-2 h-10 w-10 text-muted-foreground/35" />
         <p className="text-sm font-bold text-muted-foreground">No hay actividad reciente</p>
       </div>
     );
@@ -149,13 +132,6 @@ const BookingList = () => {
                         }}
                       >
                         Gestionar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-xs font-bold text-rose-600"
-                        disabled={booking.status === 'Cancelled' || booking.status === 'CheckedOut'}
-                        onClick={() => handleCancel(booking)}
-                      >
-                        Cancelar
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
