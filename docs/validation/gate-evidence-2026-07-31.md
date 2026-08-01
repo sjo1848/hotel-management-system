@@ -207,6 +207,79 @@ Detalles del gate frontend:
 - [ ] Checklist manual completa de seis anchos.
 - [ ] Commit/push/deploy, fuera del alcance ejecutado.
 
+---
+
+## Paquete de Negocio — Portabilidad y Alineacion de Estado (2026-08-01)
+
+### Alcance
+
+- Se incorpora `docs/business/` como paquete documental independiente.
+- Se reemplazan rutas absolutas locales por enlaces relativos portables.
+- Roadmap, backlog y bitacora reflejan el cierre tecnico de WF-001 a WF-012.
+- Los planes de marzo quedan identificados como cortes historicos.
+- Soporte Sev 1 deja de prometer respuesta inmediata fuera del SLA contratado.
+
+### Evidencia ejecutada
+
+| Comando | Resultado | Evidencia resumida |
+| --- | --- | --- |
+| `./scripts/check-validation-governance.sh` | `PASS` | Gobierno documental conforme. |
+| verificacion local de targets Markdown con `perl` + `test -e` | `PASS` | Todos los enlaces locales de los 39 documentos resuelven. |
+| `rg -n '/home/sjo1848/dev/hms-elite' docs/business` | `PASS` | Cero rutas absolutas de la estacion de trabajo. |
+| escaneo de secretos/defaults inseguros con `rg` | `PASS` | Sin `admin123`, `dev-secret`, claves privadas ni tokens de alta confianza. |
+| `git diff --cached --check` | `PASS` | Sin errores de whitespace. |
+
+`./scripts/gate.sh` no se repite para este bloque exclusivamente Markdown: el
+gate tecnico completo ya paso sobre el commit funcional inmediatamente anterior.
+Los gates equivalentes relevantes son gobierno, integridad de enlaces, secretos y
+whitespace.
+
+### Review estricto
+
+#### Critical
+
+- Sin hallazgos abiertos.
+
+#### High
+
+- Cerrado: los enlaces absolutos hacian el paquete inutilizable fuera de una
+  estacion de trabajo especifica.
+- Cerrado: soporte definia Sev 1 como respuesta inmediata aunque los objetivos
+  Basic, Pro y Enterprise son distintos.
+
+#### Medium
+
+- Cerrado: roadmap y backlog trataban workflows ya implementados como trabajo
+  abierto, desviando la siguiente inversion de validacion, staging y go-live.
+- Pricing y SLA siguen siendo baseline no contractual; requieren validacion
+  comercial y capacidad operativa antes de incorporarse a una propuesta final.
+
+#### Low
+
+- Los documentos conservan fechas historicas de marzo cuando corresponde; su
+  estado vigente enlaza ahora al roadmap y backlog del 2026-08-01.
+
+### Que Romperia En Produccion o Venta
+
+- Prometer respuesta inmediata sin cobertura operativa crearia incumplimiento
+  comercial y una expectativa imposible de sostener.
+- Tratar una baseline de precios como cotizacion final omitiria discovery,
+  alcance y moneda/tipo de cambio acordados.
+- Expandir features antes de QA manual y validacion con hotel real esconderia el
+  principal riesgo actual: adopcion y operacion repetible.
+
+### DoD documental
+
+- [x] 39 documentos revisados como bloque independiente.
+- [x] Precios Basic, Pro y Enterprise consistentes entre pricing, casos y propuestas.
+- [x] SLA identificado como objetivo de respuesta, no resolucion garantizada.
+- [x] Rutas locales eliminadas y enlaces internos validados.
+- [x] Roadmap, backlog y bitacora alineados con el cierre tecnico.
+- [x] Review Critical/High/Medium/Low completado.
+- [x] Evidencia PASS/FAIL registrada.
+- [ ] QA manual por rol y seis anchos, pendiente operativa ya documentada.
+- [ ] Push/deploy, fuera de alcance.
+
 ## Delta — 2026-08-01 — WF-005
 
 ### Decision Y Alcance
