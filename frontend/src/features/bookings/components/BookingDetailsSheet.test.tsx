@@ -175,6 +175,44 @@ describe("BookingDetailsSheet", () => {
     });
   });
 
+  it("moves focus to the account section when guidedFocusStep is payment", async () => {
+    mockController.mockReturnValue({
+      ...controllerDefaults,
+      bookingState: { ...booking, status: "CheckedIn" },
+    });
+    render(
+      <BookingDetailsSheet
+        booking={{ ...booking, status: "CheckedIn" }}
+        isOpen
+        onClose={vi.fn()}
+        guidedFocusStep="payment"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("reception-guide-payment");
+    });
+  });
+
+  it("moves focus to the checkout section when guidedFocusStep is checkout", async () => {
+    mockController.mockReturnValue({
+      ...controllerDefaults,
+      bookingState: { ...booking, status: "CheckedIn" },
+    });
+    render(
+      <BookingDetailsSheet
+        booking={{ ...booking, status: "CheckedIn" }}
+        isOpen
+        onClose={vi.fn()}
+        guidedFocusStep="checkout"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(document.activeElement?.id).toBe("reception-guide-checkout");
+    });
+  });
+
   it("continues to the next case of the turn queue", () => {
     const onOpenQueuedBooking = vi.fn();
     render(
