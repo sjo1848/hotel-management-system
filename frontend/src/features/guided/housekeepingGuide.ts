@@ -75,6 +75,7 @@ export const buildHousekeepingGuideSteps = (
       label: "Revisá prioridades del turno",
       helper:
         "Ubicá primero qué habitaciones siguen sucias, cuáles están en limpieza y dónde hay bloqueos.",
+      actionLabel: "Ir al board",
       done: progress.reviewBoardDone,
       active: !progress.reviewBoardDone,
     },
@@ -83,6 +84,7 @@ export const buildHousekeepingGuideSteps = (
       label: "Tomá una habitación dirty",
       helper:
         "Mové una pieza a Cleaning para empezar a drenar la cola y darle ritmo al turno.",
+      actionLabel: "Ver habitaciones dirty",
       done: startCleaningDone,
       active: progress.reviewBoardDone && !startCleaningDone,
     },
@@ -91,6 +93,7 @@ export const buildHousekeepingGuideSteps = (
       label: "Liberá inventario",
       helper:
         "Cerrá una limpieza y devolvé la habitación a Available para que vuelva a venderse.",
+      actionLabel: "Ver habitaciones en limpieza",
       done: finishCleaningDone,
       active: progress.reviewBoardDone && startCleaningDone && !finishCleaningDone,
     },
@@ -99,6 +102,7 @@ export const buildHousekeepingGuideSteps = (
       label: "Escalá un bloqueo si hace falta",
       helper:
         "Si una habitación no puede liberarse, mandala a Maintenance o devolvela a Dirty.",
+      actionLabel: "Ver bloqueos",
       done: handleBlockerDone,
       active:
         progress.reviewBoardDone && startCleaningDone && finishCleaningDone && !handleBlockerDone,

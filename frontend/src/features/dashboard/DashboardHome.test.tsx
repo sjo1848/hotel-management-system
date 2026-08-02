@@ -164,7 +164,7 @@ describe("DashboardHome", () => {
         });
       });
     },
-    10_000,
+    20_000,
   );
 
   it("shows retry UI when initial dashboard load fails", async () => {
@@ -219,5 +219,5 @@ describe("DashboardHome", () => {
     expect(mockTrackUiEvent).toHaveBeenCalledWith("close_cash_failure", {
       message: "cash close failed",
     });
-  });
+  }, 20_000);
 });

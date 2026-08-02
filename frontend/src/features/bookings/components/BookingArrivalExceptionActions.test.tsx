@@ -24,7 +24,7 @@ const booking: Booking = {
 };
 
 describe("BookingArrivalExceptionActions", () => {
-  it("requires evidence and submits late arrival or no-show explicitly", () => {
+  it("requires a reason before opening the confirmation and submits no-show only after explicit confirmation", () => {
     const onAction = vi.fn();
     render(
       <BookingArrivalExceptionActions
@@ -40,11 +40,67 @@ describe("BookingArrivalExceptionActions", () => {
       target: { value: "Sin contacto al horario acordado" },
     });
     expect(noShowButton).toBeEnabled();
+
     fireEvent.click(noShowButton);
+    expect(onAction).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Vas a registrar un no-show/i),
+    ).toBeDefined();
+    expect(screen.getByText(/Motivo: Sin contacto al horario acordado/i)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /Confirmar no-show/i }));
     expect(onAction).toHaveBeenCalledWith("NoShow", {
       terminal_reason: "Sin contacto al horario acordado",
     });
+  });
 
+  it("keeps the typed reason when opening the confirmation and allows going back without executing", () => {
+    const onAction = vi.fn();
+    render(
+      <BookingArrivalExceptionActions
+        booking={booking}
+        statusLoading={null}
+        onAction={onAction}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/Motivo terminal/i), {
+      target: { value: "Cliente no responde a contactos" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Cancelar reserva/i }));
+    expect(screen.getByText(/Vas a cancelar esta reserva/i)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /Volver/i }));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Vas a cancelar esta reserva/i)).toBeNull();
+    expect(screen.getByLabelText(/Motivo terminal/i)).toHaveValue("Cliente no responde a contactos");
+  });
+
+  it("does not double-submit while a terminal status is loading", () => {
+    const onAction = vi.fn();
+    render(
+      <BookingArrivalExceptionActions
+        booking={booking}
+        statusLoading="NoShow"
+        onAction={onAction}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText(/Motivo terminal/i), {
+      target: { value: "Sin respuesta en horario de llegada" },
+    });
+    expect(screen.getByRole("button", { name: /Marcar no-show/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Registrar llegada tardía/i })).toBeDisabled();
+  });
+
+  it("requires future ETA evidence to submit a late arrival", () => {
+    const onAction = vi.fn();
+    render(
+      <BookingArrivalExceptionActions
+        booking={booking}
+        statusLoading={null}
+        onAction={onAction}
+      />,
+    );
     const localEta = new Date(Date.now() + 60 * 60 * 1000);
     const offset = localEta.getTimezoneOffset() * 60_000;
     const localEtaInput = new Date(localEta.getTime() - offset).toISOString().slice(0, 16);

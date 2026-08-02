@@ -47,6 +47,49 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
   await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Gestionar" }).first().click();
-  await expect(page.getByText("Centro operativo de la estadia.")).toBeVisible();
+  await expect(
+    page.getByText(/Revisá el bloqueo y completá una sola próxima acción/),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Cerrar" })).toBeVisible();
+});
+
+test("reception role smoke: guided rail navigates without marking progress", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+
+  await expect(page.getByRole("button", { name: /Abrí un caso del turno/ })).toBeVisible();
+  await expect(page.getByText(/0\/5 completado/)).toBeVisible();
+
+  await page.getByRole("button", { name: /Abrí un caso del turno/ }).click();
+
+  await expect(page.getByText(/0\/5 completado/)).toBeVisible();
+  await expect(page.locator("#front-desk-board")).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Salir del modo guiado" })).toBeVisible();
+});
+
+test("reception role smoke: board search shows the no-match state", async ({ page }) => {
+  await login(page);
+
+  await expect(page.getByLabel(/Buscar en el turno/)).toBeVisible();
+  await page.getByLabel(/Buscar en el turno/).fill("caso inexistente zzz");
+
+  await expect(
+    page.getByText(/No hay casos que coincidan con la busqueda y el filtro actuales/),
+  ).toBeVisible();
+});
+
+test("reception role smoke: layout has no horizontal overflow on common widths", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+
+  for (const width of [375, 390, 430, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect
+      .poll(async () =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ),
+      )
+      .toBeLessThanOrEqual(0);
+  }
 });

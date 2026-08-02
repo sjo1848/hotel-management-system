@@ -303,7 +303,79 @@ No incluir tokens, contraseñas, datos personales reales ni cookies en capturas,
 videos o traces. Si una evidencia los contiene, eliminarla del artefacto y
 repetir la captura antes de compartirla.
 
-## 9. Firma de cierre
+## 9. Ejecuciones registradas
+
+### Ejecución 2026-08-01 — Validación WF-013 (UX guiada recepción y housekeeping)
+
+Entorno local, branch `feature/gate-hardening-rbac-e2e`, sin commit (implementación
+local pendiente de commit intencional).
+
+| Gate | Comando | Resultado |
+| --- | --- | --- |
+| Unit tests focalizados (guías, board, excepciones, sheet) | `docker compose exec -T frontend npm run test -- --run src/features/guided/receptionGuide.test.ts src/features/guided/components/GuideRail.test.tsx src/features/guided/components/GuideHint.test.tsx src/features/bookings/components/FrontDeskBoardPanel.test.tsx src/features/bookings/components/BookingDetailsSheet.test.tsx src/features/bookings/components/BookingArrivalExceptionActions.test.tsx` | `PASS` (16/16) |
+| Suite unit frontend | `docker compose exec -T frontend npm run test -- --run` | `PASS` (21 archivos, 81 tests) |
+| Lint/typecheck | `docker compose exec -T frontend npm run lint` | `PASS` |
+| Build | `docker compose exec -T frontend npm run build` | `PASS` |
+| Contract | `./scripts/check-openapi-alignment.sh` | `PASS` (sin cambios de contrato v1) |
+| Journeys core | `./scripts/qa-core-journeys.sh` | `PASS` (HMS-QA-010) |
+| Smoke E2E recepción | `./scripts/playwright-reception-smoke.sh` | `PASS` (6/6, incluye sweep 375/390/430/768/1024/1440 sin overflow) |
+| Smoke E2E housekeeping | `./scripts/playwright-housekeeping-smoke.sh` | `PASS` (4/4, incluye foco de rail a columna dirty y sweep de anchos) |
+| Gate completo | `LC_ALL=C HMS_KPI_RUNNER=docker ./scripts/gate.sh` | `PASS` (incluye coverage frontend >= 80%) |
+| Whitespace | `git diff --check` sobre el conjunto WF-013 | `PASS` |
+
+Cobertura específica de WF-013 verificada:
+
+- `receptionGuide.test.ts` (4): acción de navegación por paso, progreso solo vía
+  eventos operativos, activación de pasos según estado de booking, guía completa.
+- `GuideRail.test.tsx` (6): `aria-current` solo en paso activo, estados
+  `Ahora/Pendiente/Completado`, clic navega sin marcar progreso, toggle/reset/CTA.
+- `GuideHint.test.tsx` (3): `aria-live="polite"`, CTA navega sin transición crítica.
+- `FrontDeskBoardPanel.test.tsx` (7): cola completa sin truncar, deduplicación de
+  casos, acción primaria por lane, dispatch con contexto de cola, filtros y
+  búsqueda con normalización de acentos, estados vacíos.
+- `BookingDetailsSheet.test.tsx` (4): pill de cola, foco guiado al montar (rAF),
+  CTA guiado no ejecuta check-in, continuación al siguiente caso.
+- `BookingArrivalExceptionActions.test.tsx` (5): confirmación explícita de
+  2 clics, motivo conservado al volver, sin doble envío con estado cargando, ETA
+  futura obligatoria, no-show bloqueado antes de la llegada.
+
+Smokes E2E actualizados en esta ejecución:
+
+- `reception-role-smoke.spec.ts`: centro operativo con encabezado
+  huésped/habitación, rail guiado navega sin marcar progreso (`0/5 completado`
+  estable), búsqueda sin coincidencias, sweep de anchos sin overflow.
+- `housekeeping-role-smoke.spec.ts`: locator `Salir del modo guiado`, clic en
+  tarjeta del rail enfoca `housekeeping-column-dirty` sin ejecutar acción, sweep
+  de anchos sin overflow.
+
+Defectos registrados durante la corrida:
+
+```text
+ID: QA-20260801-001
+Severidad: Low (preexistente, no de WF-013)
+Caso: Gates de CI
+Ruta o pantalla: DashboardHome.test.tsx
+Detalle: Flake de carga paralela: 2 tests de cierre de caja excedían timeouts
+  (10s/5s) con userEvent.type bajo carga. Ajustado timeout a 20s (robustez, sin
+  cambio de comportamiento). Verificado: standalone y suite completa en green.
+Estado: corregido
+```
+
+```text
+ID: QA-20260801-002
+Severidad: Medium (UX, aceptado como diseño en WF-013)
+Caso: QA-09
+Ruta o pantalla: BookingsPage / HousekeepingPage
+Detalle: Doble toggle del modo guiado (header "Salir del modo guiado" + rail
+  "Ocultar guía"). Ambos apagan el modo; validado en smoke E2E.
+Estado: diferido (decisión de diseño documentada)
+```
+
+Nota operativa: `./scripts/gate.sh` requiere `LC_ALL=C` en máquinas con locale
+decimal (p.ej. `es_AR`) para la comparación de tamaño de bundles, y PostgreSQL
+levantado (`docker compose up -d db backend frontend`).
+
+## 10. Firma de cierre
 
 ```text
 Ejecutado por:

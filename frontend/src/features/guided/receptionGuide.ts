@@ -78,6 +78,7 @@ export const buildReceptionGuideSteps = (
       id: "open-case",
       label: "Abrí un caso del turno",
       helper: "Tomá una llegada lista, un bloqueo o iniciá un walk-in para empezar a operar.",
+      actionLabel: "Ir a la cola",
       done: progress.openCaseDone,
       active: !progress.openCaseDone,
     },
@@ -85,6 +86,7 @@ export const buildReceptionGuideSteps = (
       id: "review-case",
       label: "Validá huésped y estadía",
       helper: "Revisá la ficha, la habitación y el siguiente paso recomendado desde el centro operativo.",
+      actionLabel: "Abrir caso",
       done: progress.reviewCaseDone,
       active: progress.openCaseDone && !progress.reviewCaseDone,
     },
@@ -92,6 +94,7 @@ export const buildReceptionGuideSteps = (
       id: "check-in",
       label: "Registrá la llegada",
       helper: "Completá el check-in formal cuando la reserva esté confirmada y la habitación lista.",
+      actionLabel: "Ir al check-in",
       done: progress.checkInDone,
       active:
         progress.reviewCaseDone &&
@@ -102,6 +105,7 @@ export const buildReceptionGuideSteps = (
       id: "payment",
       label: "Cerrá cuenta o registrá cobro",
       helper: "Antes del checkout, dejá la cuenta clara y cobrá cuando corresponda.",
+      actionLabel: "Ir a la cuenta",
       done: progress.paymentDone,
       active:
         progress.reviewCaseDone &&
@@ -112,6 +116,7 @@ export const buildReceptionGuideSteps = (
       id: "checkout",
       label: "Finalizá la salida",
       helper: "Cerrá checkout y dejá la habitación lista para pasar a housekeeping.",
+      actionLabel: "Ir al checkout",
       done: progress.checkoutDone,
       active:
         (progress.paymentDone || bookingStatus === "CheckedOut") &&

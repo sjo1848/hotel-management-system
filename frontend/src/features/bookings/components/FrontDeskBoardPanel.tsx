@@ -15,6 +15,7 @@ import {
   DoorClosed,
   Hotel,
   Loader2,
+  Search,
   ShieldAlert,
   X,
 } from "lucide-react";
@@ -41,6 +42,19 @@ const currency = (value: number) => `$${(value / 100).toLocaleString("es-AR")}`;
 const stayRange = (checkIn: string, checkOut: string) =>
   `${format(parseISO(checkIn), "dd MMM", { locale: es })} al ${format(parseISO(checkOut), "dd MMM", { locale: es })}`;
 
+type QueueFilter = "all" | "urgent" | "arrivals" | "departures" | "in-house";
+
+const queueFilters: Array<{ value: QueueFilter; label: string }> = [
+  { value: "all", label: "Todos" },
+  { value: "urgent", label: "Urgentes" },
+  { value: "arrivals", label: "Llegadas" },
+  { value: "departures", label: "Salidas" },
+  { value: "in-house", label: "En casa" },
+];
+
+const normalizedSearch = (value: string) =>
+  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
+
 const FrontDeskBoardPanel = ({
   board,
   loading,
@@ -57,20 +71,115 @@ const FrontDeskBoardPanel = ({
   const actionQueue = board?.action_queue ?? [];
   const [viewMode, setViewMode] = useState<"queue" | "sections">("queue");
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const readyArrivalIds = useMemo(
+    () => new Set(readyArrivals.map((entry) => entry.booking_id)),
+    [readyArrivals],
+  );
+  const blockedArrivalIds = useMemo(
+    () => new Set(blockedArrivals.map((entry) => entry.booking_id)),
+    [blockedArrivals],
+  );
+  const departureIds = useMemo(
+    () => new Set(departures.map((entry) => entry.booking_id)),
+    [departures],
+  );
+  const inHouseIds = useMemo(
+    () => new Set(inHouse.map((entry) => entry.booking_id)),
+    [inHouse],
+  );
+  const cockpitQueue = useMemo(() => {
+    const queuedIds = new Set(actionQueue.map((item) => item.entry.booking_id));
+    const appendMissing = (
+      entries: FrontDeskBoardEntry[],
+      createItem: (entry: FrontDeskBoardEntry) => FrontDeskQueueItem,
+    ) =>
+      entries.flatMap((entry) => {
+        if (queuedIds.has(entry.booking_id)) return [];
+        queuedIds.add(entry.booking_id);
+        return [createItem(entry)];
+      });
+    const missingBlocked = appendMissing(blockedArrivals, (entry) => ({
+      entry,
+      lane: "Bloqueada",
+      title: entry.blocker?.title ?? "Llegada bloqueada",
+      detail: entry.blocker?.detail ?? "La llegada necesita una resolución operativa.",
+      primary_label: "Revisar bloqueo",
+      action_kind: "open-booking",
+    }));
+    const missingDepartures = appendMissing(departures, (entry) => ({
+      entry,
+      lane: "Salida",
+      title: "Salida pendiente",
+      detail: "Revisá cuenta, habitación y handoff antes de cerrar el checkout.",
+      primary_label: "Preparar checkout",
+      action_kind: "open-booking",
+    }));
+    const missingReady = appendMissing(readyArrivals, (entry) => ({
+      entry,
+      lane: "Llegada",
+      title: "Llegada lista",
+      detail: "La habitación está disponible para completar la recepción.",
+      primary_label: "Hacer check-in",
+      action_kind: "prepare-check-in",
+    }));
+    const missingInHouse = appendMissing(inHouse, (entry) => ({
+      entry,
+      lane: "En casa",
+      title: "Estadia activa",
+      detail: "Seguimiento de cuenta, habitacion y excepciones durante la estadia.",
+      primary_label: "Gestionar estadia",
+      action_kind: "open-booking",
+    }));
+    return [
+      ...actionQueue,
+      ...missingBlocked,
+      ...missingDepartures,
+      ...missingReady,
+      ...missingInHouse,
+    ];
+  }, [actionQueue, blockedArrivals, departures, inHouse, readyArrivals]);
+  const filteredQueue = useMemo(() => {
+    const query = normalizedSearch(searchQuery);
+    return cockpitQueue.filter((item) => {
+      const bookingId = item.entry.booking_id;
+      const matchesFilter =
+        queueFilter === "all" ||
+        (queueFilter === "urgent" &&
+          (blockedArrivalIds.has(bookingId) || departureIds.has(bookingId))) ||
+        (queueFilter === "arrivals" &&
+          (readyArrivalIds.has(bookingId) || blockedArrivalIds.has(bookingId))) ||
+        (queueFilter === "departures" && departureIds.has(bookingId)) ||
+        (queueFilter === "in-house" && inHouseIds.has(bookingId));
+      if (!matchesFilter) return false;
+      if (!query) return true;
+      return normalizedSearch(
+        [
+          item.entry.guest_name,
+          item.entry.room_number,
+          item.entry.room_type,
+          item.entry.booking_id,
+          item.lane,
+          item.title,
+          item.detail,
+          item.entry.blocker?.title ?? "",
+          item.entry.blocker?.detail ?? "",
+        ].join(" "),
+      ).includes(query);
+    });
+  }, [
+    blockedArrivalIds,
+    cockpitQueue,
+    departureIds,
+    inHouseIds,
+    queueFilter,
+    readyArrivalIds,
+    searchQuery,
+  ]);
   const boardCaseOrder = useMemo(
-    () => {
-      if (actionQueue.length > 0) {
-        return Array.from(new Set(actionQueue.map((item) => item.entry.booking_id)));
-      }
-      return Array.from(
-        new Set(
-          [...blockedArrivals, ...departures, ...readyArrivals, ...inHouse].map(
-            (entry) => entry.booking_id,
-          ),
-        ),
-      );
-    },
-    [actionQueue, blockedArrivals, departures, inHouse, readyArrivals],
+    () => Array.from(new Set(cockpitQueue.map((item) => item.entry.booking_id))),
+    [cockpitQueue],
   );
   const orderedSelectedBookingIds = useMemo(
     () => boardCaseOrder.filter((bookingId) => selectedBookingIds.includes(bookingId)),
@@ -88,23 +197,6 @@ const FrontDeskBoardPanel = ({
   const prepareCheckInFromBoard = (bookingId: string) => {
     onPrepareCheckIn(bookingId, getActiveQueueBookingIds(bookingId));
   };
-  const criticalQueue = useMemo(
-    () =>
-      actionQueue.slice(0, 4).map((item) => ({
-        key: `${item.lane}:${item.entry.booking_id}`,
-        title: item.title,
-        detail: item.detail,
-        actionLabel: item.primary_label,
-        onAction: () => {
-          if (item.action_kind === "prepare-check-in") {
-            prepareCheckInFromBoard(item.entry.booking_id);
-            return;
-          }
-          openBookingFromBoard(item.entry.booking_id);
-        },
-      })),
-    [actionQueue, openBookingFromBoard, prepareCheckInFromBoard],
-  );
   const operationalFocus = useMemo(() => {
     if (blockedArrivals.length > 0) {
       return "Destrabar llegadas antes de seguir vendiendo el turno.";
@@ -118,8 +210,8 @@ const FrontDeskBoardPanel = ({
     return "No hay urgencias activas: usa el board para seguimiento fino y contexto.";
   }, [blockedArrivals.length, departures.length, readyArrivals.length]);
   const visibleQueueBookingIds = useMemo(
-    () => actionQueue.map((item) => item.entry.booking_id),
-    [actionQueue],
+    () => filteredQueue.map((item) => item.entry.booking_id),
+    [filteredQueue],
   );
   const selectedEntries = useMemo(() => {
     const byId = new Map<string, FrontDeskBoardEntry>();
@@ -247,6 +339,62 @@ const FrontDeskBoardPanel = ({
         <StatCard label="Bloqueos activos" value={holdsToday.length} tone="destructive" icon={CalendarDays} />
       </div>
 
+      {viewMode === "queue" ? (
+        <div className="mt-5 rounded-3xl border border-border bg-background/70 p-4 shadow-sm">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <label
+                htmlFor="front-desk-search"
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground"
+              >
+                Buscar en el turno
+              </label>
+              <div className="relative mt-2">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="front-desk-search"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Huesped, habitacion o reserva"
+                  className="h-11 w-full rounded-2xl border border-input bg-card pl-10 pr-4 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+            </div>
+
+            <div className="min-w-0 xl:max-w-[58%]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Filtrar casos
+              </p>
+              <div className="mt-2 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar cola de recepcion">
+                {queueFilters.map((filter) => (
+                  <Button
+                    key={filter.value}
+                    type="button"
+                    size="sm"
+                    variant={queueFilter === filter.value ? "default" : "outline"}
+                    className="h-9 shrink-0 rounded-xl"
+                    aria-pressed={queueFilter === filter.value}
+                    onClick={() => setQueueFilter(filter.value)}
+                  >
+                    {filter.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="font-semibold text-foreground">
+              Mostrando {filteredQueue.length} de {cockpitQueue.length} casos del turno
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {blockedArrivals.length + departures.length} requieren atencion prioritaria
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {selectedBookingIds.length > 0 ? (
         <div className="motion-refresh mt-5 rounded-3xl border border-border bg-background/70 p-4 shadow-sm">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -255,10 +403,10 @@ const FrontDeskBoardPanel = ({
                 Seleccion operativa
               </p>
               <p className="mt-2 text-sm font-semibold text-foreground">
-                {selectedBookingIds.length} caso(s) listos para trabajar en lote
+                {selectedBookingIds.length} caso(s) en tu recorrido
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Recepcion puede exportar la cola elegida o abrir el siguiente caso sin perder foco.
+                Abrí el primero y avanzá caso por caso sin volver al board.
               </p>
             </div>
 
@@ -305,48 +453,6 @@ const FrontDeskBoardPanel = ({
         </div>
       ) : null}
 
-      {criticalQueue.length > 0 ? (
-        <div className="motion-refresh mt-5 rounded-3xl border border-primary/20 bg-primary/5 p-4 shadow-sm">
-          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">
-                Cola critica
-              </p>
-              <h4 className="mt-2 text-lg font-black tracking-tight text-foreground">
-                Resolvé estos casos antes del resto del turno
-              </h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Mezcla bloqueos, salidas y llegadas listas en el orden que más impacto operativo tiene.
-              </p>
-            </div>
-          </div>
-
-          <div className="stagger-list mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {criticalQueue.map((item) => (
-              <article
-                key={item.key}
-                className="rounded-2xl border border-border bg-card px-4 py-4 shadow-sm"
-              >
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  {item.title}
-                </p>
-                <p className="mt-3 min-h-[3rem] text-sm font-semibold text-foreground">
-                  {item.detail}
-                </p>
-                <Button
-                  className="mt-4 h-10 w-full rounded-2xl"
-                  variant="outline"
-                  onClick={item.onAction}
-                >
-                  {item.actionLabel}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </article>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       {!loading && holdsToday.length > 0 ? (
         <div className="stagger-list mt-4 flex gap-3 overflow-x-auto pb-1">
           {holdsToday.slice(0, 4).map((hold) => (
@@ -373,14 +479,14 @@ const FrontDeskBoardPanel = ({
         </div>
       ) : viewMode === "queue" ? (
         <div className="mt-5 space-y-3">
-          {actionQueue.length > 0 ? (
+          {filteredQueue.length > 0 ? (
             <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground">
-                Seleccioná varios casos y operalos como bloque seguro desde la barra superior.
+                Trabajá los casos en orden o seleccioná una cola para recorrerla sin volver al board.
               </p>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Button type="button" variant="outline" size="sm" className="rounded-xl sm:w-auto" onClick={selectVisibleQueue}>
-                  Seleccionar visibles
+                  Seleccionar resultados
                 </Button>
                 <Button type="button" variant="ghost" size="sm" className="rounded-xl sm:w-auto" onClick={clearSelection}>
                   Vaciar
@@ -388,30 +494,38 @@ const FrontDeskBoardPanel = ({
               </div>
             </div>
           ) : null}
-          {actionQueue.length === 0 ? (
+          {filteredQueue.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
-              No hay casos urgentes para la fecha operativa seleccionada.
+              {cockpitQueue.length === 0
+                ? "No hay casos pendientes para la fecha operativa seleccionada."
+                : "No hay casos que coincidan con la busqueda y el filtro actuales."}
             </div>
           ) : (
-            actionQueue.map((item) => (
+            filteredQueue.map((item, index) => (
               <article
                 key={`${item.lane}:${item.entry.booking_id}`}
-                className="rounded-2xl border border-border bg-background/70 px-4 py-4 shadow-sm"
+                className="rounded-3xl border border-border bg-background/70 px-4 py-4 shadow-sm transition hover:border-primary/30 hover:bg-card sm:px-5"
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex gap-3">
-                    <label className="flex pt-1">
+                    <label className="flex pt-1" title="Agregar caso a la cola de trabajo">
                       <input
                         type="checkbox"
+                        aria-label={`Seleccionar caso de ${item.entry.guest_name}`}
                         className="h-4 w-4 rounded border-border text-primary"
                         checked={selectedBookingIds.includes(item.entry.booking_id)}
                         onChange={() => toggleSelection(item.entry.booking_id)}
                       />
                     </label>
                     <div className="space-y-2">
-                      <Badge variant={getQueueBadgeVariant(item)} className="w-fit">
-                        {item.lane}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant={getQueueBadgeVariant(item)} className="w-fit">
+                          {item.lane}
+                        </Badge>
+                        <span className="text-xs font-semibold text-muted-foreground">
+                          Caso {index + 1} de {filteredQueue.length}
+                        </span>
+                      </div>
                       <div>
                         <h4 className="text-base font-black tracking-tight text-foreground">
                           {item.entry.guest_name}
@@ -419,15 +533,33 @@ const FrontDeskBoardPanel = ({
                         <p className="mt-1 text-sm text-foreground">
                           Hab. {item.entry.room_number} · {item.entry.room_type}
                         </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {stayRange(item.entry.check_in, item.entry.check_out)} · Reserva {item.entry.booking_id.slice(0, 8).toUpperCase()}
+                        </p>
                       </div>
+                      <p className="text-sm font-medium text-foreground">{item.title}</p>
                       <p className="text-sm text-muted-foreground">{item.detail}</p>
+                      {item.entry.blocker ? (
+                        <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
+                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <div>
+                            <p className="font-semibold">{item.entry.blocker.title}</p>
+                            <p className="mt-1 text-xs">{item.entry.blocker.detail}</p>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-                    <Badge variant={getQueueBadgeVariant(item)} className="w-fit">
-                      {selectedBookingIds.includes(item.entry.booking_id) ? "Seleccionado" : item.title}
-                    </Badge>
+                  <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:min-w-[220px]">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        Cuenta de referencia
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {currency(item.entry.total_price_cents)}
+                      </p>
+                    </div>
                     <Button
                       className="h-10 w-full rounded-2xl sm:w-auto"
                       onClick={() => {
@@ -438,9 +570,12 @@ const FrontDeskBoardPanel = ({
                         openBookingFromBoard(item.entry.booking_id);
                       }}
                     >
-                      {item.primary_label}
+                      {getPrimaryActionLabel(item)}
                       <ArrowRight className="h-4 w-4" />
                     </Button>
+                    <p className="text-center text-xs text-muted-foreground">
+                      Abre el caso con contexto y controles previos.
+                    </p>
                   </div>
                 </div>
               </article>
@@ -657,6 +792,15 @@ const FrontDeskColumn = ({
 );
 
 export default FrontDeskBoardPanel;
+
+const getPrimaryActionLabel = (item: FrontDeskQueueItem) => {
+  if (item.entry.blocker || item.lane === "Bloqueada") return "Revisar bloqueo";
+  if (item.action_kind === "prepare-check-in") return "Hacer check-in";
+  if (item.lane === "Salida") return "Preparar checkout";
+  if (item.lane === "En casa") return "Gestionar estadia";
+  return item.primary_label;
+};
+
   const getQueueBadgeVariant = (item: FrontDeskQueueItem) => {
     switch (item.action_kind) {
       case "prepare-check-in":
@@ -664,6 +808,7 @@ export default FrontDeskBoardPanel;
       default:
         if (item.lane === "Bloqueada") return "warning" as const;
         if (item.lane === "Salida") return "info" as const;
+        if (item.lane === "En casa") return "neutral" as const;
         return "outline" as const;
     }
   };

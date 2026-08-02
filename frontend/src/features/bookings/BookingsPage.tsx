@@ -7,10 +7,6 @@ import {
   MoreVertical,
   Filter,
   Download,
-  ArrowRight,
-  DoorOpen,
-  ShieldAlert,
-  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,16 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getBookings, getFrontDeskBoard, updateBooking } from "./services/bookingService";
-import { Booking, BookingFrontDeskData, FrontDeskBoard, FrontDeskBoardEntry } from "@/types/domain";
+import { Booking, BookingFrontDeskData } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import { downloadCSV, cn } from "@/lib/utils";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
 import { PageHeader } from "@/components/ui/page-header";
-import { SectionCard, SectionEyebrow } from "@/components/ui/section-card";
 import { useGuidedMode } from "@/features/guided/GuidedModeContext";
 import GuideRail from "@/features/guided/components/GuideRail";
-import GuideHint from "@/features/guided/components/GuideHint";
+import type { ReceptionGuideStepId } from "@/features/guided/receptionGuide";
 
 const BookingEditDrawer = lazy(() => import("./components/BookingEditDrawer"));
 const BookingDetailsSheet = lazy(() => import("./components/BookingDetailsSheet"));
@@ -55,6 +50,7 @@ const BookingsPage = () => {
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const [boardDate, setBoardDate] = useState(new Date().toISOString().slice(0, 10));
   const [frontDeskQueueBookingIds, setFrontDeskQueueBookingIds] = useState<string[]>([]);
+  const [guidedFocusStep, setGuidedFocusStep] = useState<ReceptionGuideStepId | null>(null);
 
   const {
     data: bookingsData,
@@ -136,94 +132,51 @@ const BookingsPage = () => {
     setIsWalkInOpen(true);
     trackReceptionEvent("open_walk_in");
   };
-  const operationalTasks = useMemo(
-    () => {
-      const board = frontDeskBoard as FrontDeskBoard | undefined;
-      const taskCards: Array<{
-        key: string;
-        title: string;
-        helper: string;
-        count: number;
-        tone: string;
-        actionLabel: string;
-        icon: typeof DoorOpen;
-        entry?: FrontDeskBoardEntry;
-        onAction: () => void;
-      }> = [];
-
-      const firstReady = board?.arrivals_ready?.[0];
-      const firstBlocked = board?.arrivals_blocked?.[0];
-      const firstDeparture = board?.departures_today?.[0];
-
-      taskCards.push({
-        key: "arrivals-ready",
-        title: "Check-ins listos",
-        helper: firstReady
-          ? `${firstReady.guest_name} ya puede pasar por recepción.`
-          : "No hay llegadas listas para iniciar ahora.",
-        count: board?.arrivals_ready?.length ?? 0,
-        tone: "border-primary/20 bg-primary/10",
-        actionLabel: firstReady ? "Abrir llegada" : "Nueva reserva",
-        icon: DoorOpen,
-        entry: firstReady,
-        onAction: () => {
-          if (firstReady) {
-            openBookingById(firstReady.booking_id, defaultFrontDeskQueueBookingIds);
-            return;
-          }
-          openWalkIn();
-        },
+  const openReceptionGuideStep = (stepId: string) => {
+    const receptionStep = stepId as ReceptionGuideStepId;
+    setGuidedFocusStep(receptionStep);
+    if (receptionStep === "open-case") {
+      document.getElementById("front-desk-board")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
+      return;
+    }
 
-      taskCards.push({
-        key: "blocked-arrivals",
-        title: "Casos bloqueados",
-        helper: firstBlocked
-          ? `${firstBlocked.guest_name} necesita resolución operativa antes del check-in.`
-          : "No hay bloqueos activos en recepción.",
-        count: board?.arrivals_blocked?.length ?? 0,
-        tone: "border-amber-500/20 bg-amber-500/10",
-        actionLabel: firstBlocked ? "Resolver caso" : "Ver board",
-        icon: ShieldAlert,
-        entry: firstBlocked,
-        onAction: () => {
-          if (firstBlocked) {
-            openBookingById(firstBlocked.booking_id, defaultFrontDeskQueueBookingIds);
-            return;
-          }
-          void refetchFrontDeskBoard();
-        },
-      });
+    const selectedMatchesStep =
+      selectedBooking &&
+      (receptionStep === "review-case" ||
+        (receptionStep === "check-in" && selectedBooking.status === "Confirmed") ||
+        (["payment", "checkout"].includes(receptionStep) &&
+          selectedBooking.status === "CheckedIn"));
+    const targetEntry =
+      receptionStep === "check-in"
+        ? frontDeskBoard?.arrivals_ready?.[0] ?? frontDeskBoard?.arrivals_blocked?.[0]
+        : receptionStep === "payment" || receptionStep === "checkout"
+          ? frontDeskBoard?.departures_today?.[0] ?? frontDeskBoard?.in_house?.[0]
+          : frontDeskBoard?.arrivals_blocked?.[0] ??
+            frontDeskBoard?.arrivals_ready?.[0] ??
+            frontDeskBoard?.departures_today?.[0] ??
+            frontDeskBoard?.in_house?.[0];
+    const targetBooking = selectedMatchesStep
+      ? selectedBooking
+      : bookings.find((item) => item.id === targetEntry?.booking_id);
 
-      taskCards.push({
-        key: "departures",
-        title: "Cobros y salidas",
-        helper: firstDeparture
-          ? `${firstDeparture.guest_name} debería cerrar checkout y cuenta hoy.`
-          : "No hay salidas pendientes en la fecha operativa.",
-        count: board?.departures_today?.length ?? 0,
-        tone: "border-secondary/20 bg-secondary/10",
-        actionLabel: firstDeparture ? "Preparar checkout" : "Exportar reservas",
-        icon: CreditCard,
-        entry: firstDeparture,
-        onAction: () => {
-          if (firstDeparture) {
-            openBookingById(firstDeparture.booking_id, defaultFrontDeskQueueBookingIds);
-            return;
-          }
-          handleExport();
-        },
-      });
+    if (targetBooking) {
+      openBookingById(targetBooking.id, defaultFrontDeskQueueBookingIds);
+      return;
+    }
 
-      return taskCards;
-    },
-    [
-      defaultFrontDeskQueueBookingIds,
-      frontDeskBoard,
-      refetchFrontDeskBoard,
-      handleExport,
-    ],
-  );
+    toast({
+      title: "No hay un caso disponible para este paso",
+      description: "Usá la cola del turno o creá una reserva para continuar el recorrido.",
+      variant: "default",
+    });
+    document.getElementById("front-desk-board")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
   const summary = useMemo(() => ({
     total: bookings.length,
     confirmed: bookings.filter((booking) => booking.status === "Confirmed").length,
@@ -234,41 +187,7 @@ const BookingsPage = () => {
       .reduce((sum, booking) => sum + booking.total_price_cents, 0),
   }), [bookings]);
   const guideState = getReceptionGuideState(selectedBooking?.status);
-  const guideCta = useMemo(() => {
-    const firstReady = frontDeskBoard?.arrivals_ready?.[0];
-    const firstBlocked = frontDeskBoard?.arrivals_blocked?.[0];
-    if (!guideState.steps[0]?.done) {
-      if (firstReady) {
-        return {
-          label: "Abrir llegada",
-          onClick: () => openBookingById(firstReady.booking_id, defaultFrontDeskQueueBookingIds),
-        };
-      }
-      if (firstBlocked) {
-        return {
-          label: "Resolver caso",
-          onClick: () => openBookingById(firstBlocked.booking_id, defaultFrontDeskQueueBookingIds),
-        };
-      }
-      return {
-        label: "Nueva reserva",
-        onClick: openWalkIn,
-      };
-    }
-    if (selectedBooking && !guideState.steps[3].done && selectedBooking.status === "CheckedIn") {
-      return {
-        label: "Volver al caso",
-        onClick: () => setIsDetailsOpen(true),
-      };
-    }
-    return null;
-  }, [
-    defaultFrontDeskQueueBookingIds,
-    frontDeskBoard?.arrivals_blocked,
-    frontDeskBoard?.arrivals_ready,
-    guideState.steps,
-    selectedBooking,
-  ]);
+  const activeGuideStep = guideState.steps.find((step) => step.active);
 
   const handleStatusUpdate = async (
     id: string,
@@ -446,7 +365,7 @@ const BookingsPage = () => {
               className="h-10 w-full rounded-xl sm:w-auto"
               onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}
             >
-              {guidedModeEnabled ? "Ocultar guía" : "Modo guiado"}
+              {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
             </Button>
           </>
         }
@@ -462,110 +381,11 @@ const BookingsPage = () => {
           enabled={guidedModeEnabled}
           onToggle={() => setGuidedModeEnabled(!guidedModeEnabled)}
           onReset={resetReceptionGuide}
-          ctaLabel={guideCta?.label}
-          onCta={guideCta?.onClick}
+          ctaLabel={activeGuideStep?.actionLabel}
+          onCta={activeGuideStep ? () => openReceptionGuideStep(activeGuideStep.id) : undefined}
+          onStepSelect={openReceptionGuideStep}
         />
       ) : null}
-
-      <section className="stagger-list grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <SectionCard>
-          <SectionEyebrow>Lo inmediato del turno</SectionEyebrow>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-foreground">
-            Empezá por estas tres colas
-          </h2>
-          <p className="mt-2 max-w-[56ch] text-sm text-muted-foreground">
-            Primero check-ins listos, después bloqueos y después salidas con cobro. El resto ya
-            baja al board completo.
-          </p>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {operationalTasks.map((task) => {
-              const TaskIcon = task.icon;
-              return (
-                <article
-                  key={task.key}
-                  className={cn(
-                    "rounded-3xl border p-5 shadow-sm transition-colors",
-                    task.tone,
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-                        {task.title}
-                      </p>
-                      <p className="mt-3 text-3xl font-black tracking-tight text-foreground">
-                        {task.count}
-                      </p>
-                    </div>
-                    <div className="rounded-2xl bg-card p-3 shadow-sm">
-                      <TaskIcon className="h-5 w-5 text-foreground" />
-                    </div>
-                  </div>
-                  <p className="mt-4 min-h-[2.75rem] text-sm text-muted-foreground">
-                    {task.helper}
-                  </p>
-                  {task.entry ? (
-                    <div className="mt-4 rounded-2xl border border-border bg-card/80 px-4 py-3">
-                      <p className="text-sm font-black text-foreground">{task.entry.guest_name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Hab. {task.entry.room_number} · {task.entry.room_type}
-                      </p>
-                    </div>
-                  ) : null}
-                  <Button
-                    className="mt-4 h-11 w-full rounded-2xl"
-                    variant={task.entry ? "default" : "outline"}
-                    onClick={task.onAction}
-                  >
-                    {task.actionLabel}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </article>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          {guidedModeEnabled ? (
-            <GuideHint
-              title={guideState.summary.title}
-              description={guideState.summary.description}
-              ctaLabel={guideCta?.label}
-              onCta={guideCta?.onClick}
-            />
-          ) : null}
-          <SectionCard>
-            <SectionEyebrow>Foco del turno</SectionEyebrow>
-            <p className="mt-3 text-xl font-black tracking-tight text-foreground">
-              {(frontDeskBoard?.arrivals_blocked?.length ?? 0) > 0
-                ? "Destrabar casos antes del check-in"
-                : (frontDeskBoard?.departures_today?.length ?? 0) > 0
-                  ? "Cerrar checkout y cobros"
-                  : "Convertir llegadas en check-ins"}
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {(frontDeskBoard?.arrivals_blocked?.length ?? 0) > 0
-                ? "Hay casos que traban el turno y además afectan habitaciones."
-                : (frontDeskBoard?.departures_today?.length ?? 0) > 0
-                  ? "Las salidas de hoy son la palanca para liberar caja e inventario."
-                  : "Si el turno está limpio, empujá ingresos y seguimiento fino."}
-            </p>
-          </SectionCard>
-
-          <SectionCard>
-            <SectionEyebrow>Siguiente capa</SectionEyebrow>
-            <p className="mt-3 text-xl font-black tracking-tight text-foreground">
-              Board completo + reservas
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Después de resolver lo urgente, bajá al board operativo y desde ahí abrí la reserva o
-              la tabla completa según el caso.
-            </p>
-          </SectionCard>
-        </div>
-      </section>
 
       <Suspense
         fallback={
@@ -673,6 +493,7 @@ const BookingsPage = () => {
               onRefreshBooking={async () => {
                 await refreshBookingsView(selectedBooking.id);
               }}
+              guidedFocusStep={guidedFocusStep}
               queueBookingIds={frontDeskQueueBookingIds}
               onOpenQueuedBooking={(bookingId) => {
                 openBookingById(bookingId, frontDeskQueueBookingIds);
@@ -681,6 +502,7 @@ const BookingsPage = () => {
                 setIsDetailsOpen(false);
                 setSelectedBooking(null);
                 setFrontDeskQueueBookingIds([]);
+                setGuidedFocusStep(null);
               }}
             />
           </>

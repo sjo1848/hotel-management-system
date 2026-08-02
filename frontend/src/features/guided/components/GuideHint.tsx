@@ -17,7 +17,10 @@ const GuideHint = ({
   onCta,
 }: GuideHintProps) => {
   return (
-    <div className="motion-live-pill rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 shadow-sm">
+    <div
+      className="motion-live-pill rounded-2xl border border-primary/20 bg-primary/10 px-4 py-4 shadow-sm"
+      aria-live="polite"
+    >
       <div className="flex items-start gap-3">
         <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
           <Sparkles className="h-4 w-4" />

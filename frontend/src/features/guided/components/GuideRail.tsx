@@ -1,4 +1,4 @@
-import { CheckCircle2, Compass, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Compass, RotateCcw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { GuideStepView } from "@/features/guided/types";
@@ -14,6 +14,7 @@ type GuideRailProps = {
   onReset: () => void;
   ctaLabel?: string;
   onCta?: () => void;
+  onStepSelect?: (stepId: string) => void;
 };
 
 const progressPercent = (completed: number, total: number) =>
@@ -30,6 +31,7 @@ const GuideRail = ({
   onReset,
   ctaLabel,
   onCta,
+  onStepSelect,
 }: GuideRailProps) => {
   return (
     <section className="motion-refresh overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-card to-card p-5 shadow-sm">
@@ -74,15 +76,28 @@ const GuideRail = ({
         </p>
       </div>
 
+      <div className="mt-4 flex flex-col gap-1 rounded-2xl border border-primary/15 bg-card/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-semibold text-foreground">
+          Una misión por vez: la tarjeta resaltada es la acción actual.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          Tocá cualquier paso para ir a su contexto sin marcarlo como completado.
+        </p>
+      </div>
+
       <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {steps.map((step, index) => (
-          <article
+          <button
             key={step.id}
+            type="button"
+            aria-current={step.active ? "step" : undefined}
+            onClick={() => onStepSelect?.(step.id)}
             className={cn(
-              "rounded-2xl border px-4 py-4 shadow-sm transition-all",
+              "group rounded-2xl border px-4 py-4 text-left shadow-sm transition-all",
               step.done && "border-primary/20 bg-primary/10",
-              !step.done && step.active && "border-primary/30 bg-card ring-1 ring-primary/20",
+              !step.done && step.active && "border-primary/30 bg-card ring-2 ring-primary/20",
               !step.done && !step.active && "border-border bg-card/80",
+              onStepSelect && "cursor-pointer hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
             )}
           >
             <div className="flex items-start gap-3">
@@ -101,9 +116,20 @@ const GuideRail = ({
               <div>
                 <p className="text-sm font-black text-foreground">{step.label}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{step.helper}</p>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                    {step.done ? "Completado" : step.active ? "Ahora" : "Pendiente"}
+                  </span>
+                  {onStepSelect ? (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground">
+                      {step.actionLabel ?? "Ver paso"}
+                      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
-          </article>
+          </button>
         ))}
       </div>
     </section>

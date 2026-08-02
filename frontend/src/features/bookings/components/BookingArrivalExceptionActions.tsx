@@ -33,6 +33,9 @@ const BookingArrivalExceptionActions = ({
   const [lateNote, setLateNote] = useState(
     booking.operational_data?.late_arrival_note ?? "",
   );
+  const [pendingTerminalAction, setPendingTerminalAction] = useState<
+    "Cancelled" | "NoShow" | null
+  >(null);
 
   const reasonIsValid = terminalReason.trim().length >= 6;
   const lateEtaTimestamp = Date.parse(lateEta);
@@ -123,9 +126,7 @@ const BookingArrivalExceptionActions = ({
             variant="outline"
             className="border-destructive/20 text-destructive hover:bg-destructive/10"
             disabled={statusLoading !== null || !reasonIsValid}
-            onClick={() =>
-              onAction("Cancelled", { terminal_reason: terminalReason.trim() })
-            }
+            onClick={() => setPendingTerminalAction("Cancelled")}
           >
             {statusLoading === "Cancelled" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -139,7 +140,7 @@ const BookingArrivalExceptionActions = ({
             variant="outline"
             disabled={statusLoading !== null || !reasonIsValid || !canMarkNoShow}
             title={canMarkNoShow ? undefined : "Disponible desde la fecha de llegada"}
-            onClick={() => onAction("NoShow", { terminal_reason: terminalReason.trim() })}
+            onClick={() => setPendingTerminalAction("NoShow")}
           >
             {statusLoading === "NoShow" ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -149,6 +150,48 @@ const BookingArrivalExceptionActions = ({
             Marcar no-show
           </Button>
         </div>
+
+        {pendingTerminalAction ? (
+          <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              {pendingTerminalAction === "Cancelled"
+                ? "Vas a cancelar esta reserva"
+                : "Vas a registrar un no-show"}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              La acción libera la disponibilidad, deja motivo, actor y hora en auditoría y no permite volver al estado anterior desde recepción.
+            </p>
+            <div className="mt-3 rounded-xl border border-border bg-card px-3 py-2 text-xs text-foreground">
+              Motivo: {terminalReason.trim()}
+            </div>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingTerminalAction(null)}
+              >
+                Volver
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                disabled={statusLoading !== null || !reasonIsValid}
+                onClick={() => {
+                  onAction(pendingTerminalAction, {
+                    terminal_reason: terminalReason.trim(),
+                  });
+                  setPendingTerminalAction(null);
+                }}
+              >
+                {pendingTerminalAction === "Cancelled"
+                  ? "Confirmar cancelación"
+                  : "Confirmar no-show"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

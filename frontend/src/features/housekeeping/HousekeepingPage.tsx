@@ -136,13 +136,8 @@ const HousekeepingPage = () => {
   }, [boardData?.departures_today, boardData?.rooms]);
   const departuresToday = boardData?.departures_today ?? [];
   const guideState = getHousekeepingGuideState(summary);
-  const firstDirtyRoom = roomsByStatus.Dirty[0];
-  const firstCleaningRoom = roomsByStatus.Cleaning[0];
+  const activeHousekeepingGuideStep = guideState.steps.find((step) => step.active);
   const firstMaintenanceRoom = roomsByStatus.Maintenance[0];
-  const firstBlockedDeparture = departuresToday.find(
-    (item) => item.room_status === "Maintenance" || item.booking_status === "CheckedIn",
-  );
-  const firstBlockedRoomNumber = firstMaintenanceRoom?.room_number ?? firstBlockedDeparture?.room_number;
   const blockedTargetId = firstMaintenanceRoom
     ? "housekeeping-board-columns"
     : "housekeeping-departures";
@@ -198,7 +193,23 @@ const HousekeepingPage = () => {
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
+      element.focus({ preventScroll: true });
     }
+  };
+  const openHousekeepingGuideStep = (stepId: string) => {
+    if (stepId === "start-cleaning") {
+      scrollToSection("housekeeping-column-dirty");
+      return;
+    }
+    if (stepId === "finish-cleaning") {
+      scrollToSection("housekeeping-column-cleaning");
+      return;
+    }
+    if (stepId === "handle-blocker") {
+      scrollToSection(blockedTargetId);
+      return;
+    }
+    scrollToSection("housekeeping-board-columns");
   };
 
   const runAction = async (
@@ -347,7 +358,7 @@ const HousekeepingPage = () => {
               onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}
             >
               <Sparkles className="h-4 w-4" />
-              {guidedModeEnabled ? "Ocultar guía" : "Activar guía"}
+              {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
             </Button>
           </div>
         }
@@ -363,28 +374,13 @@ const HousekeepingPage = () => {
           enabled={guidedModeEnabled}
           onToggle={() => setGuidedModeEnabled(!guidedModeEnabled)}
           onReset={resetHousekeepingGuide}
-          ctaLabel={
-            !guideState.steps[0]?.done
-              ? "Revisar board"
-              : firstDirtyRoom
-                ? `Tomar ${firstDirtyRoom.room_number}`
-                : firstCleaningRoom
-                  ? `Liberar ${firstCleaningRoom.room_number}`
-                  : firstBlockedRoomNumber
-                    ? `Revisar ${firstBlockedRoomNumber}`
-                    : undefined
-          }
+          ctaLabel={activeHousekeepingGuideStep?.actionLabel}
           onCta={
-            !guideState.steps[0]?.done
-              ? () => scrollToSection("housekeeping-board-columns")
-              : firstDirtyRoom
-                ? () => scrollToSection("housekeeping-board-columns")
-                : firstCleaningRoom
-                  ? () => scrollToSection("housekeeping-board-columns")
-                  : firstBlockedRoomNumber
-                    ? () => scrollToSection(blockedTargetId)
-                    : undefined
+            activeHousekeepingGuideStep
+              ? () => openHousekeepingGuideStep(activeHousekeepingGuideStep.id)
+              : undefined
           }
+          onStepSelect={openHousekeepingGuideStep}
         />
       ) : null}
 
@@ -457,27 +453,11 @@ const HousekeepingPage = () => {
               eyebrow="Misión guiada"
               title={guideState.summary.title}
               description={guideState.summary.description}
-              ctaLabel={
-                !guideState.steps[0]?.done
-                  ? "Ir al board"
-                  : firstDirtyRoom
-                    ? "Iniciar limpieza"
-                    : firstCleaningRoom
-                      ? "Cerrar limpieza"
-                      : firstBlockedRoomNumber
-                        ? "Ver bloqueo"
-                        : undefined
-              }
+              ctaLabel={activeHousekeepingGuideStep?.actionLabel}
               onCta={
-                !guideState.steps[0]?.done
-                  ? () => scrollToSection("housekeeping-board-columns")
-                  : firstDirtyRoom
-                    ? () => scrollToSection("housekeeping-board-columns")
-                    : firstCleaningRoom
-                      ? () => scrollToSection("housekeeping-board-columns")
-                      : firstBlockedRoomNumber
-                        ? () => scrollToSection(blockedTargetId)
-                        : undefined
+                activeHousekeepingGuideStep
+                  ? () => openHousekeepingGuideStep(activeHousekeepingGuideStep.id)
+                  : undefined
               }
             />
           ) : null}
@@ -525,7 +505,8 @@ const HousekeepingPage = () => {
 
       <section
         id="housekeeping-departures"
-        className="motion-refresh rounded-3xl border border-border bg-card p-5 shadow-sm"
+        tabIndex={-1}
+        className="motion-refresh scroll-mt-6 rounded-3xl border border-border bg-card p-5 shadow-sm outline-none focus:ring-2 focus:ring-primary/40"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -588,7 +569,8 @@ const HousekeepingPage = () => {
 
       <section
         id="housekeeping-board-columns"
-        className="motion-refresh grid gap-4 md:grid-cols-2 xl:grid-cols-4"
+        tabIndex={-1}
+        className="motion-refresh grid scroll-mt-6 gap-4 rounded-3xl outline-none focus:ring-2 focus:ring-primary/40 md:grid-cols-2 xl:grid-cols-4"
       >
         {BOARD_COLUMNS.map((column) => {
           const rooms = roomsByStatus[column.status];
@@ -596,7 +578,12 @@ const HousekeepingPage = () => {
           return (
             <div
               key={column.status}
-              className={cn("motion-surface rounded-3xl border p-4 shadow-sm", column.tone)}
+              id={`housekeeping-column-${column.status.toLowerCase()}`}
+              tabIndex={-1}
+              className={cn(
+                "motion-surface scroll-mt-6 rounded-3xl border p-4 shadow-sm outline-none focus:ring-2 focus:ring-primary/40",
+                column.tone,
+              )}
             >
               <div className="mb-4">
                 <h3 className="text-lg font-black tracking-tight text-foreground">{column.title}</h3>
