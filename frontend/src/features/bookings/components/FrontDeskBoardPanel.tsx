@@ -1,10 +1,7 @@
 import { useMemo, useState } from "react";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale";
 import {
   AlertTriangle,
   ArrowRight,
-  ArrowRightLeft,
   BedDouble,
   CalendarDays,
   Check,
@@ -22,6 +19,15 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { downloadCSV } from "@/lib/utils";
+import { currency, stayRange } from "@/features/bookings/utils/format";
+import { FrontDeskColumn } from "./FrontDeskColumn";
+import {
+  buildCockpitQueue,
+  buildLaneIdSets,
+  filterCockpitQueue,
+  queueFilters,
+  type QueueFilter,
+} from "@/features/bookings/utils/cockpitQueue";
 import type {
   FrontDeskBoard,
   FrontDeskBoardEntry,
@@ -36,24 +42,6 @@ type FrontDeskBoardPanelProps = {
   onOpenBooking: (bookingId: string, queueBookingIds?: string[]) => void;
   onPrepareCheckIn: (bookingId: string, queueBookingIds?: string[]) => void;
 };
-
-const currency = (value: number) => `$${(value / 100).toLocaleString("es-AR")}`;
-
-const stayRange = (checkIn: string, checkOut: string) =>
-  `${format(parseISO(checkIn), "dd MMM", { locale: es })} al ${format(parseISO(checkOut), "dd MMM", { locale: es })}`;
-
-type QueueFilter = "all" | "urgent" | "arrivals" | "departures" | "in-house";
-
-const queueFilters: Array<{ value: QueueFilter; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "urgent", label: "Urgentes" },
-  { value: "arrivals", label: "Llegadas" },
-  { value: "departures", label: "Salidas" },
-  { value: "in-house", label: "En casa" },
-];
-
-const normalizedSearch = (value: string) =>
-  value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("es").trim();
 
 const FrontDeskBoardPanel = ({
   board,
@@ -73,110 +61,31 @@ const FrontDeskBoardPanel = ({
   const [selectedBookingIds, setSelectedBookingIds] = useState<string[]>([]);
   const [queueFilter, setQueueFilter] = useState<QueueFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const readyArrivalIds = useMemo(
-    () => new Set(readyArrivals.map((entry) => entry.booking_id)),
-    [readyArrivals],
+  const laneIds = useMemo(
+    () => buildLaneIdSets(readyArrivals, blockedArrivals, departures, inHouse),
+    [blockedArrivals, departures, inHouse, readyArrivals],
   );
-  const blockedArrivalIds = useMemo(
-    () => new Set(blockedArrivals.map((entry) => entry.booking_id)),
-    [blockedArrivals],
+  const cockpitQueue = useMemo(
+    () =>
+      buildCockpitQueue({
+        actionQueue,
+        readyArrivals,
+        blockedArrivals,
+        departures,
+        inHouse,
+      }),
+    [actionQueue, blockedArrivals, departures, inHouse, readyArrivals],
   );
-  const departureIds = useMemo(
-    () => new Set(departures.map((entry) => entry.booking_id)),
-    [departures],
+  const filteredQueue = useMemo(
+    () =>
+      filterCockpitQueue({
+        queue: cockpitQueue,
+        searchQuery,
+        queueFilter,
+        laneIds,
+      }),
+    [cockpitQueue, laneIds, queueFilter, searchQuery],
   );
-  const inHouseIds = useMemo(
-    () => new Set(inHouse.map((entry) => entry.booking_id)),
-    [inHouse],
-  );
-  const cockpitQueue = useMemo(() => {
-    const queuedIds = new Set(actionQueue.map((item) => item.entry.booking_id));
-    const appendMissing = (
-      entries: FrontDeskBoardEntry[],
-      createItem: (entry: FrontDeskBoardEntry) => FrontDeskQueueItem,
-    ) =>
-      entries.flatMap((entry) => {
-        if (queuedIds.has(entry.booking_id)) return [];
-        queuedIds.add(entry.booking_id);
-        return [createItem(entry)];
-      });
-    const missingBlocked = appendMissing(blockedArrivals, (entry) => ({
-      entry,
-      lane: "Bloqueada",
-      title: entry.blocker?.title ?? "Llegada bloqueada",
-      detail: entry.blocker?.detail ?? "La llegada necesita una resolución operativa.",
-      primary_label: "Revisar bloqueo",
-      action_kind: "open-booking",
-    }));
-    const missingDepartures = appendMissing(departures, (entry) => ({
-      entry,
-      lane: "Salida",
-      title: "Salida pendiente",
-      detail: "Revisá cuenta, habitación y handoff antes de cerrar el checkout.",
-      primary_label: "Preparar checkout",
-      action_kind: "open-booking",
-    }));
-    const missingReady = appendMissing(readyArrivals, (entry) => ({
-      entry,
-      lane: "Llegada",
-      title: "Llegada lista",
-      detail: "La habitación está disponible para completar la recepción.",
-      primary_label: "Hacer check-in",
-      action_kind: "prepare-check-in",
-    }));
-    const missingInHouse = appendMissing(inHouse, (entry) => ({
-      entry,
-      lane: "En casa",
-      title: "Estadia activa",
-      detail: "Seguimiento de cuenta, habitacion y excepciones durante la estadia.",
-      primary_label: "Gestionar estadia",
-      action_kind: "open-booking",
-    }));
-    return [
-      ...actionQueue,
-      ...missingBlocked,
-      ...missingDepartures,
-      ...missingReady,
-      ...missingInHouse,
-    ];
-  }, [actionQueue, blockedArrivals, departures, inHouse, readyArrivals]);
-  const filteredQueue = useMemo(() => {
-    const query = normalizedSearch(searchQuery);
-    return cockpitQueue.filter((item) => {
-      const bookingId = item.entry.booking_id;
-      const matchesFilter =
-        queueFilter === "all" ||
-        (queueFilter === "urgent" &&
-          (blockedArrivalIds.has(bookingId) || departureIds.has(bookingId))) ||
-        (queueFilter === "arrivals" &&
-          (readyArrivalIds.has(bookingId) || blockedArrivalIds.has(bookingId))) ||
-        (queueFilter === "departures" && departureIds.has(bookingId)) ||
-        (queueFilter === "in-house" && inHouseIds.has(bookingId));
-      if (!matchesFilter) return false;
-      if (!query) return true;
-      return normalizedSearch(
-        [
-          item.entry.guest_name,
-          item.entry.room_number,
-          item.entry.room_type,
-          item.entry.booking_id,
-          item.lane,
-          item.title,
-          item.detail,
-          item.entry.blocker?.title ?? "",
-          item.entry.blocker?.detail ?? "",
-        ].join(" "),
-      ).includes(query);
-    });
-  }, [
-    blockedArrivalIds,
-    cockpitQueue,
-    departureIds,
-    inHouseIds,
-    queueFilter,
-    readyArrivalIds,
-    searchQuery,
-  ]);
   const boardCaseOrder = useMemo(
     () => Array.from(new Set(cockpitQueue.map((item) => item.entry.booking_id))),
     [cockpitQueue],
@@ -668,126 +577,6 @@ const StatCard = ({ label, value, tone, icon: Icon }: StatCardProps) => (
         <Icon className="h-4 w-4" />
       </div>
     </div>
-  </div>
-);
-
-type FrontDeskColumnProps = {
-  title: string;
-  description: string;
-  empty: string;
-  entries: FrontDeskBoardEntry[];
-  selectedBookingIds: string[];
-  tone: StatCardProps["tone"];
-  onSelectLane: () => void;
-  onToggleSelection: (bookingId: string) => void;
-  primaryLabel: string;
-  onPrimaryAction: (bookingId: string) => void;
-  onSecondaryAction: (bookingId: string) => void;
-};
-
-const FrontDeskColumn = ({
-  title,
-  description,
-  empty,
-  entries,
-  selectedBookingIds,
-  tone,
-  onSelectLane,
-  onToggleSelection,
-  primaryLabel,
-  onPrimaryAction,
-  onSecondaryAction,
-}: FrontDeskColumnProps) => (
-  <div className="rounded-3xl border border-border bg-background/60 p-4">
-    <div className="mb-4">
-      <h4 className="text-sm font-black uppercase tracking-[0.18em] text-foreground">{title}</h4>
-      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-      {entries.length > 0 ? (
-        <div className="mt-2 flex items-center justify-between gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {entries.length} caso(s) en cola
-          </p>
-          <Button type="button" variant="ghost" size="sm" className="h-8 rounded-lg px-2" onClick={onSelectLane}>
-            Seleccionar carril
-          </Button>
-        </div>
-      ) : null}
-    </div>
-
-    {entries.length === 0 ? (
-      <div className="rounded-2xl border border-dashed border-border px-4 py-8 text-sm text-muted-foreground">
-        {empty}
-      </div>
-    ) : (
-      <div className="space-y-3">
-        {entries.map((entry) => (
-          <article key={entry.booking_id} className="rounded-2xl border border-border bg-card px-4 py-4 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <label className="flex pt-1">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-border text-primary"
-                    checked={selectedBookingIds.includes(entry.booking_id)}
-                    onChange={() => onToggleSelection(entry.booking_id)}
-                  />
-                </label>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    Habitacion {entry.room_number}
-                  </p>
-                  <h5 className="mt-2 text-base font-black tracking-tight text-foreground">
-                    {entry.guest_name}
-                  </h5>
-                  <p className="mt-1 text-xs text-muted-foreground">{entry.room_type}</p>
-                </div>
-              </div>
-              <Badge
-                variant={tone === "warning" ? "warning" : tone === "success" ? "success" : tone === "destructive" ? "destructive" : "outline"}
-                className="shrink-0"
-              >
-                {entry.booking_status}
-              </Badge>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border bg-background px-3 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Estadia</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">{stayRange(entry.check_in, entry.check_out)}</p>
-              </div>
-              <div className="rounded-2xl border border-border bg-background px-3 py-3">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Cuenta</p>
-                <p className="mt-2 text-sm font-semibold text-foreground">{currency(entry.total_price_cents)}</p>
-              </div>
-            </div>
-
-            {entry.blocker ? (
-              <div className="mt-4 flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <div>
-                  <p className="font-semibold">{entry.blocker.title}</p>
-                  <p className="mt-1 text-xs">{entry.blocker.detail}</p>
-                </div>
-              </div>
-            ) : null}
-
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Button className="h-10 rounded-2xl sm:flex-1" onClick={() => onPrimaryAction(entry.booking_id)}>
-                <ArrowRightLeft className="h-4 w-4" />
-                {primaryLabel}
-              </Button>
-              <Button
-                variant="outline"
-                className="h-10 rounded-2xl sm:flex-1"
-                onClick={() => onSecondaryAction(entry.booking_id)}
-              >
-                Abrir reserva
-              </Button>
-            </div>
-          </article>
-        ))}
-      </div>
-    )}
   </div>
 );
 

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const hotelId = process.env.E2E_HOTEL_ID ?? "00000000-0000-0000-0000-000000000001";
 const username = process.env.E2E_USERNAME ?? "admin";
-const password = process.env.E2E_PASSWORD ?? "admin123";
+const password = process.env.E2E_PASSWORD ?? "demo2026pass";
 
 test.describe.configure({ retries: 0 });
 
@@ -73,11 +73,14 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
       /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
   );
   await walkInSheet.getByRole("button", { name: "Crear y gestionar" }).click();
-  await expect(page.getByText("Revisá el bloqueo y completá una sola próxima acción.")).toBeVisible();
+  await expect(page.getByText(/Revisá el bloqueo y completá una sola próxima acción/)).toBeVisible();
   expect((await initialInvoiceLookup).status()).toBe(404);
-  await expect(page.getByText("Todavia no existe factura asociada para esta reserva.")).toBeVisible();
+
+  await page.getByRole("tab", { name: /Cuenta/ }).click();
+  await expect(page.getByText("Sin cargos extra registrados por el momento.")).toBeVisible();
   await expect(page.getByText("La factura solicitada no existe")).toHaveCount(0);
 
+  await page.getByRole("tab", { name: /Operación/ }).click();
   await page.getByRole("checkbox", { name: /Identidad validada/ }).check();
   await page.getByRole("checkbox", { name: /Fechas y tarifa confirmadas/ }).check();
   await page.getByRole("checkbox", { name: /Contacto verificado/ }).check();
@@ -85,6 +88,7 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
   await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
 
+  await page.getByRole("tab", { name: /Cuenta/ }).click();
   const accountSection = page
     .getByText("Cuenta y cargos", { exact: true })
     .locator("xpath=ancestor::div[contains(@class, 'rounded-3xl')][1]");
@@ -105,12 +109,14 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await expect(accountSection.getByText("Cuenta cobrada", { exact: true })).toBeVisible();
   await expect(accountSection.getByText(formatArgentineCurrency(accountTotal), { exact: true }).first()).toBeVisible();
 
+  await page.getByRole("tab", { name: /Operación/ }).click();
   await page.getByRole("checkbox", { name: /Cuenta revisada/ }).check();
   await page.getByRole("checkbox", { name: /Habitacion liberada/ }).check();
   await page.getByRole("checkbox", { name: /Handoff a housekeeping/ }).check();
   await page.getByRole("button", { name: "Cuenta cobrada al cierre" }).click();
   await page.getByRole("button", { name: "Confirmar salida y enviar a limpieza" }).click();
-  await expect(page.getByRole("heading", { name: "Estadía cerrada" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Estadía cerrada" })).toBeVisible();
+  await page.getByRole("tab", { name: /Cuenta/ }).click();
   await expect(accountSection.getByText(formatArgentineCurrency(accountTotal), { exact: true }).first()).toBeVisible();
 
   await page.goto("/housekeeping");

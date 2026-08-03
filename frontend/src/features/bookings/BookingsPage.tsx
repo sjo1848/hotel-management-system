@@ -25,8 +25,17 @@ import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
 import { PageHeader } from "@/components/ui/page-header";
 import { useGuidedMode } from "@/features/guided/GuidedModeContext";
-import GuideRail from "@/features/guided/components/GuideRail";
+import CompactGuideAssistant from "@/features/guided/components/CompactGuideAssistant";
 import type { ReceptionGuideStepId } from "@/features/guided/receptionGuide";
+import { ReceptionWorkspace, type ReceptionWorkspaceView } from "./components/ReceptionWorkspace";
+import { ReceptionQueueList } from "./components/ReceptionQueueList";
+import { ReceptionShiftView } from "./components/ReceptionShiftView";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import {
+  buildCockpitQueue,
+  buildLaneIdSets,
+  filterCockpitQueue,
+} from "./utils/cockpitQueue";
 
 const BookingEditDrawer = lazy(() => import("./components/BookingEditDrawer"));
 const BookingDetailsSheet = lazy(() => import("./components/BookingDetailsSheet"));
@@ -51,6 +60,8 @@ const BookingsPage = () => {
   const [boardDate, setBoardDate] = useState(new Date().toISOString().slice(0, 10));
   const [frontDeskQueueBookingIds, setFrontDeskQueueBookingIds] = useState<string[]>([]);
   const [guidedFocusStep, setGuidedFocusStep] = useState<ReceptionGuideStepId | null>(null);
+  const [workspaceView, setWorkspaceView] = useState<ReceptionWorkspaceView>("shift");
+  const isDesktop = useMediaQuery("(min-width: 1280px)");
 
   const {
     data: bookingsData,
@@ -68,6 +79,7 @@ const BookingsPage = () => {
   const {
     data: frontDeskBoard,
     isLoading: frontDeskLoading,
+    error: frontDeskError,
     refetch: refetchFrontDeskBoard,
   } = useResourceQuery({
     queryKey: frontDeskQueryKey,
@@ -113,6 +125,46 @@ const BookingsPage = () => {
       ),
     [frontDeskBoard],
   );
+  const workspaceCounts = useMemo(
+    () => ({
+      shift: defaultFrontDeskQueueBookingIds.length,
+      arrivals:
+        (frontDeskBoard?.arrivals_ready.length ?? 0) +
+        (frontDeskBoard?.arrivals_blocked.length ?? 0),
+      "in-house": frontDeskBoard?.in_house.length ?? 0,
+      departures: frontDeskBoard?.departures_today.length ?? 0,
+      reservations: bookings.length,
+    }),
+    [bookings.length, defaultFrontDeskQueueBookingIds.length, frontDeskBoard],
+  );
+  const cockpitQueueItems = useMemo(
+    () =>
+      buildCockpitQueue({
+        actionQueue: frontDeskBoard?.action_queue ?? [],
+        readyArrivals: frontDeskBoard?.arrivals_ready ?? [],
+        blockedArrivals: frontDeskBoard?.arrivals_blocked ?? [],
+        departures: frontDeskBoard?.departures_today ?? [],
+        inHouse: frontDeskBoard?.in_house ?? [],
+      }),
+    [frontDeskBoard],
+  );
+  const queueLaneIds = useMemo(
+    () =>
+      buildLaneIdSets(
+        frontDeskBoard?.arrivals_ready ?? [],
+        frontDeskBoard?.arrivals_blocked ?? [],
+        frontDeskBoard?.departures_today ?? [],
+        frontDeskBoard?.in_house ?? [],
+      ),
+    [frontDeskBoard],
+  );
+  const filterQueueByLane = (queueFilter: "arrivals" | "in-house" | "departures") =>
+    filterCockpitQueue({
+      queue: cockpitQueueItems,
+      searchQuery: "",
+      queueFilter,
+      laneIds: queueLaneIds,
+    });
   const openBookingById = (bookingId: string, queueBookingIds?: string[]) => {
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return;
@@ -123,9 +175,28 @@ const BookingsPage = () => {
       normalizedQueue.length > 0 ? normalizedQueue : defaultFrontDeskQueueBookingIds,
     );
     setSelectedBooking(booking);
-    setIsDetailsOpen(true);
     trackReceptionEvent("open_case");
     trackReceptionEvent("review_case");
+    if (isDesktop && workspaceView === "shift") {
+      setGuidedFocusStep(null);
+      setIsDetailsOpen(false);
+      return;
+    }
+    setIsDetailsOpen(true);
+  };
+  const handleViewChange = (view: ReceptionWorkspaceView) => {
+    setWorkspaceView(view);
+    if (view !== "shift") {
+      setSelectedBooking(null);
+      setGuidedFocusStep(null);
+      setIsDetailsOpen(false);
+      setFrontDeskQueueBookingIds([]);
+    }
+  };
+  const closeSelectedCase = () => {
+    setSelectedBooking(null);
+    setGuidedFocusStep(null);
+    setFrontDeskQueueBookingIds([]);
   };
   const openWalkIn = () => {
     setFrontDeskQueueBookingIds([]);
@@ -136,6 +207,7 @@ const BookingsPage = () => {
     const receptionStep = stepId as ReceptionGuideStepId;
     setGuidedFocusStep(receptionStep);
     if (receptionStep === "open-case") {
+      setWorkspaceView("shift");
       document.getElementById("front-desk-board")?.scrollIntoView({
         behavior: "smooth",
         block: "start",
@@ -172,6 +244,7 @@ const BookingsPage = () => {
       description: "Usá la cola del turno o creá una reserva para continuar el recorrido.",
       variant: "default",
     });
+    setWorkspaceView("shift");
     document.getElementById("front-desk-board")?.scrollIntoView({
       behavior: "smooth",
       block: "start",
@@ -320,30 +393,6 @@ const BookingsPage = () => {
         description="Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista."
         actions={
           <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-10 w-full rounded-xl border-border sm:w-auto",
-                    filterStatus !== "all" && "border-primary/20 bg-primary/10 text-primary",
-                  )}
-                >
-                  <Filter className="mr-2 h-4 w-4" />
-                  {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48 bg-card">
-                <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setFilterStatus("NoShow")}>No-show</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             <Button
               variant="outline"
               size="sm"
@@ -372,83 +421,177 @@ const BookingsPage = () => {
       />
 
       {guidedModeEnabled ? (
-        <GuideRail
+        <CompactGuideAssistant
           title={guideState.summary.title}
           description={guideState.summary.description}
           completed={guideState.summary.completed}
           total={guideState.summary.total}
           steps={guideState.steps}
-          enabled={guidedModeEnabled}
-          onToggle={() => setGuidedModeEnabled(!guidedModeEnabled)}
-          onReset={resetReceptionGuide}
-          ctaLabel={activeGuideStep?.actionLabel}
+          ctaLabel="Continuar"
           onCta={activeGuideStep ? () => openReceptionGuideStep(activeGuideStep.id) : undefined}
+          onReset={resetReceptionGuide}
           onStepSelect={openReceptionGuideStep}
         />
       ) : null}
 
-      <Suspense
-        fallback={
-          <section className="motion-refresh rounded-3xl border border-border bg-card p-5 shadow-sm">
-            <p className="text-sm font-semibold text-muted-foreground">Cargando board operativo...</p>
-          </section>
+      <ReceptionWorkspace
+        view={workspaceView}
+        onViewChange={handleViewChange}
+        counts={workspaceCounts}
+        shiftView={
+          isDesktop ? (
+            <ReceptionShiftView
+              items={cockpitQueueItems}
+              selectedBooking={selectedBooking}
+              loading={frontDeskLoading}
+              error={frontDeskError}
+              onRetry={() => void refetchFrontDeskBoard()}
+              onOpenCase={openBookingById}
+              onPrepareCheckIn={(bookingId) => {
+                setGuidedFocusStep("check-in");
+                openBookingById(bookingId);
+              }}
+              onCloseCase={closeSelectedCase}
+              queueBookingIds={frontDeskQueueBookingIds}
+              onOpenQueuedBooking={(bookingId) => {
+                openBookingById(bookingId, frontDeskQueueBookingIds);
+              }}
+              guidedFocusStep={guidedFocusStep}
+              onUpdateStatus={handleStatusUpdate}
+              onEditBooking={() => setIsEditOpen(true)}
+              onRefreshBooking={() => refreshBookingsView(selectedBooking?.id)}
+            />
+          ) : (
+            <Suspense
+              fallback={
+                <section className="motion-refresh rounded-3xl border border-border bg-card p-5 shadow-sm">
+                  <p className="text-sm font-semibold text-muted-foreground">Cargando board operativo...</p>
+                </section>
+              }
+            >
+              <div id="front-desk-board" key={frontDeskQueryKey} className="motion-refresh">
+                <FrontDeskBoardPanel
+                  board={frontDeskBoard}
+                  loading={frontDeskLoading}
+                  boardDate={boardDate}
+                  onBoardDateChange={setBoardDate}
+                  onOpenBooking={openBookingById}
+                  onPrepareCheckIn={openBookingById}
+                />
+              </div>
+            </Suspense>
+          )
         }
-      >
-        <div id="front-desk-board" key={frontDeskQueryKey} className="motion-refresh">
-          <FrontDeskBoardPanel
-            board={frontDeskBoard}
+        arrivalsView={
+          <ReceptionQueueList
+            items={filterQueueByLane("arrivals")}
             loading={frontDeskLoading}
-            boardDate={boardDate}
-            onBoardDateChange={setBoardDate}
-            onOpenBooking={openBookingById}
+            error={frontDeskError}
+            emptyMessage="No hay llegadas pendientes"
+            onRetry={() => void refetchFrontDeskBoard()}
+            onOpen={openBookingById}
             onPrepareCheckIn={openBookingById}
+            ariaLabel="Llegadas del día"
           />
-        </div>
-      </Suspense>
+        }
+        inHouseView={
+          <ReceptionQueueList
+            items={filterQueueByLane("in-house")}
+            loading={frontDeskLoading}
+            error={frontDeskError}
+            emptyMessage="No hay estadías activas"
+            onRetry={() => void refetchFrontDeskBoard()}
+            onOpen={openBookingById}
+            onPrepareCheckIn={openBookingById}
+            ariaLabel="En casa"
+          />
+        }
+        departuresView={
+          <ReceptionQueueList
+            items={filterQueueByLane("departures")}
+            loading={frontDeskLoading}
+            error={frontDeskError}
+            emptyMessage="No hay salidas pendientes"
+            onRetry={() => void refetchFrontDeskBoard()}
+            onOpen={openBookingById}
+            onPrepareCheckIn={openBookingById}
+            ariaLabel="Salidas del día"
+          />
+        }
+        reservationsView={
+          <>
+            <section className="stagger-list grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                  Reservas totales
+                </p>
+                <p className="mt-3 text-3xl font-black tracking-tight text-foreground">{summary.total}</p>
+                <p className="mt-2 text-sm text-muted-foreground">base operativa actual</p>
+              </div>
+              <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                  Confirmadas
+                </p>
+                <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.confirmed}</p>
+                <p className="mt-2 text-sm text-primary">listas para check-in</p>
+              </div>
+              <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+                  En el hotel
+                </p>
+                <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.checkedIn}</p>
+                <p className="mt-2 text-sm text-primary">estadia activa</p>
+              </div>
+              <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+                  Revenue bruto
+                </p>
+                <p className="mt-3 text-3xl font-black tracking-tight text-foreground">
+                  ${(summary.revenue / 100).toLocaleString("es-AR")}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{summary.checkedOut} salidas completadas</p>
+              </div>
+            </section>
 
-      <section className="stagger-list grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-            Reservas totales
-          </p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-foreground">{summary.total}</p>
-          <p className="mt-2 text-sm text-muted-foreground">base operativa actual</p>
-        </div>
-        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-            Confirmadas
-          </p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.confirmed}</p>
-          <p className="mt-2 text-sm text-primary">listas para check-in</p>
-        </div>
-        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
-            En el hotel
-          </p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.checkedIn}</p>
-          <p className="mt-2 text-sm text-primary">estadia activa</p>
-        </div>
-        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
-            Revenue bruto
-          </p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-foreground">
-            ${(summary.revenue / 100).toLocaleString("es-AR")}
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">{summary.checkedOut} salidas completadas</p>
-        </div>
-      </section>
+            <div className="flex justify-end">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-10 rounded-xl border-border",
+                      filterStatus !== "all" && "border-primary/20 bg-primary/10 text-primary",
+                    )}
+                  >
+                    <Filter className="mr-2 h-4 w-4" />
+                    {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-card">
+                  <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setFilterStatus("NoShow")}>No-show</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
-      <DataTable
-        columns={columns}
-        data={filteredBookings}
-        isLoading={loading}
-        error={bookingLoadError}
-        onRetry={() => {
-          void refetchBookings();
-        }}
-        searchable
-        searchPlaceholder="Buscar por huésped o ID..."
+            <DataTable
+              columns={columns}
+              data={filteredBookings}
+              isLoading={loading}
+              error={bookingLoadError}
+              onRetry={() => {
+                void refetchBookings();
+              }}
+              searchable
+              searchPlaceholder="Buscar por huésped o ID..."
+            />
+          </>
+        }
       />
 
       <Suspense fallback={null}>
@@ -460,7 +603,12 @@ const BookingsPage = () => {
             await refreshBookingsView(booking.id);
             setFrontDeskQueueBookingIds([]);
             setSelectedBooking(booking);
-            setIsDetailsOpen(true);
+            if (isDesktop && workspaceView === "shift") {
+              setGuidedFocusStep(null);
+              setIsDetailsOpen(false);
+            } else {
+              setIsDetailsOpen(true);
+            }
             trackReceptionEvent("review_case");
           }}
         />
