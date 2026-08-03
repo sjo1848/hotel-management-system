@@ -1,7 +1,7 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { addDays, eachDayOfInterval, format, isSameDay, isWithinInterval, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowRight, CalendarRange } from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionCard, SectionEyebrow } from "@/components/ui/section-card";
 import type { Booking, Room, RoomHoldBoardEntry } from "@/types/domain";
@@ -17,22 +17,16 @@ type RoomInventoryPlannerProps = {
 };
 
 type PlannerRow = {
-  floorLabel: string;
   room: Room;
   holds: RoomHoldBoardEntry[];
   bookings: Booking[];
 };
 
-const getFloorLabel = (roomNumber: string) => {
-  const digits = roomNumber.replace(/\D/g, "");
-  if (digits.length >= 3) {
-    return `Piso ${digits.slice(0, -2)}`;
-  }
-  if (digits.length === 2) {
-    return `Piso ${digits.slice(0, 1)}`;
-  }
-  return "Sin piso";
-};
+const isWithinDayRange = (date: Date, start: string, end: string) =>
+  isWithinInterval(date, {
+    start: parseISO(start),
+    end: addDays(parseISO(end), -1),
+  });
 
 const RoomInventoryPlanner = ({
   rooms,
@@ -41,6 +35,8 @@ const RoomInventoryPlanner = ({
   startDate,
   onManageRoom,
 }: RoomInventoryPlannerProps) => {
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0);
+
   const plannerDays = useMemo(() => {
     const safeStart = parseISO(startDate);
     return eachDayOfInterval({
@@ -52,7 +48,6 @@ const RoomInventoryPlanner = ({
   const rows = useMemo<PlannerRow[]>(() => {
     return rooms
       .map((room) => ({
-        floorLabel: getFloorLabel(room.room_number),
         room,
         holds: holds
           .filter((entry) => entry.room_id === room.id)
@@ -66,25 +61,12 @@ const RoomInventoryPlanner = ({
           )
           .sort((left, right) => left.check_in.localeCompare(right.check_in)),
       }))
-      .sort((left, right) => {
-        if (left.floorLabel !== right.floorLabel) {
-          return left.floorLabel.localeCompare(right.floorLabel, "es");
-        }
-        return left.room.room_number.localeCompare(right.room.room_number, "es");
-      });
-  }, [holds, rooms]);
-
-  const groupedRows = useMemo(() => {
-    return rows.reduce<Array<{ floorLabel: string; entries: PlannerRow[] }>>((acc, row) => {
-      const current = acc.find((entry) => entry.floorLabel === row.floorLabel);
-      if (current) {
-        current.entries.push(row);
-        return acc;
-      }
-      acc.push({ floorLabel: row.floorLabel, entries: [row] });
-      return acc;
-    }, []);
-  }, [rows]);
+      .sort((left, right) =>
+        left.room.room_number.localeCompare(right.room.room_number, "es", {
+          numeric: true,
+        }),
+      );
+  }, [bookings, holds, rooms]);
 
   const occupancySummary = useMemo(() => {
     const futureBookedRooms = new Set(
@@ -97,6 +79,18 @@ const RoomInventoryPlanner = ({
     return { futureBookedRooms, checkedInCount };
   }, [rows]);
 
+  const selectedDate = plannerDays[selectedDayOffset];
+
+  const dayCellContent = (
+    row: PlannerRow,
+    date: Date,
+  ): { holds: RoomHoldBoardEntry[]; bookings: Booking[] } => ({
+    holds: row.holds.filter((entry) => isWithinDayRange(date, entry.start_date, entry.end_date)),
+    bookings: row.bookings.filter((entry) =>
+      isWithinDayRange(date, entry.check_in, entry.check_out),
+    ),
+  });
+
   return (
     <SectionCard>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -105,10 +99,10 @@ const RoomInventoryPlanner = ({
             <CalendarRange className="h-5 w-5" />
           </div>
           <div>
-            <SectionEyebrow className="text-foreground">Planner operativo 7 dias</SectionEyebrow>
+            <SectionEyebrow className="text-foreground">Planner operativo 7 días</SectionEyebrow>
             <p className="max-w-[58ch] text-sm text-muted-foreground">
-              Vista rapida por piso para detectar inventario fuera de venta, holds activos y el
-              estado actual de cada habitacion sin bajar al detalle completo.
+              Vista rápida de la semana para detectar inventario fuera de venta, holds activos y el
+              estado actual de cada habitación sin bajar al detalle completo.
             </p>
           </div>
         </div>
@@ -124,21 +118,21 @@ const RoomInventoryPlanner = ({
             Usa la timeline completa de bloqueos abajo para ampliar rango y editar fechas.
           </p>
           <p className="mt-2 text-xs font-semibold text-foreground">
-            {occupancySummary.futureBookedRooms} habitaciones con ocupacion futura visible ·{" "}
+            {occupancySummary.futureBookedRooms} habitaciones con ocupación futura visible ·{" "}
             {occupancySummary.checkedInCount} estancias activas en la ventana.
           </p>
         </div>
       </div>
 
-      <div className="motion-refresh mt-5 overflow-x-auto rounded-2xl border border-border bg-background/60">
+      <div className="motion-refresh mt-5 hidden overflow-x-auto rounded-2xl border border-border bg-background/60 md:block">
         <div
-          className="grid min-w-[760px] gap-px bg-border lg:min-w-[920px]"
+          className="grid min-w-[860px] gap-px bg-border"
           style={{
             gridTemplateColumns: `minmax(210px, 250px) repeat(${plannerDays.length}, minmax(74px, 1fr))`,
           }}
         >
-          <div className="bg-card px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-            Habitacion / accion
+          <div className="sticky left-0 z-10 bg-card px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Habitación
           </div>
           {plannerDays.map((date) => (
             <div
@@ -150,133 +144,228 @@ const RoomInventoryPlanner = ({
             </div>
           ))}
 
-          {groupedRows.map((group) => (
-            <Fragment key={group.floorLabel}>
-              <div className="col-span-full bg-muted/80 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                {group.floorLabel}
-              </div>
-
-              {group.entries.map(({ room, holds: roomHolds, bookings: roomBookings }) => {
-                const statusMeta = getRoomStatusMeta(room.status);
-                return (
-                  <Fragment key={room.id}>
-                    <div className="bg-card px-4 py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className={`inline-flex rounded-2xl px-3 py-1.5 text-sm font-black text-white shadow-sm ${statusMeta.accentClassName}`}
-                            >
-                              {room.room_number}
-                            </div>
-                            {getRoomStatusBadge(room.status)}
-                          </div>
-                          <p className="mt-3 text-sm font-black text-foreground">
-                            {room.room_type}
-                          </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {roomHolds.length > 0
-                              ? `${roomHolds.length} bloqueo(s) en la ventana visible.`
-                              : roomBookings.length > 0
-                                ? `${roomBookings.length} reserva(s) proyectadas en la semana visible.`
-                                : "Sin bloqueos ni reservas visibles en esta semana."}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="motion-surface h-9 rounded-xl px-3 text-xs"
-                          onClick={() => onManageRoom(room.id)}
+          {rows.map(({ room, holds: roomHolds, bookings: roomBookings }) => {
+            const statusMeta = getRoomStatusMeta(room.status);
+            return (
+              <Fragment key={room.id}>
+                <div className="sticky left-0 z-10 bg-card px-4 py-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`inline-flex rounded-2xl px-3 py-1.5 text-sm font-black text-white shadow-sm ${statusMeta.accentClassName}`}
                         >
-                          Gestionar
-                        </Button>
+                          {room.room_number}
+                        </div>
+                        {getRoomStatusBadge(room.status)}
+                      </div>
+                      <p className="mt-3 text-sm font-black text-foreground">{room.room_type}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {roomHolds.length > 0
+                          ? `${roomHolds.length} bloqueo(s) en la ventana visible.`
+                          : roomBookings.length > 0
+                            ? `${roomBookings.length} reserva(s) proyectadas en la semana visible.`
+                            : "Sin bloqueos ni reservas visibles en esta semana."}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="motion-surface h-9 rounded-xl px-3 text-xs"
+                      onClick={() => onManageRoom(room.id)}
+                    >
+                      Gestionar
+                    </Button>
+                  </div>
+                </div>
+
+                {plannerDays.map((date) => {
+                  const { holds: activeHolds, bookings: activeBookings } = dayCellContent(
+                    { room, holds: roomHolds, bookings: roomBookings },
+                    date,
+                  );
+                  const isPlannerToday = isSameDay(date, new Date());
+
+                  return (
+                    <div
+                      key={`${room.id}-${date.toISOString()}`}
+                      className={`bg-card px-2 py-3 ${isPlannerToday ? "ring-1 ring-inset ring-primary/20" : ""}`}
+                    >
+                      <div className="flex min-h-[72px] flex-col gap-1.5">
+                        {isPlannerToday ? (
+                          <div className="motion-live-pill rounded-lg border border-border bg-background/80 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
+                            Hoy
+                          </div>
+                        ) : (
+                          <div className="h-[26px]" />
+                        )}
+
+                        {activeHolds.length > 0 ? (
+                          activeHolds.map((entry) => {
+                            const meta = getRoomHoldMeta(entry.hold_type);
+                            return (
+                              <div
+                                key={`${entry.hold_id}-${date.toISOString()}`}
+                                className="rounded-lg px-2 py-1 text-[10px] font-bold text-white shadow-sm"
+                                style={{ backgroundColor: meta.color }}
+                                title={`${meta.label}: ${entry.reason}`}
+                              >
+                                {meta.label}
+                              </div>
+                            );
+                          })
+                        ) : null}
+
+                        {activeBookings.length > 0 ? (
+                          activeBookings.slice(0, 2).map((entry) => {
+                            const isCheckedIn = entry.status === "CheckedIn";
+                            return (
+                              <div
+                                key={`${entry.id}-${date.toISOString()}`}
+                                className={
+                                  isCheckedIn
+                                    ? "rounded-lg bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground shadow-sm"
+                                    : "rounded-lg border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-bold text-sky-700 shadow-sm dark:text-sky-200"
+                                }
+                                title={
+                                  isCheckedIn
+                                    ? "Estancia activa"
+                                    : `Reserva ${entry.check_in} al ${entry.check_out}`
+                                }
+                              >
+                                {isCheckedIn ? "Hospedado" : "Reserva"}
+                              </div>
+                            );
+                          })
+                        ) : null}
+
+                        {activeHolds.length === 0 && activeBookings.length === 0 ? (
+                          isPlannerToday ? (
+                            <div className="rounded-lg border border-dashed border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+                              Estado actual
+                            </div>
+                          ) : (
+                            <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/80 text-[10px] text-muted-foreground/70">
+                              Libre
+                            </div>
+                          )
+                        ) : null}
+
+                        {activeBookings.length > 2 ? (
+                          <div className="rounded-lg border border-border bg-background/70 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+                            +{activeBookings.length - 2} más
+                          </div>
+                        ) : null}
                       </div>
                     </div>
+                  );
+                })}
+              </Fragment>
+            );
+          })}
+        </div>
+      </div>
 
-                    {plannerDays.map((date) => {
-                      const activeHolds = roomHolds.filter((entry) =>
-                        isWithinInterval(date, {
-                          start: parseISO(entry.start_date),
-                          end: addDays(parseISO(entry.end_date), -1),
-                        }),
-                      );
-                      const activeBookings = roomBookings.filter((entry) =>
-                        isWithinInterval(date, {
-                          start: parseISO(entry.check_in),
-                          end: addDays(parseISO(entry.check_out), -1),
-                        }),
-                      );
-                      const isPlannerToday = isSameDay(date, new Date());
+      <div className="mt-5 md:hidden">
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            className="h-9 w-9 shrink-0 rounded-xl p-0"
+            aria-label="Día anterior"
+            onClick={() =>
+              setSelectedDayOffset((current) => Math.max(0, current - 1))
+            }
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex flex-1 gap-1 overflow-x-auto rounded-xl border border-border bg-muted p-1">
+            {plannerDays.map((date, index) => {
+              const active = index === selectedDayOffset;
+              return (
+                <button
+                  key={date.toISOString()}
+                  type="button"
+                  aria-pressed={active}
+                  className={`h-10 min-w-[52px] flex-1 rounded-lg text-xs font-bold transition ${
+                    active
+                      ? "bg-card text-foreground shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:bg-card/60 hover:text-foreground"
+                  }`}
+                  onClick={() => setSelectedDayOffset(index)}
+                >
+                  {format(date, "EEE dd", { locale: es })}
+                </button>
+              );
+            })}
+          </div>
+          <Button
+            variant="outline"
+            className="h-9 w-9 shrink-0 rounded-xl p-0"
+            aria-label="Día siguiente"
+            onClick={() =>
+              setSelectedDayOffset((current) => Math.min(plannerDays.length - 1, current + 1))
+            }
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
 
+        <div className="mt-3 space-y-3">
+          {rows.map(({ room, holds: roomHolds, bookings: roomBookings }) => {
+            const { holds: activeHolds, bookings: activeBookings } = dayCellContent(
+              { room, holds: roomHolds, bookings: roomBookings },
+              selectedDate,
+            );
+            return (
+              <div
+                key={room.id}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-black text-foreground">
+                      {room.room_number}
+                    </span>
+                    {getRoomStatusBadge(room.status)}
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">{room.room_type}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {activeHolds.map((entry) => {
+                      const meta = getRoomHoldMeta(entry.hold_type);
                       return (
-                        <div
-                          key={`${room.id}-${date.toISOString()}`}
-                          className={`bg-card px-2 py-3 ${isPlannerToday ? "ring-1 ring-inset ring-primary/20" : ""}`}
+                        <span
+                          key={entry.hold_id}
+                          className="rounded-md px-2 py-0.5 text-[10px] font-bold text-white"
+                          style={{ backgroundColor: meta.color }}
                         >
-                          <div className="flex min-h-[72px] flex-col gap-1.5">
-                            {isPlannerToday ? (
-                              <div className="motion-live-pill rounded-lg border border-border bg-background/80 px-2 py-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
-                                Hoy
-                              </div>
-                            ) : (
-                              <div className="h-[26px]" />
-                            )}
-
-                            {activeHolds.length > 0 ? (
-                              activeHolds.map((entry) => {
-                                const meta = getRoomHoldMeta(entry.hold_type);
-                                return (
-                                  <div
-                                    key={`${entry.hold_id}-${date.toISOString()}`}
-                                    className="rounded-lg px-2 py-1 text-[10px] font-bold text-white shadow-sm"
-                                    style={{ backgroundColor: meta.color }}
-                                    title={`${meta.label}: ${entry.reason}`}
-                                  >
-                                    {meta.label}
-                                  </div>
-                                );
-                              })
-                            ) : activeBookings.length > 0 ? (
-                              activeBookings.slice(0, 2).map((entry) => {
-                                const isCheckedIn = entry.status === "CheckedIn";
-                                return (
-                                  <div
-                                    key={`${entry.id}-${date.toISOString()}`}
-                                    className={
-                                      isCheckedIn
-                                        ? "rounded-lg bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground shadow-sm"
-                                        : "rounded-lg border border-sky-500/20 bg-sky-500/10 px-2 py-1 text-[10px] font-bold text-sky-700 shadow-sm dark:text-sky-200"
-                                    }
-                                    title={`${isCheckedIn ? "Hospedado" : "Reserva"}: ${entry.guest_name}`}
-                                  >
-                                    {isCheckedIn ? "Hospedado" : "Reserva"}
-                                  </div>
-                                );
-                              })
-                            ) : isPlannerToday ? (
-                              <div className="rounded-lg border border-dashed border-border px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                                Estado actual
-                              </div>
-                            ) : (
-                              <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border/80 text-[10px] text-muted-foreground/70">
-                                Libre
-                              </div>
-                            )}
-
-                            {activeBookings.length > 2 ? (
-                              <div className="rounded-lg border border-border bg-background/70 px-2 py-1 text-[10px] font-semibold text-muted-foreground">
-                                +{activeBookings.length - 2} mas
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
+                          {meta.label}
+                        </span>
                       );
                     })}
-                  </Fragment>
-                );
-              })}
-            </Fragment>
-          ))}
+                    {activeBookings.length > 0 ? (
+                      <span className="rounded-md border border-sky-500/20 bg-sky-500/10 px-2 py-0.5 text-[10px] font-bold text-sky-700 dark:text-sky-200">
+                        {activeBookings.some((entry) => entry.status === "CheckedIn")
+                          ? "Hospedado"
+                          : "Reserva"}
+                      </span>
+                    ) : null}
+                    {activeHolds.length === 0 && activeBookings.length === 0 ? (
+                      <span className="rounded-md border border-dashed border-border px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                        Libre
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  className="h-9 shrink-0 rounded-xl text-xs"
+                  onClick={() => onManageRoom(room.id)}
+                >
+                  Ver detalle
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
