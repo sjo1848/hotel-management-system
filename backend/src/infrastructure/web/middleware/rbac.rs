@@ -150,9 +150,11 @@ mod tests {
     use super::role_has_capability;
 
     #[test]
-    fn admin_has_all_capabilities() {
+    fn admin_has_tenant_capabilities_without_saas_scope() {
         assert!(role_has_capability("admin", "users.delete"));
-        assert!(role_has_capability("admin", "saas.hotels.write"));
+        assert!(!role_has_capability("admin", "saas.hotels.read"));
+        assert!(!role_has_capability("admin", "saas.hotels.write"));
+        assert!(role_has_capability("admin", "bookings.checkout.override"));
         assert!(!role_has_capability("admin", "unknown.capability"));
     }
 
@@ -170,12 +172,17 @@ mod tests {
         assert!(role_has_capability("ops", "audit.events.read"));
         assert!(role_has_capability("ops", "bookings.write"));
         assert!(role_has_capability("ops", "billing.invoices.read"));
+        assert!(!role_has_capability("ops", "bookings.checkout.override"));
         assert!(!role_has_capability("ops", "users.write"));
     }
 
     #[test]
     fn receptionist_and_housekeeping_have_scoped_permissions() {
         assert!(role_has_capability("receptionist", "bookings.write"));
+        assert!(!role_has_capability(
+            "receptionist",
+            "bookings.checkout.override"
+        ));
         assert!(!role_has_capability("receptionist", "users.read"));
         assert!(role_has_capability("housekeeping", "housekeeping.write"));
         assert!(!role_has_capability("housekeeping", "bookings.read"));

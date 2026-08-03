@@ -54,9 +54,9 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="theme-fade login-shell min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans">
-      <div className="absolute right-4 top-4 z-20">
-        <ThemeToggle />
+    <div className="theme-fade login-shell min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans px-4 py-8 sm:px-6">
+      <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
+        <ThemeToggle compact className="sm:[&>button]:min-w-20" />
       </div>
 
       {/* Dynamic Background */}
@@ -69,14 +69,14 @@ const LoginPage = () => {
       <div className="absolute inset-0 z-0 login-overlay" />
 
       {/* Glassmorphism Card */}
-      <div className="login-card relative z-10 w-full max-w-md p-8 mx-4 rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-700 border">
+      <div className="login-card relative z-10 mx-auto w-full max-w-md rounded-2xl border p-5 shadow-2xl animate-in fade-in zoom-in duration-700 sm:p-8">
 
         {/* Header */}
         <div className="mb-10 text-center space-y-2">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-secondary to-amber-700 mb-4 shadow-lg shadow-amber-900/20">
             <Lock className="w-6 h-6 text-secondary-foreground" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-[hsl(var(--login-fg))] mb-2">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-[hsl(var(--login-fg))] mb-2">
             HMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-yellow-500">ELITE</span>
           </h1>
           <p className="text-sm font-medium tracking-wide uppercase text-[hsl(var(--login-muted))]">
@@ -142,7 +142,7 @@ const LoginPage = () => {
           <Button
             type="submit"
             variant="secondary"
-            className="w-full font-bold h-12 text-base shadow-xl shadow-amber-900/10 hover:shadow-amber-900/20 transition-all duration-300"
+            className="w-full h-12 text-sm font-bold shadow-xl shadow-amber-900/10 transition-all duration-300 hover:shadow-amber-900/20 sm:text-base"
             disabled={loading}
           >
             {loading ? (

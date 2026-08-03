@@ -60,23 +60,23 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
           <div
             key={t.id}
             className={cn(
-              "rounded-xl border shadow-lg bg-white p-4 animate-in fade-in slide-in-from-top-2",
-              t.variant === "success" && "border-emerald-200 bg-emerald-50/50",
-              t.variant === "error" && "border-red-200 bg-red-50/50",
+              "animate-in slide-in-from-top-2 fade-in rounded-2xl border bg-card/95 p-4 shadow-xl backdrop-blur-xl",
+              t.variant === "success" && "border-emerald-500/20 bg-emerald-500/10",
+              t.variant === "error" && "border-destructive/20 bg-destructive/10",
             )}
           >
-            <div className="text-sm font-semibold text-slate-900">
+            <div className="text-sm font-semibold text-foreground">
               {t.title}
             </div>
             {t.description ? (
-              <div className="text-sm text-slate-600 mt-1">
+              <div className="mt-1 text-sm text-muted-foreground">
                 {t.description}
               </div>
             ) : null}
             <button
               type="button"
               onClick={() => removeToast(t.id)}
-              className="text-xs text-slate-400 hover:text-slate-600 mt-2"
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground"
             >
               Cerrar
             </button>

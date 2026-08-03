@@ -96,7 +96,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
         </Popover>
         {date?.from && date?.to ? (
           nights > 0 ? (
-            <div className="text-xs text-emerald-600 font-medium">
+            <div className="text-xs font-medium text-primary">
               Estancia válida:{" "}
               <span className="font-bold">
                 {nights} {nights === 1 ? "noche" : "noches"}
@@ -127,7 +127,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
         <Button
           onClick={handleSearch}
           disabled={!date?.from || !date?.to || nights <= 0}
-          className="h-12 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-xl shadow-lg shadow-slate-200 transition-all active:scale-95 disabled:opacity-50"
+          className="h-12 rounded-xl bg-primary px-8 text-primary-foreground shadow-lg transition-all active:scale-95 disabled:opacity-50"
         >
           <Search className="w-4 h-4 mr-2" />
           Buscar Habitaciones

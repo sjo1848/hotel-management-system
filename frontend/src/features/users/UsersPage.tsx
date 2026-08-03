@@ -10,11 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getUsers, deleteUser } from "./usersService";
-import { User } from "@/types/domain";
+import { ManagedUser } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import UserCreateDrawer from "./components/UserCreateDrawer";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
+import { PageHeader } from "@/components/ui/page-header";
 
 const UsersPage = () => {
   const { toast } = useToast();
@@ -26,7 +27,7 @@ const UsersPage = () => {
     isLoading: loading,
     error: usersError,
     refetch: refetchUsers,
-  } = useResourceQuery<User[]>({
+  } = useResourceQuery<ManagedUser[]>({
     queryKey: usersQueryKey,
     queryFn: getUsers,
     staleTimeMs: 10_000,
@@ -49,7 +50,7 @@ const UsersPage = () => {
     }
   };
 
-  const columns: Column<User>[] = [
+  const columns: Column<ManagedUser>[] = [
     {
       header: "Usuario",
       cell: (item) => (
@@ -68,7 +69,7 @@ const UsersPage = () => {
       header: "Rol del Sistema",
       cell: (item) => (
         <Badge
-          variant={item.role === "admin" || item.role === "saas_admin" ? "info" : "secondary"}
+          variant={item.role === "admin" ? "info" : "secondary"}
           className="gap-1"
         >
           <Shield className="w-3 h-3" /> {item.role.toUpperCase()}
@@ -89,7 +90,7 @@ const UsersPage = () => {
               Editar Permisos
             </DropdownMenuItem>
             <DropdownMenuItem 
-              className="text-red-600"
+              className="text-destructive"
               onClick={() => handleDelete(item.id)}
             >
               Eliminar Cuenta
@@ -103,44 +104,32 @@ const UsersPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-foreground tracking-tight leading-none">
-              Control de Acceso
-            </h2>
-          </div>
-          <p className="text-muted-foreground font-medium mt-2">
-            Gestión de operadores y niveles de seguridad (RBAC).
-          </p>
-        </div>
+      <PageHeader
+        title="Control de Acceso"
+        description="Gestión de usuarios tenant y roles operativos (RBAC)."
+        icon={<Shield className="h-5 w-5" />}
+        actions={
+          <Button
+            className="h-12 gap-2 rounded-xl bg-primary shadow-xl shadow-primary/15 transition-all active:scale-95"
+            onClick={() => setIsCreateOpen(true)}
+          >
+            <Plus className="w-4 h-4" />
+            Nuevo usuario
+          </Button>
+        }
+      />
 
-        <Button 
-          className="h-12 rounded-xl bg-slate-900 shadow-xl shadow-slate-200 transition-all active:scale-95 gap-2"
-          onClick={() => setIsCreateOpen(true)}
-        >
-          <Plus className="w-4 h-4" />
-          Nuevo Operador
-        </Button>
-      </div>
-
-      <div className="bg-card rounded-3xl border border-border shadow-2xl shadow-slate-200/50 overflow-hidden">
-        {usersError && (
-          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
-            {getErrorMessage(usersError, "No tienes permisos para gestionar usuarios.")}
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          data={users}
-          isLoading={loading}
-          searchable
-          searchPlaceholder="Buscar por nombre de usuario..."
-        />
-      </div>
+      <DataTable
+        columns={columns}
+        data={users}
+        isLoading={loading}
+        error={usersError ? getErrorMessage(usersError, "No tienes permisos para gestionar usuarios.") : null}
+        onRetry={() => {
+          void refetchUsers();
+        }}
+        searchable
+        searchPlaceholder="Buscar por nombre de usuario..."
+      />
 
       <UserCreateDrawer 
         isOpen={isCreateOpen}

@@ -1,281 +1,512 @@
-import React from "react";
+import { useEffect } from "react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-    Calendar,
-    User,
-    DoorOpen,
-    CreditCard,
-    Clock,
-    CheckCircle,
-    XCircle,
-    Mail,
-    Phone,
-    ArrowRight
-} from "lucide-react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-
-import {
-    getInvoiceByBooking,
-} from "@/features/bookings/services/invoiceService";
-
-import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-    SheetDescription,
-    SheetFooter,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Booking, BookingStatus, Invoice } from "@/types/domain";
 import { cn } from "@/lib/utils";
+import type {
+  Booking,
+  BookingFrontDeskData,
+  BookingStatus,
+} from "@/types/domain";
+import AuditTimeline from "@/features/audit/components/AuditTimeline";
+import { useGuidedMode } from "@/features/guided/GuidedModeContext";
+import GuideHint from "@/features/guided/components/GuideHint";
+import {
+  BookingAccountSection,
+  BookingCheckInSection,
+  BookingCheckOutSection,
+  BookingGuestStaySection,
+  BookingNextActionBanner,
+  BookingReassignmentSection,
+  BookingSidebarPanels,
+  BookingSummaryMetrics,
+} from "@/features/bookings/components/BookingDetailsSections";
+import { useBookingDetailsController } from "@/features/bookings/components/useBookingDetailsController";
+import type { ReceptionGuideStepId } from "@/features/guided/receptionGuide";
 
 interface BookingDetailsSheetProps {
-    booking: Booking | null;
-    isOpen: boolean;
-    onClose: () => void;
-    onUpdateStatus?: (id: string, status: BookingStatus) => Promise<void>;
+  booking: Booking | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onUpdateStatus?: (
+    id: string,
+    status: BookingStatus,
+    frontDesk?: Partial<BookingFrontDeskData>,
+  ) => Promise<void>;
+  onEditBooking?: () => void;
+  onRefreshBooking?: () => Promise<void> | void;
+  queueBookingIds?: string[];
+  onOpenQueuedBooking?: (bookingId: string) => void;
+  guidedFocusStep?: ReceptionGuideStepId | null;
 }
 
-const BookingDetailsSheet: React.FC<BookingDetailsSheetProps> = ({
+const guideTargetByStep: Partial<Record<ReceptionGuideStepId, string>> = {
+  "review-case": "reception-guide-review",
+  "check-in": "reception-guide-check-in",
+  payment: "reception-guide-payment",
+  checkout: "reception-guide-checkout",
+};
+
+const focusGuideTarget = (step: ReceptionGuideStepId) => {
+  const targetId = guideTargetByStep[step];
+  if (!targetId) return null;
+  return window.requestAnimationFrame(() => {
+    const target = document.getElementById(targetId);
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.focus({ preventScroll: true });
+  });
+};
+
+const BookingDetailsSheet = ({
+  booking,
+  isOpen,
+  onClose,
+  onUpdateStatus,
+  onEditBooking,
+  onRefreshBooking,
+  queueBookingIds = [],
+  onOpenQueuedBooking,
+  guidedFocusStep = null,
+}: BookingDetailsSheetProps) => {
+  const {
+    bookingState,
+    room,
+    roomOptions,
+    extraCharges,
+    invoice,
+    payments,
+    loading,
+    loadingCharges,
+    statusLoading,
+    roomOptionsLoading,
+    reassignmentLoading,
+    auditRefreshTick,
+    settlementLoading,
+    selectedRoomId,
+    reassignmentReason,
+    paymentMethod,
+    paymentAmount,
+    paymentReference,
+    paymentNote,
+    checkInForm,
+    checkOutForm,
+    nights,
+    extrasTotal,
+    accommodationTotal,
+    outstandingAmountCents,
+    statusMeta,
+    canManageRoomException,
+    canViewAudit,
+    canOverrideCheckoutBalance,
+    checkInBlockers,
+    canCompleteFormalCheckIn,
+    checkoutBlockers,
+    canCompleteFormalCheckOut,
+    nextAction,
+    reassignmentBlockers,
+    warningBanner,
+    footerRoom,
+    quickCharges,
+    setSelectedRoomId,
+    setReassignmentReason,
+    setPaymentMethod,
+    setPaymentAmount,
+    setPaymentReference,
+    setPaymentNote,
+    updateCheckInForm,
+    updateCheckOutForm,
+    refreshOperationalData,
+    handleRegisterPayment,
+    handleRoomReassignment,
+    handleQuickCharge,
+    handleStatusAction,
+  } = useBookingDetailsController({
     booking,
     isOpen,
-    onClose,
     onUpdateStatus,
-}) => {
-    const [invoice, setInvoice] = React.useState<Invoice | null>(null);
-    const [loadingInvoice, setLoadingInvoice] = React.useState(false);
+    onRefreshBooking,
+  });
+  const { enabled: guidedModeEnabled, getReceptionGuideState, trackReceptionEvent } = useGuidedMode();
 
-    React.useEffect(() => {
-        if (isOpen && booking?.status === "CheckedOut") {
-            setLoadingInvoice(true);
-            getInvoiceByBooking(booking.id)
-                .then(setInvoice)
-                .catch(console.error)
-                .finally(() => setLoadingInvoice(false));
-        } else if (!isOpen) {
-            setInvoice(null);
-        }
-    }, [isOpen, booking?.id, booking?.status]);
-
-    if (!booking) return null;
-
-    const getStatusInfo = (status: BookingStatus) => {
-        switch (status) {
-            case "Confirmed":
-                return { label: "Confirmada", color: "text-blue-600 bg-blue-50 border-blue-100", icon: Clock };
-            case "CheckedIn":
-                return { label: "En el Hotel", color: "text-emerald-600 bg-emerald-50 border-emerald-100", icon: CheckCircle };
-            case "CheckedOut":
-                return { label: "Finalizada", color: "text-muted-foreground bg-muted border-border", icon: CheckCircle };
-            case "Cancelled":
-                return { label: "Cancelada", color: "text-red-600 bg-red-50 border-red-100", icon: XCircle };
-            default:
-                return { label: status, color: "text-muted-foreground bg-muted border-border", icon: Clock };
-        }
+  useEffect(() => {
+    if (!isOpen || !guidedFocusStep) return;
+    const frame = focusGuideTarget(guidedFocusStep);
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
     };
+  }, [bookingState?.id, guidedFocusStep, isOpen]);
 
-    const statusInfo = getStatusInfo(booking.status);
-    const StatusIcon = statusInfo.icon;
+  if (!bookingState) return null;
+  const guideState = getReceptionGuideState(bookingState.status);
 
-    return (
-        <Sheet open={isOpen} onOpenChange={onClose}>
-            <SheetContent className="sm:max-w-md md:max-w-lg overflow-y-auto">
-                <SheetHeader className="pb-6 border-b border-border">
-                    <div className="flex items-center justify-between mb-2">
-                        <Badge className={cn("px-2.5 py-0.5 border font-medium flex items-center gap-1", statusInfo.color)}>
-                            <StatusIcon className="w-3.5 h-3.5" />
-                            {statusInfo.label}
-                        </Badge>
-                        <span className="text-xs font-mono text-muted-foreground">REF: {booking.id.substring(0, 8).toUpperCase()}</span>
-                    </div>
-                    <SheetTitle className="text-2xl font-bold text-foreground">Detalles de Reserva</SheetTitle>
-                    <SheetDescription className="text-muted-foreground">
-                        Información completa de la estancia y el huésped.
-                    </SheetDescription>
-                </SheetHeader>
+  const StatusIcon = statusMeta.icon;
+  const normalizedQueueBookingIds = Array.from(new Set(queueBookingIds));
+  const currentQueueIndex = normalizedQueueBookingIds.indexOf(bookingState.id);
+  const hasQueueSession = currentQueueIndex >= 0 && normalizedQueueBookingIds.length > 1;
+  const previousQueueBookingId =
+    hasQueueSession && currentQueueIndex > 0
+      ? normalizedQueueBookingIds[currentQueueIndex - 1]
+      : null;
+  const nextQueueBookingId =
+    hasQueueSession && currentQueueIndex < normalizedQueueBookingIds.length - 1
+      ? normalizedQueueBookingIds[currentQueueIndex + 1]
+      : null;
+  const pendingControlCount =
+    bookingState.status === "Confirmed"
+      ? checkInBlockers.length
+      : bookingState.status === "CheckedIn"
+        ? checkoutBlockers.length
+        : 0;
 
-                <div className="py-8 space-y-8">
-                    {/* Seccion: Huésped */}
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2 text-foreground font-semibold text-sm uppercase tracking-wider">
-                            <User className="w-4 h-4 text-secondary" />
-                            Información del Huésped
-                        </div>
-                        <div className="bg-muted/50 rounded-xl p-4 border border-border flex items-start gap-4">
-                            <div className="h-12 w-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary font-bold text-lg">
-                                {booking.guest_name.charAt(0)}
-                            </div>
-                            <div className="space-y-1">
-                                <div className="font-bold text-foreground text-lg">{booking.guest_name}</div>
-                                <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                                    <div className="flex items-center gap-1.5">
-                                        <Mail className="w-3.5 h-3.5" /> guest@example.com
-                                    </div>
-                                    <div className="flex items-center gap-1.5">
-                                        <Phone className="w-3.5 h-3.5" /> +1 (555) 001-2233
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
+  const handleGuidedStatusAction = async (
+    status: BookingStatus,
+    frontDesk?: Partial<BookingFrontDeskData>,
+  ) => {
+    await handleStatusAction(status, frontDesk);
+    if (status === "CheckedIn") {
+      trackReceptionEvent("checkin_complete");
+    }
+    if (status === "CheckedOut") {
+      trackReceptionEvent("checkout_complete");
+    }
+  };
 
-                    {/* Seccion: Estancia */}
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2 text-foreground font-semibold text-sm uppercase tracking-wider">
-                            <Calendar className="w-4 h-4 text-secondary" />
-                            Fechas de Estancia
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-card rounded-xl p-3 border border-border shadow-sm">
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Check-in</p>
-                                <p className="font-bold text-foreground">{format(new Date(booking.check_in), "EEE, dd MMM yyyy", { locale: es })}</p>
-                                <p className="text-xs text-muted-foreground mt-1">Desde las 15:00</p>
-                            </div>
-                            <div className="bg-card rounded-xl p-3 border border-border shadow-sm">
-                                <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Check-out</p>
-                                <p className="font-bold text-foreground">{format(new Date(booking.check_out), "EEE, dd MMM yyyy", { locale: es })}</p>
-                                <p className="text-xs text-muted-foreground mt-1">Hasta las 11:00</p>
-                            </div>
-                        </div>
-                    </section>
+  const handleGuidedRegisterPayment = async () => {
+    await handleRegisterPayment();
+    trackReceptionEvent("payment_registered");
+  };
 
-                    {/* Seccion: Habitación */}
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2 text-foreground font-semibold text-sm uppercase tracking-wider">
-                            <DoorOpen className="w-4 h-4 text-secondary" />
-                            Habitación (ID: {booking.room_id.slice(0,4)})
-                        </div>
-                        <div className="flex items-center justify-between p-4 bg-slate-900 rounded-xl text-white shadow-xl overflow-hidden relative group">
-                            <div className="absolute right-0 top-0 bottom-0 w-32 bg-secondary opacity-10 group-hover:opacity-20 transition-opacity skew-x-12 -mr-8" />
-                            <div className="relative z-10">
-                                <div className="text-[10px] text-slate-300 font-bold uppercase mb-1">Total Reserva</div>
-                                <div className="text-3xl font-black font-mono">${(booking.total_price_cents / 100).toLocaleString()}</div>
-                            </div>
-                        </div>
-                    </section>
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="w-full overflow-hidden border-l border-border bg-card p-0 sm:max-w-[760px]">
+        <div className="flex min-h-0 flex-1 flex-col">
+        <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-3">
+              <Badge className={cn("inline-flex items-center gap-1.5 border px-3 py-1", statusMeta.badge)}>
+                <StatusIcon className="h-3.5 w-3.5" />
+                {statusMeta.label}
+              </Badge>
+              <div>
+                <SheetTitle className="pr-8 text-2xl font-black tracking-tight">
+                  {bookingState.guest_name}
+                </SheetTitle>
+                <SheetDescription className="mt-2 max-w-[58ch] text-sm">
+                  Hab. {room?.room_number ?? bookingState.room_id.slice(0, 6)} · Reserva {bookingState.id.slice(0, 8).toUpperCase()} · Revisá el bloqueo y completá una sola próxima acción.
+                </SheetDescription>
+              </div>
+            </div>
 
-                    {/* Seccion: Pago */}
-                    <section className="space-y-4">
-                        <div className="flex items-center gap-2 text-foreground font-semibold text-sm uppercase tracking-wider">
-                            <CreditCard className="w-4 h-4 text-secondary" />
-                            Resumen Financiero
-                        </div>
-                        <div className="border border-border rounded-xl overflow-hidden shadow-sm">
-                            <div className="p-4 bg-card flex justify-between items-center">
-                                <span className="text-lg font-bold text-foreground">Total Estancia</span>
-                                <div className="text-right">
-                                    <span className="text-2xl font-black text-secondary">${booking.total_price_cents / 100}</span>
-                                    <p className="text-[10px] text-muted-foreground font-bold uppercase">IVA Incluido</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Seccion: Factura (Solo si está disponible) */}
-                    {(booking.status === "CheckedOut" || invoice) && (
-                        <section className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <div className="flex items-center gap-2 text-foreground font-semibold text-sm uppercase tracking-wider">
-                                <CreditCard className="w-4 h-4 text-emerald-600" />
-                                Factura Generada
-                            </div>
-                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-5 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-3 opacity-10">
-                                    <CheckCircle className="w-12 h-12 text-emerald-600" />
-                                </div>
-
-                                {loadingInvoice ? (
-                                    <div className="flex items-center justify-center py-4">
-                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600" />
-                                    </div>
-                                ) : invoice ? (
-                                    <div className="space-y-4 relative z-10">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="text-[10px] text-emerald-600 font-bold uppercase">Folio Fiscal</p>
-                                                <p className="font-mono text-xs text-muted-foreground">{invoice.id.toUpperCase()}</p>
-                                            </div>
-                                            <Badge className={cn(
-                                                "px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                                                invoice.status === "PAID"
-                                                    ? "bg-emerald-600 text-white"
-                                                    : invoice.status === "VOIDED"
-                                                      ? "bg-rose-100 text-rose-700 border-rose-200"
-                                                      : "bg-amber-100 text-amber-700 border-amber-200"
-                                            )}>
-                                                {invoice.status === "PAID"
-                                                    ? "Pagada"
-                                                    : invoice.status === "VOIDED"
-                                                      ? "Anulada"
-                                                      : "Pendiente"}
-                                            </Badge>
-                                        </div>
-
-                                        <div className="pt-2 flex justify-between items-end border-t border-emerald-100">
-                                            <div>
-                                                <p className="text-[10px] text-emerald-600 font-bold uppercase">Emitida el</p>
-                                                <p className="text-sm font-medium text-foreground">
-                                                    {format(new Date(invoice.created_at), "dd/MM/yyyy HH:mm")}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-[10px] text-emerald-600 font-bold uppercase">Total Facturado</p>
-                                                <p className="text-2xl font-black text-emerald-700">${invoice.amount_cents / 100}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic">No se pudo cargar la información de la factura.</p>
-                                )}
-                            </div>
-                        </section>
-                    )}
+            <div className="grid gap-3 sm:min-w-[220px]">
+              {hasQueueSession ? (
+                <div className="motion-live-pill rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 shadow-sm">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">
+                    Cola del turno
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-foreground">
+                    Caso {currentQueueIndex + 1} de {normalizedQueueBookingIds.length}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Quedan {normalizedQueueBookingIds.length - currentQueueIndex - 1} después de este caso.
+                  </p>
                 </div>
+              ) : null}
+              <div
+                className={cn(
+                  "rounded-2xl border px-4 py-3 shadow-sm",
+                  pendingControlCount > 0
+                    ? "border-amber-500/20 bg-amber-500/10"
+                    : "border-primary/20 bg-primary/10",
+                )}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Próxima acción
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">
+                  {nextAction.title}
+                </p>
+                {pendingControlCount > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {pendingControlCount} control(es) pendiente(s)
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </SheetHeader>
 
-                <SheetFooter className="pt-6 border-t border-border gap-2 sm:gap-0">
-                    <div className="flex flex-col sm:flex-row w-full gap-2">
-                        {(booking.status === "Confirmed") && (
-                            <Button
-                                className="w-full sm:flex-1 bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 gap-2"
-                                onClick={() => onUpdateStatus?.(booking.id, "CheckedIn")}
-                            >
-                                <CheckCircle className="w-4 h-4" /> Registrar Check-in
-                            </Button>
-                        )}
+        <div key={bookingState.id} className="motion-queue-step min-h-0 flex-1 overflow-y-auto space-y-6 px-4 py-5 sm:px-6 sm:py-6">
+          {guidedModeEnabled ? (
+            <GuideHint
+              eyebrow="Misión guiada"
+              title={guideState.summary.title}
+              description={guideState.summary.description}
+              ctaLabel={
+                bookingState.status === "Confirmed"
+                  ? "Ir al checklist de llegada"
+                  : bookingState.status === "CheckedIn" && outstandingAmountCents > 0
+                    ? "Ir a la cuenta"
+                    : bookingState.status === "CheckedIn"
+                      ? "Ir al checklist de salida"
+                      : undefined
+              }
+              onCta={
+                bookingState.status === "Confirmed"
+                  ? () => focusGuideTarget("check-in")
+                  : bookingState.status === "CheckedIn" && outstandingAmountCents > 0
+                    ? () => focusGuideTarget("payment")
+                    : bookingState.status === "CheckedIn"
+                      ? () => focusGuideTarget("checkout")
+                      : undefined
+              }
+            />
+          ) : null}
+          <div
+            id="reception-guide-review"
+            tabIndex={-1}
+            className={cn(
+              "scroll-mt-6 rounded-3xl outline-none transition-shadow",
+              guidedFocusStep === "review-case" && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",
+            )}
+          >
+            <BookingSummaryMetrics booking={bookingState} room={room} nights={nights} />
+          </div>
 
-                        {(booking.status === "CheckedIn") && (
-                            <Button
-                                className="w-full sm:flex-1 bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/20 gap-2"
-                                onClick={() => onUpdateStatus?.(booking.id, "CheckedOut")}
-                            >
-                                <ArrowRight className="w-4 h-4" /> Registrar Check-out
-                            </Button>
-                        )}
+          <BookingNextActionBanner
+            nextAction={nextAction}
+            statusLoading={statusLoading}
+            onStatusAction={(status) => {
+              void handleGuidedStatusAction(status);
+            }}
+          />
 
-                        {(booking.status === "Confirmed" || booking.status === "CheckedIn") && (
-                            <Button
-                                variant="outline"
-                                className="w-full sm:w-auto border-red-200 text-red-600 hover:bg-red-50 gap-2"
-                                onClick={() => onUpdateStatus?.(booking.id, "Cancelled")}
-                            >
-                                <XCircle className="w-4 h-4" /> Cancelar
-                            </Button>
-                        )}
+          {warningBanner ? (
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-800">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <warningBanner.icon className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-semibold">{warningBanner.title}</p>
+                    <p className="mt-1 text-xs">{warningBanner.description}</p>
+                    <p className="mt-2 text-xs font-semibold">
+                      {canManageRoomException
+                        ? "Elegí una habitación alternativa en la sección siguiente o actualizá el estado."
+                        : "Pedí a Operaciones que libere o reasigne la habitación y después actualizá el estado."}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0 rounded-xl border-amber-500/30 bg-card text-foreground"
+                  onClick={() => {
+                    void refreshOperationalData();
+                  }}
+                >
+                  Actualizar estado
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
-                        {booking.status === "CheckedOut" && (
-                            <Button
-                                variant="outline"
-                                className="w-full pointer-events-none opacity-50 border-border text-muted-foreground gap-2"
-                            >
-                                <CheckCircle className="w-4 h-4" /> Completada
-                            </Button>
-                        )}
-                    </div>
-                </SheetFooter>
-            </SheetContent>
-        </Sheet>
-    );
+          <section className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+            <div className="space-y-6">
+              <BookingGuestStaySection booking={bookingState} room={room} />
+
+              {canManageRoomException && bookingState.status !== "CheckedOut" && bookingState.status !== "Cancelled" && bookingState.status !== "NoShow" ? (
+                <BookingReassignmentSection
+                  booking={bookingState}
+                  roomOptionsLoading={roomOptionsLoading}
+                  roomOptions={roomOptions}
+                  selectedRoomId={selectedRoomId}
+                  reassignmentReason={reassignmentReason}
+                  reassignmentBlockers={reassignmentBlockers}
+                  reassignmentLoading={reassignmentLoading}
+                  onSelectRoom={setSelectedRoomId}
+                  onReasonChange={setReassignmentReason}
+                  onSubmit={() => {
+                    void handleRoomReassignment();
+                  }}
+                />
+              ) : null}
+
+              {bookingState.status === "Confirmed" ? (
+                <div
+                  id="reception-guide-check-in"
+                  tabIndex={-1}
+                  className={cn(
+                    "scroll-mt-6 rounded-3xl outline-none transition-shadow",
+                    guidedFocusStep === "check-in" && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",
+                  )}
+                >
+                  <BookingCheckInSection
+                    form={checkInForm}
+                    checkInBlockers={checkInBlockers}
+                    canCompleteFormalCheckIn={canCompleteFormalCheckIn}
+                    statusLoading={statusLoading}
+                    onFormChange={updateCheckInForm}
+                    onStatusAction={(status) => {
+                      void handleGuidedStatusAction(status);
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              {bookingState.status === "CheckedIn" ? (
+                <div
+                  id="reception-guide-checkout"
+                  tabIndex={-1}
+                  className={cn(
+                    "scroll-mt-6 rounded-3xl outline-none transition-shadow",
+                    guidedFocusStep === "checkout" && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",
+                  )}
+                >
+                  <BookingCheckOutSection
+                    form={checkOutForm}
+                    checkoutBlockers={checkoutBlockers}
+                    canCompleteFormalCheckOut={canCompleteFormalCheckOut}
+                    statusLoading={statusLoading}
+                    outstandingAmountCents={outstandingAmountCents}
+                    canOverrideCheckoutBalance={canOverrideCheckoutBalance}
+                    onFormChange={updateCheckOutForm}
+                    onStatusAction={(status) => {
+                      void handleGuidedStatusAction(status);
+                    }}
+                  />
+                </div>
+              ) : null}
+
+              <div
+                id="reception-guide-payment"
+                tabIndex={-1}
+                className={cn(
+                  "scroll-mt-6 rounded-3xl outline-none transition-shadow",
+                  guidedFocusStep === "payment" && "ring-2 ring-primary/40 ring-offset-2 ring-offset-background",
+                )}
+              >
+                <BookingAccountSection
+                  booking={bookingState}
+                  accommodationTotal={accommodationTotal}
+                  extrasTotal={extrasTotal}
+                  loadingCharges={loadingCharges}
+                  quickCharges={quickCharges}
+                  onQuickCharge={(label, amountCents, category) => {
+                    void handleQuickCharge(label, amountCents, category);
+                  }}
+                  outstandingAmountCents={outstandingAmountCents}
+                  paymentMethod={paymentMethod}
+                  paymentAmount={paymentAmount}
+                  paymentReference={paymentReference}
+                  paymentNote={paymentNote}
+                  settlementLoading={settlementLoading}
+                  invoice={invoice}
+                  payments={payments}
+                  extraCharges={extraCharges}
+                  onPaymentMethodChange={setPaymentMethod}
+                  onPaymentAmountChange={setPaymentAmount}
+                  onPaymentReferenceChange={setPaymentReference}
+                  onPaymentNoteChange={setPaymentNote}
+                  onRegisterPayment={() => {
+                    void handleGuidedRegisterPayment();
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <BookingSidebarPanels
+                booking={bookingState}
+                room={room}
+                loading={loading}
+                invoice={invoice}
+                statusLoading={statusLoading}
+                onEditBooking={onEditBooking}
+                onStatusAction={(status, frontDesk) => {
+                  void handleGuidedStatusAction(status, frontDesk);
+                }}
+              />
+
+              {canViewAudit ? (
+                <AuditTimeline
+                  title="Auditoria de reserva"
+                  description="Check-in, checkout, cancelaciones y excepciones visibles para supervision."
+                  entityIds={[bookingState.id, bookingState.room_id]}
+                  refreshSignal={`${bookingState.id}:${bookingState.room_id}:${bookingState.status}:${auditRefreshTick}`}
+                  emptyMessage="Todavia no hay eventos de auditoria vinculados a esta reserva."
+                />
+              ) : null}
+            </div>
+          </section>
+        </div>
+
+        <SheetFooter className="border-t bg-card/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
+            <Button
+              variant="outline"
+              className="w-full rounded-xl sm:w-auto"
+              onClick={() => {
+                void refreshOperationalData();
+              }}
+            >
+              <CalendarDays className="h-4 w-4" />
+              Refrescar
+            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {hasQueueSession ? (
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full rounded-xl sm:w-auto"
+                    disabled={!previousQueueBookingId}
+                    onClick={() => {
+                      if (previousQueueBookingId) {
+                        onOpenQueuedBooking?.(previousQueueBookingId);
+                      }
+                    }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Caso anterior
+                  </Button>
+                  <Button
+                    variant={nextQueueBookingId ? "default" : "outline"}
+                    className="w-full rounded-xl sm:w-auto"
+                    disabled={!nextQueueBookingId}
+                    onClick={() => {
+                      if (nextQueueBookingId) {
+                        onOpenQueuedBooking?.(nextQueueBookingId);
+                      }
+                    }}
+                  >
+                    Continuar con siguiente
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              ) : null}
+              {footerRoom && (
+                <Button variant="outline" className="w-full rounded-xl sm:w-auto" disabled>
+                  <footerRoom.icon className="h-4 w-4" />
+                  {footerRoom.label}
+                </Button>
+              )}
+              <Button variant="outline" className="w-full rounded-xl sm:w-auto" onClick={onClose}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </SheetFooter>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 };
 
 export default BookingDetailsSheet;

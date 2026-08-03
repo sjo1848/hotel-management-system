@@ -63,7 +63,7 @@ resolve_runner() {
 
 is_transient_sqlx_failure() {
   local output_file="$1"
-  grep -qE 'database "_sqlx_test_[^"]+" does not exist|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
+  grep -qE 'database "_sqlx_test_[^"]+" does not exist|It seems to have just been dropped or renamed|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
 }
 
 run_test_with_retry() {
@@ -108,6 +108,13 @@ run_test_with_retry() {
 
 RUNNER_RESOLVED="$(resolve_runner)"
 echo "==> HMS-QA-010 core journeys (runner=${RUNNER_RESOLVED})"
+
+if [[ "$RUNNER_RESOLVED" == "docker" ]]; then
+  echo "==> ensuring backend test runner is available"
+  DATABASE_URL="${HMS_DOCKER_DATABASE_URL:-postgres://admin:password123@db:5432/hms_core}" \
+    docker compose up -d db backend >/dev/null
+fi
+
 run_test_with_retry "csrf_authn_security"
 run_test_with_retry "rbac_authorization"
 run_test_with_retry "booking_flow"

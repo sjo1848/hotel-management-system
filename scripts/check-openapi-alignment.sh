@@ -31,7 +31,7 @@ missing_in_routes="$tmp_dir/missing_in_routes.txt"
 
 grep -oE '"/api/v1[^"]*"' "$ROUTES_FILE" \
   | tr -d '"' \
-  | sed -E 's/:[A-Za-z_][A-Za-z0-9_]*/{id}/g' \
+  | sed -E 's/:([A-Za-z_][A-Za-z0-9_]*)/{\1}/g' \
   | sort -u > "$routes_norm"
 
 awk '

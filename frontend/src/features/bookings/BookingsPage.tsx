@@ -1,6 +1,13 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Plus, CheckCircle, Clock, XCircle, MoreVertical, Filter, Download } from "lucide-react";
+import { Suspense, lazy, useMemo, useState } from "react";
+import {
+  Plus,
+  CheckCircle,
+  Clock,
+  XCircle,
+  MoreVertical,
+  Filter,
+  Download,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -10,23 +17,40 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getBookings, updateBooking } from "./services/bookingService";
-import { Booking } from "@/types/domain";
+import { getBookings, getFrontDeskBoard, updateBooking } from "./services/bookingService";
+import { Booking, BookingFrontDeskData } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import { downloadCSV, cn } from "@/lib/utils";
-import BookingEditDrawer from "./components/BookingEditDrawer";
-import BookingDetailsSheet from "./components/BookingDetailsSheet";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
+import { PageHeader } from "@/components/ui/page-header";
+import { useGuidedMode } from "@/features/guided/GuidedModeContext";
+import GuideRail from "@/features/guided/components/GuideRail";
+import type { ReceptionGuideStepId } from "@/features/guided/receptionGuide";
+
+const BookingEditDrawer = lazy(() => import("./components/BookingEditDrawer"));
+const BookingDetailsSheet = lazy(() => import("./components/BookingDetailsSheet"));
+const FrontDeskBoardPanel = lazy(() => import("./components/FrontDeskBoardPanel"));
+const WalkInBookingSheet = lazy(() => import("./components/WalkInBookingSheet"));
 
 const BookingsPage = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const {
+    enabled: guidedModeEnabled,
+    setEnabled: setGuidedModeEnabled,
+    resetReceptionGuide,
+    trackReceptionEvent,
+    getReceptionGuideState,
+  } = useGuidedMode();
   const bookingQueryKey = "bookings:list";
   const [filterStatus, setFilterStatus] = useState<string>("all");
-  const [selectedBooking, setSelectedRoom] = useState<Booking | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [boardDate, setBoardDate] = useState(new Date().toISOString().slice(0, 10));
+  const [frontDeskQueueBookingIds, setFrontDeskQueueBookingIds] = useState<string[]>([]);
+  const [guidedFocusStep, setGuidedFocusStep] = useState<ReceptionGuideStepId | null>(null);
 
   const {
     data: bookingsData,
@@ -40,20 +64,27 @@ const BookingsPage = () => {
   });
 
   const bookings = useMemo(() => bookingsData ?? [], [bookingsData]);
+  const frontDeskQueryKey = useMemo(() => `front-desk:board:${boardDate}`, [boardDate]);
+  const {
+    data: frontDeskBoard,
+    isLoading: frontDeskLoading,
+    refetch: refetchFrontDeskBoard,
+  } = useResourceQuery({
+    queryKey: frontDeskQueryKey,
+    queryFn: () => getFrontDeskBoard(boardDate),
+    staleTimeMs: 10_000,
+  });
 
-  const handleCancel = async (id: string) => {
-    try {
-      await updateBooking(id, { status: "Cancelled" });
-      toast({ title: "Reserva cancelada", variant: "success" });
-      invalidateResource(bookingQueryKey);
-      await refetchBookings();
-    } catch (error: unknown) {
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "No se pudo cancelar la reserva"),
-        variant: "error",
-      });
-    }
+  const refreshBookingsView = async (selectedId?: string) => {
+    invalidateResource(bookingQueryKey);
+    invalidateResource(frontDeskQueryKey);
+    await refetchBookings();
+    await refetchFrontDeskBoard();
+
+    if (!selectedId) return;
+    const refreshedBookings = await getBookings();
+    const refreshedSelected = refreshedBookings.find((item) => item.id === selectedId) ?? null;
+    setSelectedBooking(refreshedSelected);
   };
 
   const handleExport = () => {
@@ -68,6 +99,126 @@ const BookingsPage = () => {
   const filteredBookings = bookings.filter((b) =>
     filterStatus === "all" ? true : b.status === filterStatus
   );
+  const defaultFrontDeskQueueBookingIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...(frontDeskBoard?.arrivals_blocked ?? []),
+            ...(frontDeskBoard?.departures_today ?? []),
+            ...(frontDeskBoard?.arrivals_ready ?? []),
+            ...(frontDeskBoard?.in_house ?? []),
+          ].map((entry) => entry.booking_id),
+        ),
+      ),
+    [frontDeskBoard],
+  );
+  const openBookingById = (bookingId: string, queueBookingIds?: string[]) => {
+    const booking = bookings.find((item) => item.id === bookingId);
+    if (!booking) return;
+    const normalizedQueue = Array.from(
+      new Set((queueBookingIds ?? []).filter((id) => id && id !== "")),
+    );
+    setFrontDeskQueueBookingIds(
+      normalizedQueue.length > 0 ? normalizedQueue : defaultFrontDeskQueueBookingIds,
+    );
+    setSelectedBooking(booking);
+    setIsDetailsOpen(true);
+    trackReceptionEvent("open_case");
+    trackReceptionEvent("review_case");
+  };
+  const openWalkIn = () => {
+    setFrontDeskQueueBookingIds([]);
+    setIsWalkInOpen(true);
+    trackReceptionEvent("open_walk_in");
+  };
+  const openReceptionGuideStep = (stepId: string) => {
+    const receptionStep = stepId as ReceptionGuideStepId;
+    setGuidedFocusStep(receptionStep);
+    if (receptionStep === "open-case") {
+      document.getElementById("front-desk-board")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      return;
+    }
+
+    const selectedMatchesStep =
+      selectedBooking &&
+      (receptionStep === "review-case" ||
+        (receptionStep === "check-in" && selectedBooking.status === "Confirmed") ||
+        (["payment", "checkout"].includes(receptionStep) &&
+          selectedBooking.status === "CheckedIn"));
+    const targetEntry =
+      receptionStep === "check-in"
+        ? frontDeskBoard?.arrivals_ready?.[0] ?? frontDeskBoard?.arrivals_blocked?.[0]
+        : receptionStep === "payment" || receptionStep === "checkout"
+          ? frontDeskBoard?.departures_today?.[0] ?? frontDeskBoard?.in_house?.[0]
+          : frontDeskBoard?.arrivals_blocked?.[0] ??
+            frontDeskBoard?.arrivals_ready?.[0] ??
+            frontDeskBoard?.departures_today?.[0] ??
+            frontDeskBoard?.in_house?.[0];
+    const targetBooking = selectedMatchesStep
+      ? selectedBooking
+      : bookings.find((item) => item.id === targetEntry?.booking_id);
+
+    if (targetBooking) {
+      openBookingById(targetBooking.id, defaultFrontDeskQueueBookingIds);
+      return;
+    }
+
+    toast({
+      title: "No hay un caso disponible para este paso",
+      description: "Usá la cola del turno o creá una reserva para continuar el recorrido.",
+      variant: "default",
+    });
+    document.getElementById("front-desk-board")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+  const summary = useMemo(() => ({
+    total: bookings.length,
+    confirmed: bookings.filter((booking) => booking.status === "Confirmed").length,
+    checkedIn: bookings.filter((booking) => booking.status === "CheckedIn").length,
+    checkedOut: bookings.filter((booking) => booking.status === "CheckedOut").length,
+    revenue: bookings
+      .filter((booking) => booking.status !== "Cancelled" && booking.status !== "NoShow")
+      .reduce((sum, booking) => sum + booking.total_price_cents, 0),
+  }), [bookings]);
+  const guideState = getReceptionGuideState(selectedBooking?.status);
+  const activeGuideStep = guideState.steps.find((step) => step.active);
+
+  const handleStatusUpdate = async (
+    id: string,
+    status: Booking["status"],
+    frontDesk?: Partial<BookingFrontDeskData>,
+  ) => {
+    try {
+      await updateBooking(id, { status, front_desk: frontDesk });
+      toast({
+        title: "Reserva actualizada",
+        description:
+          status === "CheckedIn"
+            ? "Check-in registrado correctamente."
+            : status === "CheckedOut"
+              ? "Check-out registrado correctamente."
+              : status === "Cancelled"
+                ? "Reserva cancelada."
+                : status === "NoShow"
+                  ? "No-show registrado. La habitacion volvio a disponibilidad."
+                : "Estado actualizado.",
+        variant: "success",
+      });
+      await refreshBookingsView(id);
+    } catch (error: unknown) {
+      toast({
+        title: "No se pudo actualizar",
+        description: getErrorMessage(error, "Reintenta en unos segundos."),
+        variant: "error",
+      });
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -79,6 +230,8 @@ const BookingsPage = () => {
         return <Badge variant="neutral" className="gap-1"><CheckCircle className="w-3 h-3" /> Finalizada</Badge>;
       case "Cancelled":
         return <Badge variant="destructive" className="gap-1"><XCircle className="w-3 h-3" /> Cancelada</Badge>;
+      case "NoShow":
+        return <Badge variant="warning" className="gap-1"><XCircle className="w-3 h-3" /> No-show</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -122,13 +275,14 @@ const BookingsPage = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="text-indigo-600 font-bold text-xs"
+            className="text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => {
-              setSelectedRoom(item);
+              setFrontDeskQueueBookingIds([]);
+              setSelectedBooking(item);
               setIsDetailsOpen(true);
             }}
           >
-            Detalles
+            Gestionar
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -138,19 +292,19 @@ const BookingsPage = () => {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => {
-                setSelectedRoom(item);
+                setFrontDeskQueueBookingIds([]);
+                setSelectedBooking(item);
                 setIsEditOpen(true);
               }}>
-                Editar Estado
+                Editar reserva
               </DropdownMenuItem>
-              {item.status !== "Cancelled" && item.status !== "CheckedOut" && (
-                <DropdownMenuItem 
-                  className="text-red-600"
-                  onClick={() => handleCancel(item.id)}
-                >
-                  Cancelar Reserva
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem onClick={() => {
+                setFrontDeskQueueBookingIds([]);
+                setSelectedBooking(item);
+                setIsDetailsOpen(true);
+              }}>
+                Abrir centro operativo
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -160,91 +314,199 @@ const BookingsPage = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-foreground tracking-tight leading-none">
-            Reservas
-          </h2>
-          <p className="text-muted-foreground font-medium mt-2">
-            Gestión de estancias y disponibilidad.
-          </p>
-        </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Recepción"
+        description="Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista."
+        actions={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-10 w-full rounded-xl border-border sm:w-auto",
+                    filterStatus !== "all" && "border-primary/20 bg-primary/10 text-primary",
+                  )}
+                >
+                  <Filter className="mr-2 h-4 w-4" />
+                  {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-card">
+                <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setFilterStatus("NoShow")}>No-show</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        <div className="flex gap-3">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className={cn("h-10 rounded-xl border-border", filterStatus !== "all" && "bg-indigo-50 border-indigo-200 text-indigo-700")}>
-                <Filter className="w-4 h-4 mr-2" /> 
-                {filterStatus === "all" ? "Filtros" : `Estado: ${filterStatus}`}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-card">
-              <DropdownMenuItem onClick={() => setFilterStatus("all")}>Todos los estados</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("Confirmed")}>Confirmadas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("CheckedIn")}>En el Hotel</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("CheckedOut")}>Finalizadas</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilterStatus("Cancelled")}>Canceladas</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-10 w-full rounded-xl border-border sm:w-auto"
+              onClick={handleExport}
+            >
+              <Download className="mr-2 h-4 w-4" /> Exportar
+            </Button>
+            <Button
+              size="sm"
+              className="h-10 w-full rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 sm:w-auto"
+              onClick={openWalkIn}
+            >
+              <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
+            </Button>
+            <Button
+              variant={guidedModeEnabled ? "secondary" : "outline"}
+              size="sm"
+              className="h-10 w-full rounded-xl sm:w-auto"
+              onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}
+            >
+              {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
+            </Button>
+          </>
+        }
+      />
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-10 rounded-xl border-border"
-            onClick={handleExport}
-          >
-            <Download className="w-4 h-4 mr-2" /> Exportar
-          </Button>
-          <Button 
-            size="sm" 
-            className="h-10 rounded-xl bg-slate-900 shadow-lg shadow-slate-200"
-            onClick={() => navigate("/rooms")}
-          >
-            <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
-          </Button>
-        </div>
-      </div>
-
-      <div className="bg-card rounded-3xl border border-border shadow-2xl shadow-slate-200/50 overflow-hidden">
-        {bookingLoadError && (
-          <div className="px-4 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
-            {bookingLoadError}
-          </div>
-        )}
-        <DataTable
-          columns={columns}
-          data={filteredBookings}
-          isLoading={loading}
-          searchable
-          searchPlaceholder="Buscar por huésped o ID..."
+      {guidedModeEnabled ? (
+        <GuideRail
+          title={guideState.summary.title}
+          description={guideState.summary.description}
+          completed={guideState.summary.completed}
+          total={guideState.summary.total}
+          steps={guideState.steps}
+          enabled={guidedModeEnabled}
+          onToggle={() => setGuidedModeEnabled(!guidedModeEnabled)}
+          onReset={resetReceptionGuide}
+          ctaLabel={activeGuideStep?.actionLabel}
+          onCta={activeGuideStep ? () => openReceptionGuideStep(activeGuideStep.id) : undefined}
+          onStepSelect={openReceptionGuideStep}
         />
-      </div>
+      ) : null}
+
+      <Suspense
+        fallback={
+          <section className="motion-refresh rounded-3xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-sm font-semibold text-muted-foreground">Cargando board operativo...</p>
+          </section>
+        }
+      >
+        <div id="front-desk-board" key={frontDeskQueryKey} className="motion-refresh">
+          <FrontDeskBoardPanel
+            board={frontDeskBoard}
+            loading={frontDeskLoading}
+            boardDate={boardDate}
+            onBoardDateChange={setBoardDate}
+            onOpenBooking={openBookingById}
+            onPrepareCheckIn={openBookingById}
+          />
+        </div>
+      </Suspense>
+
+      <section className="stagger-list grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+            Reservas totales
+          </p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-foreground">{summary.total}</p>
+          <p className="mt-2 text-sm text-muted-foreground">base operativa actual</p>
+        </div>
+        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+            Confirmadas
+          </p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.confirmed}</p>
+          <p className="mt-2 text-sm text-primary">listas para check-in</p>
+        </div>
+        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">
+            En el hotel
+          </p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-primary">{summary.checkedIn}</p>
+          <p className="mt-2 text-sm text-primary">estadia activa</p>
+        </div>
+        <div className="rounded-3xl border border-border bg-card p-5 shadow-sm">
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+            Revenue bruto
+          </p>
+          <p className="mt-3 text-3xl font-black tracking-tight text-foreground">
+            ${(summary.revenue / 100).toLocaleString("es-AR")}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{summary.checkedOut} salidas completadas</p>
+        </div>
+      </section>
+
+      <DataTable
+        columns={columns}
+        data={filteredBookings}
+        isLoading={loading}
+        error={bookingLoadError}
+        onRetry={() => {
+          void refetchBookings();
+        }}
+        searchable
+        searchPlaceholder="Buscar por huésped o ID..."
+      />
+
+      <Suspense fallback={null}>
+        <WalkInBookingSheet
+          isOpen={isWalkInOpen}
+          onClose={() => setIsWalkInOpen(false)}
+          onCreated={async (booking) => {
+            invalidateResource(bookingQueryKey);
+            await refreshBookingsView(booking.id);
+            setFrontDeskQueueBookingIds([]);
+            setSelectedBooking(booking);
+            setIsDetailsOpen(true);
+            trackReceptionEvent("review_case");
+          }}
+        />
+      </Suspense>
 
       {selectedBooking && (
-        <>
-          <BookingEditDrawer 
-            booking={selectedBooking}
-            isOpen={isEditOpen}
-            onClose={() => {
-              setIsEditOpen(false);
-              setSelectedRoom(null);
-            }}
-            onSuccess={async () => {
-              invalidateResource(bookingQueryKey);
-              await refetchBookings();
-            }}
-            onViewDetails={() => setIsDetailsOpen(true)}
-          />
-          <BookingDetailsSheet
-            booking={selectedBooking}
-            isOpen={isDetailsOpen}
-            onClose={() => {
-              setIsDetailsOpen(false);
-              setSelectedRoom(null);
-            }}
-          />
-        </>
+        <Suspense fallback={null}>
+          <>
+            <BookingEditDrawer
+              booking={selectedBooking}
+              isOpen={isEditOpen}
+              onClose={() => {
+                setIsEditOpen(false);
+                setSelectedBooking(null);
+                setFrontDeskQueueBookingIds([]);
+              }}
+              onSuccess={async () => {
+                await refreshBookingsView(selectedBooking.id);
+              }}
+              onViewDetails={() => setIsDetailsOpen(true)}
+            />
+            <BookingDetailsSheet
+              booking={selectedBooking}
+              isOpen={isDetailsOpen}
+              onUpdateStatus={handleStatusUpdate}
+              onEditBooking={() => {
+                setIsDetailsOpen(false);
+                setIsEditOpen(true);
+              }}
+              onRefreshBooking={async () => {
+                await refreshBookingsView(selectedBooking.id);
+              }}
+              guidedFocusStep={guidedFocusStep}
+              queueBookingIds={frontDeskQueueBookingIds}
+              onOpenQueuedBooking={(bookingId) => {
+                openBookingById(bookingId, frontDeskQueueBookingIds);
+              }}
+              onClose={() => {
+                setIsDetailsOpen(false);
+                setSelectedBooking(null);
+                setFrontDeskQueueBookingIds([]);
+                setGuidedFocusStep(null);
+              }}
+            />
+          </>
+        </Suspense>
       )}
     </div>
   );

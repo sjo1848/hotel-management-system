@@ -1,16 +1,8 @@
+import { Suspense, lazy, ReactNode } from "react";
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import DashboardHome from "./features/dashboard/DashboardHome";
-import BookingsPage from "./features/bookings/BookingsPage";
-import RoomsPage from "./features/rooms/RoomsPage";
-import CalendarPage from "./features/schedule/CalendarPage";
-import GuestsPage from "./features/guests/GuestsPage";
-import HousekeepingPage from "./features/housekeeping/HousekeepingPage";
 import LoginPage from "./features/auth/LoginPage";
-import UsersPage from "./features/users/UsersPage";
-import ReportsPage from "./features/reports/ReportsPage";
-import HotelNetworkPage from "./features/dashboard/HotelNetworkPage";
-import { ReactNode } from "react";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { useAuth } from "./features/auth/useAuth";
 import { ToastProvider } from "./components/ui/toast";
@@ -21,6 +13,16 @@ import AccessDeniedPage from "./features/errors/AccessDeniedPage";
 import { Capability, roleHasCapability } from "./features/auth/capabilities";
 import { HMSQueryProvider } from "./lib/QueryProvider";
 import { ThemeProvider } from "./theme/ThemeContext";
+import { GuidedModeProvider } from "./features/guided/GuidedModeContext";
+
+const BookingsPage = lazy(() => import("./features/bookings/BookingsPage"));
+const RoomsPage = lazy(() => import("./features/rooms/RoomsPage"));
+const CalendarPage = lazy(() => import("./features/schedule/CalendarPage"));
+const GuestsPage = lazy(() => import("./features/guests/GuestsPage"));
+const HousekeepingPage = lazy(() => import("./features/housekeeping/HousekeepingPage"));
+const UsersPage = lazy(() => import("./features/users/UsersPage"));
+const ReportsPage = lazy(() => import("./features/reports/ReportsPage"));
+const HotelNetworkPage = lazy(() => import("./features/dashboard/HotelNetworkPage"));
 
 const AppLayout = () => (
   <DashboardLayout>
@@ -28,12 +30,18 @@ const AppLayout = () => (
   </DashboardLayout>
 );
 
+const RouteLoading = () => (
+  <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+    <p className="text-sm font-semibold text-muted-foreground">Cargando modulo...</p>
+  </div>
+);
+
 const RequireAuth = ({ children }: { children: ReactNode }) => {
   const { status } = useAuth();
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500">
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
         Verificando sesión...
       </div>
     );
@@ -62,6 +70,28 @@ const RequireCapability = ({
   return <>{children}</>;
 };
 
+const RoleHomeRedirect = () => {
+  const { user } = useAuth();
+
+  if (roleHasCapability(user?.role, "analytics.kpis.read")) {
+    return <DashboardHome />;
+  }
+
+  if (roleHasCapability(user?.role, "bookings.read")) {
+    return <Navigate to="/bookings" replace />;
+  }
+
+  if (roleHasCapability(user?.role, "housekeeping.read")) {
+    return <Navigate to="/housekeeping" replace />;
+  }
+
+  if (roleHasCapability(user?.role, "saas.hotels.read")) {
+    return <Navigate to="/network" replace />;
+  }
+
+  return <Navigate to="/forbidden" replace />;
+};
+
 const router = createBrowserRouter([
   {
     path: "/login",
@@ -78,17 +108,15 @@ const router = createBrowserRouter([
     children: [
       {
         path: "/",
-        element: (
-          <RequireCapability capability="analytics.kpis.read">
-            <DashboardHome />
-          </RequireCapability>
-        ),
+        element: <RoleHomeRedirect />,
       },
       {
         path: "/bookings",
         element: (
           <RequireCapability capability="bookings.read">
-            <BookingsPage />
+            <Suspense fallback={<RouteLoading />}>
+              <BookingsPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -96,7 +124,9 @@ const router = createBrowserRouter([
         path: "/rooms",
         element: (
           <RequireCapability capability="rooms.read">
-            <RoomsPage />
+            <Suspense fallback={<RouteLoading />}>
+              <RoomsPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -104,7 +134,9 @@ const router = createBrowserRouter([
         path: "/calendar",
         element: (
           <RequireCapability capability="bookings.read">
-            <CalendarPage />
+            <Suspense fallback={<RouteLoading />}>
+              <CalendarPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -112,7 +144,9 @@ const router = createBrowserRouter([
         path: "/guests",
         element: (
           <RequireCapability capability="guests.read">
-            <GuestsPage />
+            <Suspense fallback={<RouteLoading />}>
+              <GuestsPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -120,7 +154,9 @@ const router = createBrowserRouter([
         path: "/housekeeping",
         element: (
           <RequireCapability capability="housekeeping.read">
-            <HousekeepingPage />
+            <Suspense fallback={<RouteLoading />}>
+              <HousekeepingPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -128,7 +164,9 @@ const router = createBrowserRouter([
         path: "/users",
         element: (
           <RequireCapability capability="users.read">
-            <UsersPage />
+            <Suspense fallback={<RouteLoading />}>
+              <UsersPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -136,7 +174,9 @@ const router = createBrowserRouter([
         path: "/network",
         element: (
           <RequireCapability capability="saas.hotels.read">
-            <HotelNetworkPage />
+            <Suspense fallback={<RouteLoading />}>
+              <HotelNetworkPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -144,7 +184,9 @@ const router = createBrowserRouter([
         path: "/reports",
         element: (
           <RequireCapability capability="reports.revenue.read">
-            <ReportsPage />
+            <Suspense fallback={<RouteLoading />}>
+              <ReportsPage />
+            </Suspense>
           </RequireCapability>
         ),
       },
@@ -165,10 +207,12 @@ function App() {
     <ThemeProvider>
       <HMSQueryProvider>
         <AuthProvider>
-          <ToastProvider>
-            <ApiInterceptor />
-            <RouterProvider router={router} />
-          </ToastProvider>
+          <GuidedModeProvider>
+            <ToastProvider>
+              <ApiInterceptor />
+              <RouterProvider router={router} />
+            </ToastProvider>
+          </GuidedModeProvider>
         </AuthProvider>
       </HMSQueryProvider>
     </ThemeProvider>

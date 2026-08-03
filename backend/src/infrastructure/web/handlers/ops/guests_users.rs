@@ -41,6 +41,7 @@ pub async fn list_users_handler(
 
     Ok(Json(json!(users
         .into_iter()
+        .filter(|user| !user.role.trim().eq_ignore_ascii_case("saas_admin"))
         .map(|user| json!({ "id": user.id, "username": user.username, "role": user.role }))
         .collect::<Vec<_>>())))
 }
@@ -57,6 +58,15 @@ pub async fn delete_user_handler(
         return Err(DomainError::InvalidInput(
             "No puedes eliminar tu propia cuenta".to_string(),
         ));
+    }
+
+    let target = state
+        .user_service
+        .find_user(hotel_id, user_id)
+        .await?
+        .ok_or(DomainError::UserNotFound)?;
+    if target.role.trim().eq_ignore_ascii_case("saas_admin") {
+        return Err(DomainError::Forbidden);
     }
 
     state.user_service.delete_user(hotel_id, user_id).await?;
@@ -80,21 +90,28 @@ pub async fn create_user_handler(
     Json(payload): Json<CreateUserRequest>,
 ) -> Result<Json<Value>, DomainError> {
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
+    let current_user_id = Uuid::parse_str(&claims.sub).map_err(|_| DomainError::Unauthorized)?;
     validate_non_empty_trimmed("username", &payload.username)?;
     validate_len_range("username", &payload.username, 3, 80)?;
     validate_non_empty_trimmed("password", &payload.password)?;
     validate_len_range("password", &payload.password, 8, 128)?;
     validate_non_empty_trimmed("role", &payload.role)?;
-    validate_role(&payload.role)?;
+    let role = payload.role.trim().to_lowercase();
+    validate_role(&role)?;
 
     let created: crate::domain::models::User = state
         .user_service
-        .create_user(hotel_id, payload.username, payload.password, payload.role)
+        .create_user(hotel_id, payload.username, payload.password, role)
         .await?;
 
     state
         .audit_service
-        .record(Some(hotel_id), Some(created.id), "user.created", None)
+        .record(
+            Some(hotel_id),
+            Some(current_user_id),
+            &format!("user.created: {} role={}", created.id, created.role),
+            None,
+        )
         .await;
 
     Ok(Json(

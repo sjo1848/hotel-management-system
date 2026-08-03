@@ -75,10 +75,11 @@ const GuestCreateDrawer = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sm:max-w-[440px] bg-white border-l shadow-2xl">
-        <SheetHeader className="pb-6 border-b">
+      <SheetContent className="w-full overflow-hidden border-l border-border bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-[440px]">
+        <div className="flex min-h-0 flex-1 flex-col">
+        <SheetHeader className="border-b border-border px-4 py-5 sm:px-6 sm:py-6">
           <SheetTitle className="text-2xl font-bold flex items-center gap-2">
-            <UserPlus className="w-6 h-6 text-indigo-600" />
+            <UserPlus className="w-6 h-6 text-primary" />
             Nuevo Huésped
           </SheetTitle>
           <SheetDescription>
@@ -86,25 +87,26 @@ const GuestCreateDrawer = ({
           </SheetDescription>
         </SheetHeader>
 
-        <form onSubmit={handleSubmit} className="py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="full_name" className="flex items-center gap-2">
-                <User className="w-4 h-4 text-slate-400" /> Nombre Completo
+                <User className="w-4 h-4 text-muted-foreground" /> Nombre Completo
               </Label>
               <Input
                 id="full_name"
                 placeholder="Ej: John Doe"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="border-border bg-muted/40 transition-colors focus:bg-background"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="email" className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-400" /> Correo Electrónico
+                <Mail className="w-4 h-4 text-muted-foreground" /> Correo Electrónico
               </Label>
               <Input
                 id="email"
@@ -112,35 +114,37 @@ const GuestCreateDrawer = ({
                 placeholder="john@example.com"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="border-border bg-muted/40 transition-colors focus:bg-background"
                 required
               />
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="phone" className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-400" /> Teléfono (Opcional)
+                <Phone className="w-4 h-4 text-muted-foreground" /> Teléfono (Opcional)
               </Label>
               <Input
                 id="phone"
                 placeholder="+1 (555) 000-0000"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="bg-slate-50 border-slate-200 focus:bg-white transition-colors"
+                className="border-border bg-muted/40 transition-colors focus:bg-background"
               />
             </div>
           </div>
+          </div>
 
-          <SheetFooter className="pt-6 border-t mt-auto">
+          <SheetFooter className="mt-auto border-t border-border bg-background/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
             <Button 
                 type="submit" 
                 disabled={loading} 
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl h-12 shadow-lg transition-all active:scale-[0.98]"
+                className="h-12 w-full rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-all active:scale-[0.98] hover:bg-primary/90"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Registrar Huésped"}
             </Button>
           </SheetFooter>
         </form>
+        </div>
       </SheetContent>
     </Sheet>
   );

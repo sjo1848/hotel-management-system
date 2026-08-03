@@ -19,8 +19,9 @@ impl RoomStatus {
             (Self::Available, Self::Maintenance) => true,
             (Self::Occupied, Self::Dirty) => true,
             (Self::Dirty, Self::Cleaning) => true,
+            (Self::Dirty, Self::Maintenance) => true,
             (Self::Cleaning, Self::Available) => true,
-            (Self::Maintenance, Self::Available) => true,
+            (Self::Cleaning, Self::Maintenance) => true,
             (Self::Maintenance, Self::Dirty) => true,
             // Permitir el mismo estado (no-op)
             (s, n) if s == n => true,
@@ -40,12 +41,169 @@ pub struct Room {
     pub price_cents: i64,
 }
 
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct BulkRoomStatusUpdateResult {
+    pub room_ids: Vec<Uuid>,
+    pub updated_count: usize,
+    pub status: RoomStatus,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, PartialEq, Eq)]
+pub enum MaintenanceCaseStatus {
+    Open,
+    Resolved,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, PartialEq, Eq)]
+pub enum MaintenancePriority {
+    Low,
+    Medium,
+    High,
+    Urgent,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct MaintenanceCase {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
+    pub room_id: Uuid,
+    pub status: MaintenanceCaseStatus,
+    pub priority: MaintenancePriority,
+    pub reason: String,
+    pub assigned_to: String,
+    pub reported_by_user_id: Option<Uuid>,
+    pub reported_at: chrono::NaiveDateTime,
+    pub resolution_note: Option<String>,
+    pub resolved_by_user_id: Option<Uuid>,
+    pub resolved_at: Option<chrono::NaiveDateTime>,
+    pub return_status: Option<RoomStatus>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema, PartialEq, Eq)]
+pub enum RoomHoldType {
+    Vip,
+    Maintenance,
+    Owner,
+    Compliance,
+    Commercial,
+    Other,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RoomHold {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
+    pub room_id: Uuid,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub hold_type: RoomHoldType,
+    pub reason: String,
+    pub created_by_user_id: Option<Uuid>,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct RoomHoldBoardEntry {
+    pub hold_id: Uuid,
+    pub room_id: Uuid,
+    pub room_number: String,
+    pub room_type: String,
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub hold_type: RoomHoldType,
+    pub reason: String,
+    pub created_at: Option<chrono::NaiveDateTime>,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq, ToSchema)]
 pub enum BookingStatus {
     Confirmed,
     CheckedIn,
     CheckedOut,
     Cancelled,
+    NoShow,
+}
+
+impl BookingStatus {
+    pub fn can_transition_to(&self, next: &Self) -> bool {
+        matches!(
+            (self, next),
+            (
+                Self::Confirmed,
+                Self::CheckedIn | Self::Cancelled | Self::NoShow
+            ) | (Self::CheckedIn, Self::CheckedOut)
+        ) || self == next
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Default, ToSchema)]
+pub struct BookingOperationalData {
+    pub check_in_guests_count: Option<i32>,
+    pub check_in_reference: Option<String>,
+    pub check_in_document_verified: Option<bool>,
+    pub check_in_contact_confirmed: Option<bool>,
+    pub check_in_stay_confirmed: Option<bool>,
+    pub checked_in_at: Option<chrono::NaiveDateTime>,
+    pub checked_in_by_user_id: Option<Uuid>,
+    pub check_out_payment_policy: Option<String>,
+    pub check_out_reference: Option<String>,
+    pub check_out_charges_reviewed: Option<bool>,
+    pub check_out_room_release_confirmed: Option<bool>,
+    pub check_out_housekeeping_handoff: Option<bool>,
+    pub checked_out_at: Option<chrono::NaiveDateTime>,
+    pub checked_out_by_user_id: Option<Uuid>,
+    pub terminal_reason: Option<String>,
+    pub terminal_recorded_at: Option<chrono::NaiveDateTime>,
+    pub terminal_recorded_by_user_id: Option<Uuid>,
+    pub late_arrival_eta: Option<chrono::NaiveDateTime>,
+    pub late_arrival_note: Option<String>,
+    pub late_arrival_recorded_at: Option<chrono::NaiveDateTime>,
+    pub late_arrival_recorded_by_user_id: Option<Uuid>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct BookingOperationalUpdate {
+    pub check_in_guests_count: Option<i32>,
+    pub check_in_reference: Option<String>,
+    pub check_in_document_verified: Option<bool>,
+    pub check_in_contact_confirmed: Option<bool>,
+    pub check_in_stay_confirmed: Option<bool>,
+    pub check_out_payment_policy: Option<String>,
+    pub check_out_reference: Option<String>,
+    pub check_out_charges_reviewed: Option<bool>,
+    pub check_out_room_release_confirmed: Option<bool>,
+    pub check_out_housekeeping_handoff: Option<bool>,
+    pub terminal_reason: Option<String>,
+    pub late_arrival_eta: Option<chrono::NaiveDateTime>,
+    pub late_arrival_note: Option<String>,
+}
+
+impl BookingOperationalData {
+    pub fn is_check_in_complete(&self) -> bool {
+        self.check_in_guests_count.is_some_and(|count| count > 0)
+            && self.check_in_document_verified == Some(true)
+            && self.check_in_contact_confirmed == Some(true)
+            && self.check_in_stay_confirmed == Some(true)
+    }
+
+    pub fn is_check_out_complete(&self) -> bool {
+        let valid_payment_policy = matches!(
+            self.check_out_payment_policy.as_deref(),
+            Some("settled" | "pending-approved")
+        );
+        let pending_has_reference = self.check_out_payment_policy.as_deref()
+            != Some("pending-approved")
+            || self
+                .check_out_reference
+                .as_deref()
+                .is_some_and(|reference| reference.trim().len() >= 6);
+
+        valid_payment_policy
+            && pending_has_reference
+            && self.check_out_charges_reviewed == Some(true)
+            && self.check_out_room_release_confirmed == Some(true)
+            && self.check_out_housekeeping_handoff == Some(true)
+    }
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -59,6 +217,88 @@ pub struct Booking {
     pub check_out: NaiveDate,
     pub total_price_cents: i64,
     pub status: BookingStatus,
+    pub operational_data: BookingOperationalData,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct HousekeepingBoardRoom {
+    pub room_id: Uuid,
+    pub room_number: String,
+    pub room_type: String,
+    pub room_status: RoomStatus,
+    pub turnover_today: bool,
+    pub departure_guest_name: Option<String>,
+    pub departure_booking_status: Option<BookingStatus>,
+    pub maintenance_case: Option<MaintenanceCase>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct HousekeepingDeparture {
+    pub booking_id: Uuid,
+    pub room_id: Uuid,
+    pub room_number: String,
+    pub room_type: String,
+    pub room_status: RoomStatus,
+    pub guest_name: String,
+    pub booking_status: BookingStatus,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct HousekeepingBoard {
+    pub date: NaiveDate,
+    pub rooms: Vec<HousekeepingBoardRoom>,
+    pub departures_today: Vec<HousekeepingDeparture>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct FrontDeskBlocker {
+    pub kind: String,
+    pub title: String,
+    pub detail: String,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct FrontDeskBoardEntry {
+    pub booking_id: Uuid,
+    pub room_id: Uuid,
+    pub room_number: String,
+    pub room_type: String,
+    pub guest_name: String,
+    pub check_in: NaiveDate,
+    pub check_out: NaiveDate,
+    pub booking_status: BookingStatus,
+    pub room_status: RoomStatus,
+    pub total_price_cents: i64,
+    pub operational_data: BookingOperationalData,
+    pub blocker: Option<FrontDeskBlocker>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum FrontDeskActionKind {
+    OpenBooking,
+    PrepareCheckIn,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct FrontDeskQueueItem {
+    pub entry: FrontDeskBoardEntry,
+    pub lane: String,
+    pub title: String,
+    pub detail: String,
+    pub primary_label: String,
+    pub action_kind: FrontDeskActionKind,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct FrontDeskBoard {
+    pub date: NaiveDate,
+    pub arrivals_ready: Vec<FrontDeskBoardEntry>,
+    pub arrivals_blocked: Vec<FrontDeskBoardEntry>,
+    pub departures_today: Vec<FrontDeskBoardEntry>,
+    pub in_house: Vec<FrontDeskBoardEntry>,
+    pub holds_today: Vec<RoomHoldBoardEntry>,
+    pub action_queue: Vec<FrontDeskQueueItem>,
 }
 
 impl Booking {
@@ -102,6 +342,7 @@ mod tests {
             check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),
             total_price_cents: 0,
             status: BookingStatus::Confirmed,
+            operational_data: BookingOperationalData::default(),
         };
 
         assert!(booking.is_valid());
@@ -119,6 +360,7 @@ mod tests {
             check_out: NaiveDate::from_ymd_opt(2025, 1, 10).unwrap(),
             total_price_cents: 0,
             status: BookingStatus::Confirmed,
+            operational_data: BookingOperationalData::default(),
         };
 
         assert!(!booking.is_valid());
@@ -136,11 +378,59 @@ mod tests {
             check_out: NaiveDate::from_ymd_opt(2025, 1, 12).unwrap(),
             total_price_cents: 0,
             status: BookingStatus::Confirmed,
+            operational_data: BookingOperationalData::default(),
         };
 
         let start = NaiveDate::from_ymd_opt(2025, 1, 11).unwrap();
         let end = NaiveDate::from_ymd_opt(2025, 1, 13).unwrap();
         assert!(booking.overlaps_with(start, end));
+    }
+
+    #[test]
+    fn room_status_allows_housekeeping_escalation_to_maintenance() {
+        assert!(RoomStatus::Dirty.can_transition_to(&RoomStatus::Maintenance));
+        assert!(RoomStatus::Cleaning.can_transition_to(&RoomStatus::Maintenance));
+        assert!(RoomStatus::Maintenance.can_transition_to(&RoomStatus::Dirty));
+        assert!(!RoomStatus::Maintenance.can_transition_to(&RoomStatus::Available));
+    }
+
+    #[test]
+    fn booking_status_only_allows_operational_sequence() {
+        assert!(BookingStatus::Confirmed.can_transition_to(&BookingStatus::CheckedIn));
+        assert!(BookingStatus::Confirmed.can_transition_to(&BookingStatus::Cancelled));
+        assert!(BookingStatus::Confirmed.can_transition_to(&BookingStatus::NoShow));
+        assert!(BookingStatus::CheckedIn.can_transition_to(&BookingStatus::CheckedOut));
+        assert!(BookingStatus::CheckedIn.can_transition_to(&BookingStatus::CheckedIn));
+
+        assert!(!BookingStatus::Confirmed.can_transition_to(&BookingStatus::CheckedOut));
+        assert!(!BookingStatus::CheckedIn.can_transition_to(&BookingStatus::Cancelled));
+        assert!(!BookingStatus::CheckedOut.can_transition_to(&BookingStatus::CheckedIn));
+        assert!(!BookingStatus::Cancelled.can_transition_to(&BookingStatus::Confirmed));
+        assert!(!BookingStatus::NoShow.can_transition_to(&BookingStatus::Confirmed));
+    }
+
+    #[test]
+    fn booking_operational_checklists_require_all_confirmations() {
+        let mut data = BookingOperationalData {
+            check_in_guests_count: Some(2),
+            check_in_document_verified: Some(true),
+            check_in_contact_confirmed: Some(true),
+            check_in_stay_confirmed: Some(true),
+            check_out_payment_policy: Some("pending-approved".to_string()),
+            check_out_reference: Some("OPS-123".to_string()),
+            check_out_charges_reviewed: Some(true),
+            check_out_room_release_confirmed: Some(true),
+            check_out_housekeeping_handoff: Some(true),
+            ..BookingOperationalData::default()
+        };
+
+        assert!(data.is_check_in_complete());
+        assert!(data.is_check_out_complete());
+
+        data.check_in_document_verified = Some(false);
+        data.check_out_reference = Some("short".to_string());
+        assert!(!data.is_check_in_complete());
+        assert!(!data.is_check_out_complete());
     }
 }
 
@@ -296,9 +586,26 @@ pub struct Invoice {
     pub hotel_id: Uuid,
     pub booking_id: Uuid,
     pub amount_cents: i64,
+    pub paid_amount_cents: i64,
     pub status: InvoiceStatus,
     pub payment_method: PaymentMethod,
+    pub payment_reference: Option<String>,
+    pub paid_at: Option<chrono::NaiveDateTime>,
     pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct PaymentEntry {
+    pub id: Uuid,
+    pub hotel_id: Uuid,
+    pub invoice_id: Uuid,
+    pub booking_id: Uuid,
+    pub amount_cents: i64,
+    pub payment_method: PaymentMethod,
+    pub payment_reference: Option<String>,
+    pub note: Option<String>,
+    pub received_by_user_id: Option<Uuid>,
+    pub received_at: chrono::NaiveDateTime,
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
@@ -309,9 +616,24 @@ pub struct CashClosure {
     pub total_amount_cents: i64,
     pub cash_amount_cents: i64,
     pub card_amount_cents: i64,
+    pub payment_count: i64,
+    pub counted_cash_amount_cents: i64,
+    pub cash_difference_cents: i64,
     pub opening_time: chrono::NaiveDateTime,
     pub closing_time: chrono::NaiveDateTime,
+    pub handoff_to: String,
     pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, ToSchema)]
+pub struct CashBalanceSnapshot {
+    pub total_amount_cents: i64,
+    pub cash_amount_cents: i64,
+    pub card_amount_cents: i64,
+    pub payment_count: i64,
+    pub opening_time: chrono::NaiveDateTime,
+    pub pending_amount_cents: i64,
+    pub pending_bookings_count: i64,
 }
 
 impl Invoice {
@@ -321,8 +643,11 @@ impl Invoice {
             hotel_id,
             booking_id,
             amount_cents,
+            paid_amount_cents: 0,
             status: InvoiceStatus::Pending,
             payment_method: PaymentMethod::Cash,
+            payment_reference: None,
+            paid_at: None,
             created_at: chrono::Utc::now().naive_utc(),
         }
     }

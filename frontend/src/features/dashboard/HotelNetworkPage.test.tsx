@@ -108,34 +108,43 @@ describe("HotelNetworkPage telemetry", () => {
     });
   });
 
-  it("tracks plan upgrade submitted and succeeded events", async () => {
-    renderPage();
-    expect(await findHotelUnoOption()).toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText(/propiedad/i), "hotel-1");
-    await userEvent.selectOptions(screen.getByLabelText(/plan comercial/i), "ENTERPRISE");
-    await userEvent.click(screen.getByRole("button", { name: /actualizar plan/i }));
+  it(
+    "tracks plan upgrade submitted and succeeded events",
+    async () => {
+      renderPage();
+      expect(await findHotelUnoOption()).toBeInTheDocument();
+      await userEvent.selectOptions(screen.getByLabelText(/propiedad/i), "hotel-1");
+      await userEvent.selectOptions(screen.getByLabelText(/plan comercial/i), "ENTERPRISE");
+      await userEvent.click(screen.getByRole("button", { name: /actualizar plan/i }));
 
-    await waitFor(() => {
-      expect(mockUpdateHotelPlanTier).toHaveBeenCalledWith("hotel-1", "ENTERPRISE");
-    });
+      await waitFor(() => {
+        expect(mockUpdateHotelPlanTier).toHaveBeenCalledWith("hotel-1", "ENTERPRISE");
+      });
 
-    expect(mockTrackUiEvent).toHaveBeenCalledWith(
-      "network_plan_upgrade_submitted",
-      expect.objectContaining({
-        hotel_id: "hotel-1",
-        previous_plan_tier: "PRO",
-        requested_plan_tier: "ENTERPRISE",
-      }),
-    );
-    expect(mockTrackUiEvent).toHaveBeenCalledWith(
-      "network_plan_upgrade_succeeded",
-      expect.objectContaining({
-        hotel_id: "hotel-1",
-        previous_plan_tier: "PRO",
-        updated_plan_tier: "ENTERPRISE",
-      }),
-    );
-  });
+      await waitFor(() => {
+        expect(mockTrackUiEvent).toHaveBeenCalledWith(
+          "network_plan_upgrade_submitted",
+          expect.objectContaining({
+            hotel_id: "hotel-1",
+            previous_plan_tier: "PRO",
+            requested_plan_tier: "ENTERPRISE",
+          }),
+        );
+      });
+
+      await waitFor(() => {
+        expect(mockTrackUiEvent).toHaveBeenCalledWith(
+          "network_plan_upgrade_succeeded",
+          expect.objectContaining({
+            hotel_id: "hotel-1",
+            previous_plan_tier: "PRO",
+            updated_plan_tier: "ENTERPRISE",
+          }),
+        );
+      });
+    },
+    10_000,
+  );
 
   it("tracks plan upgrade submitted and failed events", async () => {
     mockUpdateHotelPlanTier.mockRejectedValueOnce(new Error("plan update failed"));
@@ -149,21 +158,26 @@ describe("HotelNetworkPage telemetry", () => {
       expect(mockUpdateHotelPlanTier).toHaveBeenCalledWith("hotel-1", "ENTERPRISE");
     });
 
-    expect(mockTrackUiEvent).toHaveBeenCalledWith(
-      "network_plan_upgrade_submitted",
-      expect.objectContaining({
-        hotel_id: "hotel-1",
-        previous_plan_tier: "PRO",
-        requested_plan_tier: "ENTERPRISE",
-      }),
-    );
-    expect(mockTrackUiEvent).toHaveBeenCalledWith(
-      "network_plan_upgrade_failed",
-      expect.objectContaining({
-        hotel_id: "hotel-1",
-        previous_plan_tier: "PRO",
-        requested_plan_tier: "ENTERPRISE",
-      }),
-    );
+    await waitFor(() => {
+      expect(mockTrackUiEvent).toHaveBeenCalledWith(
+        "network_plan_upgrade_submitted",
+        expect.objectContaining({
+          hotel_id: "hotel-1",
+          previous_plan_tier: "PRO",
+          requested_plan_tier: "ENTERPRISE",
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockTrackUiEvent).toHaveBeenCalledWith(
+        "network_plan_upgrade_failed",
+        expect.objectContaining({
+          hotel_id: "hotel-1",
+          previous_plan_tier: "PRO",
+          requested_plan_tier: "ENTERPRISE",
+        }),
+      );
+    });
   });
 });

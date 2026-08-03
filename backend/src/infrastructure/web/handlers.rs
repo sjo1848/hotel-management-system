@@ -33,14 +33,19 @@ pub use auth::{login_handler, logout_handler, me_handler, refresh_handler};
 #[path = "handlers/ops.rs"]
 mod ops;
 pub use ops::{
-    add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
-    create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
-    finish_cleaning_handler, get_current_balance_handler, get_feature_flags_handler,
-    get_hotel_network_kpis_handler, get_invoice_by_booking_handler, get_rooms_handler,
-    list_bookings_handler, list_dirty_rooms_handler, list_extra_charges_handler,
-    list_guests_handler, list_hotels_handler, list_invoices_handler, list_users_handler,
-    search_rooms_handler, start_cleaning_handler, update_booking_handler,
-    update_hotel_plan_handler, update_room_status_handler,
+    add_extra_charge_handler, bulk_update_room_status_handler, close_cash_handler,
+    create_booking_handler, create_guest_handler, create_hotel_handler, create_room_handler,
+    create_room_hold_handler, create_user_handler, delete_room_hold_handler, delete_user_handler,
+    finish_cleaning_handler, front_desk_board_handler, get_current_balance_handler,
+    get_feature_flags_handler, get_hotel_network_kpis_handler, get_invoice_by_booking_handler,
+    get_room_handler, get_rooms_handler, housekeeping_board_handler, list_booking_payments_handler,
+    list_bookings_handler, list_cash_closures_handler, list_dirty_rooms_handler,
+    list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
+    list_room_holds_board_handler, list_room_holds_handler, list_users_handler,
+    mark_maintenance_handler, register_booking_payment_handler, return_room_to_dirty_handler,
+    search_rooms_handler, settle_booking_payment_handler, start_cleaning_handler,
+    update_booking_handler, update_hotel_plan_handler, update_room_handler,
+    update_room_hold_handler, update_room_status_handler,
 };
 #[path = "handlers/reporting.rs"]
 mod reporting;
@@ -195,13 +200,38 @@ pub struct BookingFilterParams {
     pub end: Option<NaiveDate>,
 }
 
+#[derive(Deserialize)]
+pub struct FrontDeskBoardQueryParams {
+    pub date: Option<NaiveDate>,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct UpdateBookingRequest {
     pub guest_id: Option<Uuid>,
     pub guest_name: Option<String>,
+    pub room_id: Option<Uuid>,
     pub check_in: Option<NaiveDate>,
     pub check_out: Option<NaiveDate>,
     pub status: Option<String>,
+    pub operational_note: Option<String>,
+    pub front_desk: Option<BookingFrontDeskUpdateRequest>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct BookingFrontDeskUpdateRequest {
+    pub check_in_guests_count: Option<i32>,
+    pub check_in_reference: Option<String>,
+    pub check_in_document_verified: Option<bool>,
+    pub check_in_contact_confirmed: Option<bool>,
+    pub check_in_stay_confirmed: Option<bool>,
+    pub check_out_payment_policy: Option<String>,
+    pub check_out_reference: Option<String>,
+    pub check_out_charges_reviewed: Option<bool>,
+    pub check_out_room_release_confirmed: Option<bool>,
+    pub check_out_housekeeping_handoff: Option<bool>,
+    pub terminal_reason: Option<String>,
+    pub late_arrival_eta: Option<chrono::NaiveDateTime>,
+    pub late_arrival_note: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -262,10 +292,43 @@ pub struct UpdateRoomStatusRequest {
 }
 
 #[derive(Deserialize, ToSchema)]
+pub struct BulkUpdateRoomStatusRequest {
+    pub room_ids: Vec<Uuid>,
+    pub status: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema, Default)]
+pub struct MarkMaintenanceRequest {
+    pub reason: Option<String>,
+    pub priority: Option<String>,
+    pub assigned_to: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema, Default)]
+pub struct ResolveMaintenanceRequest {
+    pub resolution_note: Option<String>,
+}
+
+#[derive(Deserialize, ToSchema)]
 pub struct CreateRoomRequest {
     pub room_number: String,
     pub room_type: String,
     pub price_cents: i64,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct UpdateRoomRequest {
+    pub room_number: String,
+    pub room_type: String,
+    pub price_cents: i64,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct CreateRoomHoldRequest {
+    pub start_date: NaiveDate,
+    pub end_date: NaiveDate,
+    pub hold_type: String,
+    pub reason: String,
 }
 
 #[derive(Deserialize)]
@@ -423,7 +486,24 @@ pub struct AddExtraChargeRequest {
     pub category: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct CashClosureRequest {
     pub notes: Option<String>,
+    pub expected_cash_amount_cents: Option<i64>,
+    pub counted_cash_amount_cents: Option<i64>,
+    pub handoff_to: Option<String>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct SettleBookingPaymentRequest {
+    pub payment_method: String,
+    pub payment_reference: Option<String>,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct RegisterBookingPaymentRequest {
+    pub amount_cents: i64,
+    pub payment_method: String,
+    pub payment_reference: Option<String>,
+    pub note: Option<String>,
 }

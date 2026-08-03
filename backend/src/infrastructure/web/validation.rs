@@ -73,6 +73,7 @@ pub fn parse_booking_status_input(
         Some("CheckedIn") | Some("CHECKED_IN") => Ok(Some(BookingStatus::CheckedIn)),
         Some("CheckedOut") | Some("CHECKED_OUT") => Ok(Some(BookingStatus::CheckedOut)),
         Some("Cancelled") | Some("CANCELLED") => Ok(Some(BookingStatus::Cancelled)),
+        Some("NoShow") | Some("NO_SHOW") => Ok(Some(BookingStatus::NoShow)),
         Some(other) => Err(DomainError::InvalidInput(format!(
             "Estado de reserva inválido: {}",
             other
@@ -84,9 +85,9 @@ pub fn parse_booking_status_input(
 pub fn validate_role(role: &str) -> Result<(), DomainError> {
     let normalized = role.trim().to_lowercase();
     match normalized.as_str() {
-        "admin" | "saas_admin" | "ops" | "receptionist" | "housekeeping" => Ok(()),
+        "admin" | "ops" | "receptionist" | "housekeeping" => Ok(()),
         _ => Err(DomainError::InvalidInput(
-            "Rol inválido. Valores permitidos: admin, saas_admin, ops, receptionist, housekeeping"
+            "Rol tenant inválido. Valores permitidos: admin, ops, receptionist, housekeeping"
                 .to_string(),
         )),
     }
@@ -114,5 +115,16 @@ mod tests {
         let end = chrono::NaiveDate::from_ymd_opt(2026, 2, 14).unwrap();
         let result = validate_date_range(start, end);
         assert!(matches!(result, Err(DomainError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn validate_role_rejects_platform_privilege_escalation() {
+        assert!(matches!(
+            validate_role("saas_admin"),
+            Err(DomainError::InvalidInput(_))
+        ));
+        assert!(validate_role("admin").is_ok());
+        assert!(validate_role("receptionist").is_ok());
+        assert!(validate_role("housekeeping").is_ok());
     }
 }

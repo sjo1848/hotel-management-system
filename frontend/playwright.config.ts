@@ -21,6 +21,9 @@ export default defineConfig({
       : undefined,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    // Playwright's bundled ffmpeg is not present when CI intentionally uses a
+    // system Chromium executable. Traces and screenshots still preserve
+    // failure evidence for that runner.
+    video: chromiumExecutablePath ? "off" : "retain-on-failure",
   },
 });

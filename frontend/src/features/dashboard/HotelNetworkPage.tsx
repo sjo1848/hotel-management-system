@@ -35,6 +35,7 @@ import { getErrorMessage } from "@/api/errors";
 import { useResourceQuery } from "@/lib/useResourceQuery";
 import { useNavigate } from "react-router-dom";
 import { trackUiEvent } from "@/lib/telemetry";
+import { PageHeader } from "@/components/ui/page-header";
 
 type NetworkData = {
   hotels: Hotel[];
@@ -223,32 +224,28 @@ const HotelNetworkPage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-slate-900 rounded-lg shadow-lg">
-              <Globe className="w-5 h-5 text-white" />
-            </div>
-            <h2 className="text-3xl font-black text-foreground tracking-tight leading-none">HQ Multi-Hotel</h2>
-          </div>
-          <p className="text-muted-foreground font-medium mt-2">Consolidado por cadena con benchmark y drill-down por propiedad.</p>
-          {flags ? (
-            <p className="mt-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
-              Plan actual tenant: {flags.plan_tier}
-            </p>
-          ) : null}
-        </div>
+      <PageHeader
+        title="HQ Multi-Hotel"
+        description="Consolidado por cadena con benchmark y drill-down por propiedad."
+        icon={<Globe className="w-5 h-5" />}
+        actions={
+          <Button
+            onClick={() => setIsCreateOpen(true)}
+            className="h-12 gap-2 rounded-xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 transition-all active:scale-95 hover:bg-primary/90"
+          >
+            <Plus className="w-4 h-4" />
+            Añadir Propiedad
+          </Button>
+        }
+      />
 
-        <Button
-          onClick={() => setIsCreateOpen(true)}
-          className="h-12 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-200 transition-all active:scale-95 gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Añadir Propiedad
-        </Button>
-      </div>
+      {flags ? (
+        <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          Plan actual tenant: {flags.plan_tier}
+        </p>
+      ) : null}
 
-      <Card className="border-none shadow-xl shadow-slate-200/60 rounded-3xl bg-card">
+      <Card className="rounded-3xl border border-border bg-card/95 shadow-xl">
         <CardContent className="grid gap-4 p-6 md:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="range-start">Desde</Label>
@@ -427,7 +424,7 @@ const HotelNetworkPage = () => {
                     </div>
                     <Button
                       type="button"
-                      className="w-full rounded-xl bg-slate-900"
+                      className="w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
                       onClick={() => navigate("/reports")}
                     >
                       Abrir Reportes <ArrowRight className="ml-2 h-4 w-4" />
@@ -468,13 +465,15 @@ const HotelNetworkPage = () => {
       )}
 
       <Sheet open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <SheetContent className="bg-card">
-          <SheetHeader className="border-b pb-6">
+        <SheetContent className="w-full overflow-hidden border-l border-border bg-background/95 p-0 shadow-2xl backdrop-blur-xl sm:max-w-[440px]">
+          <div className="flex min-h-0 flex-1 flex-col">
+          <SheetHeader className="border-b border-border px-4 py-5 sm:px-6 sm:py-6">
             <SheetTitle className="text-2xl font-black">Nueva Propiedad</SheetTitle>
             <SheetDescription>Registra un nuevo hotel en la red global.</SheetDescription>
           </SheetHeader>
 
-          <form onSubmit={handleCreateHotel} className="py-8 space-y-6">
+          <form onSubmit={handleCreateHotel} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 sm:py-8">
             <div className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="name">Nombre del Hotel</Label>
@@ -496,13 +495,15 @@ const HotelNetworkPage = () => {
                 />
               </div>
             </div>
+            </div>
 
-            <SheetFooter className="pt-6 border-t">
-              <Button type="submit" disabled={newHotelLoading} className="w-full h-12 rounded-xl bg-slate-900">
+            <SheetFooter className="border-t border-border bg-background/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+              <Button type="submit" disabled={newHotelLoading} className="h-12 w-full rounded-xl bg-primary text-primary-foreground hover:bg-primary/90">
                 {newHotelLoading ? "Guardando..." : "Dar de Alta Propiedad"}
               </Button>
             </SheetFooter>
           </form>
+          </div>
         </SheetContent>
       </Sheet>
     </div>

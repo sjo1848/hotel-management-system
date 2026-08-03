@@ -22,7 +22,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
   const total = nights > 0 ? pricePerNight * nights : 0;
   
   return (
-    <Card className="overflow-hidden border-none shadow-xl shadow-slate-200/50 group bg-card hover:-translate-y-1 transition-all duration-300">
+    <Card className="group overflow-hidden border-none bg-card shadow-xl transition-all duration-300 hover:-translate-y-1">
       <div className="relative h-56 bg-muted overflow-hidden">
         <img
           src={`https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=1000`}
@@ -79,7 +79,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
               <span className="text-xs font-bold">Fibra</span>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-emerald-600">
+          <div className="flex items-center gap-1.5 text-primary">
             <Coffee className="w-4 h-4" />
             <span className="text-xs font-bold">Premium</span>
           </div>
@@ -91,7 +91,7 @@ const RoomCard = ({ room, onBook, disabled = false, nights = 0 }: RoomCardProps)
           className={`w-full h-12 text-sm font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${
             disabled 
               ? "bg-muted text-muted-foreground cursor-not-allowed" 
-              : "bg-slate-900 hover:bg-slate-800 text-white shadow-slate-200"
+              : "bg-primary text-primary-foreground hover:bg-primary/90"
           }`}
           disabled={disabled}
           onClick={onBook}

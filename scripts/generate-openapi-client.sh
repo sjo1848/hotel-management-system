@@ -19,6 +19,18 @@ generate_to_stdout() {
     return 0
   fi
 
+  if command -v docker >/dev/null 2>&1 && docker compose ps frontend >/dev/null 2>&1; then
+    docker compose cp "$OPENAPI_FILE" frontend:/tmp/hms-openapi.yaml >/dev/null 2>&1
+    docker compose exec -T frontend sh -lc '
+      if [ -x /app/node_modules/.bin/openapi-typescript ]; then
+        /app/node_modules/.bin/openapi-typescript /tmp/hms-openapi.yaml
+      else
+        npx --yes --quiet openapi-typescript /tmp/hms-openapi.yaml
+      fi
+    '
+    return 0
+  fi
+
   if command -v docker >/dev/null 2>&1; then
     docker run --rm \
       -v "$ROOT_DIR":/workspace \

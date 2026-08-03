@@ -16,6 +16,7 @@
     "billing.invoices.read",
     "bookings.extra_charges.read",
     "bookings.extra_charges.write",
+    "bookings.checkout.override",
     "bookings.read",
     "bookings.update",
     "bookings.write",
@@ -37,8 +38,6 @@
   ],
   "role_capabilities": {
     "admin": [
-      "saas.hotels.read",
-      "saas.hotels.write",
       "rooms.read",
       "rooms.write",
       "rooms.search",
@@ -46,6 +45,7 @@
       "bookings.read",
       "bookings.write",
       "bookings.update",
+      "bookings.checkout.override",
       "bookings.extra_charges.read",
       "bookings.extra_charges.write",
       "guests.read",

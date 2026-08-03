@@ -16,6 +16,26 @@ impl PostgresRoomRepository {
     }
 }
 
+fn room_status_to_db(status: &RoomStatus) -> &'static str {
+    match status {
+        RoomStatus::Available => "AVAILABLE",
+        RoomStatus::Occupied => "OCCUPIED",
+        RoomStatus::Dirty => "DIRTY",
+        RoomStatus::Cleaning => "CLEANING",
+        RoomStatus::Maintenance => "MAINTENANCE",
+    }
+}
+
+fn room_status_from_db(status: Option<String>) -> RoomStatus {
+    match status.as_deref() {
+        Some("AVAILABLE") => RoomStatus::Available,
+        Some("OCCUPIED") => RoomStatus::Occupied,
+        Some("DIRTY") => RoomStatus::Dirty,
+        Some("CLEANING") => RoomStatus::Cleaning,
+        _ => RoomStatus::Maintenance,
+    }
+}
+
 #[async_trait]
 impl RoomRepository for PostgresRoomRepository {
     async fn create(&self, room: Room) -> Result<Room, String> {
@@ -27,13 +47,7 @@ impl RoomRepository for PostgresRoomRepository {
         .bind(room.hotel_id)
         .bind(&room.room_number)
         .bind(&room.room_type)
-        .bind(match room.status {
-            RoomStatus::Available => "AVAILABLE",
-            RoomStatus::Occupied => "OCCUPIED",
-            RoomStatus::Dirty => "DIRTY",
-            RoomStatus::Cleaning => "CLEANING",
-            RoomStatus::Maintenance => "MAINTENANCE",
-        })
+        .bind(room_status_to_db(&room.status))
         .bind(room.price_cents)
         .execute(&mut *tx)
         .await
@@ -63,12 +77,7 @@ impl RoomRepository for PostgresRoomRepository {
                     hotel_id: rec.try_get("hotel_id").unwrap(),
                     room_number: rec.try_get("room_number").unwrap(),
                     room_type: rec.try_get("room_type").unwrap(),
-                    status: match status.as_deref() {
-                        Some("AVAILABLE") => RoomStatus::Available,
-                        Some("OCCUPIED") => RoomStatus::Occupied,
-                        Some("DIRTY") => RoomStatus::Dirty,
-                        _ => RoomStatus::Maintenance,
-                    },
+                    status: room_status_from_db(status),
                     price_cents: rec.try_get("price_cents").unwrap(),
                 }
             })
@@ -94,13 +103,7 @@ impl RoomRepository for PostgresRoomRepository {
                 hotel_id: rec.try_get("hotel_id").unwrap(),
                 room_number: rec.try_get("room_number").unwrap(),
                 room_type: rec.try_get("room_type").unwrap(),
-                status: match status.as_deref() {
-                    Some("AVAILABLE") => RoomStatus::Available,
-                    Some("OCCUPIED") => RoomStatus::Occupied,
-                    Some("DIRTY") => RoomStatus::Dirty,
-                    Some("CLEANING") => RoomStatus::Cleaning,
-                    _ => RoomStatus::Maintenance,
-                },
+                status: room_status_from_db(status),
                 price_cents: rec.try_get("price_cents").unwrap(),
             }
         }))
@@ -129,16 +132,41 @@ impl RoomRepository for PostgresRoomRepository {
                 hotel_id: rec.try_get("hotel_id").unwrap(),
                 room_number: rec.try_get("room_number").unwrap(),
                 room_type: rec.try_get("room_type").unwrap(),
-                status: match status.as_deref() {
-                    Some("AVAILABLE") => RoomStatus::Available,
-                    Some("OCCUPIED") => RoomStatus::Occupied,
-                    Some("DIRTY") => RoomStatus::Dirty,
-                    Some("CLEANING") => RoomStatus::Cleaning,
-                    _ => RoomStatus::Maintenance,
-                },
+                status: room_status_from_db(status),
                 price_cents: rec.try_get("price_cents").unwrap(),
             }
         }))
+    }
+
+    async fn update(&self, room: Room) -> Result<Room, String> {
+        let mut tx = begin_tenant_tx(&self.pool, room.hotel_id).await?;
+        let status_str = match room.status {
+            RoomStatus::Available => "AVAILABLE",
+            RoomStatus::Occupied => "OCCUPIED",
+            RoomStatus::Dirty => "DIRTY",
+            RoomStatus::Cleaning => "CLEANING",
+            RoomStatus::Maintenance => "MAINTENANCE",
+        };
+
+        let result = sqlx::query(
+            "UPDATE rooms SET room_number = $1, room_type = $2, status = $3, price_cents = $4 WHERE hotel_id = $5 AND id = $6",
+        )
+        .bind(&room.room_number)
+        .bind(&room.room_type)
+        .bind(status_str)
+        .bind(room.price_cents)
+        .bind(room.hotel_id)
+        .bind(room.id)
+        .execute(&mut *tx)
+        .await
+        .map_err(map_db_error)?;
+
+        if result.rows_affected() == 0 {
+            return Err("ROOM_NOT_FOUND".to_string());
+        }
+
+        tx.commit().await.map_err(|e| e.to_string())?;
+        Ok(room)
     }
 
     async fn update_status(
@@ -148,13 +176,7 @@ impl RoomRepository for PostgresRoomRepository {
         status: RoomStatus,
     ) -> Result<(), String> {
         let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
-        let status_str = match status {
-            RoomStatus::Available => "AVAILABLE",
-            RoomStatus::Occupied => "OCCUPIED",
-            RoomStatus::Dirty => "DIRTY",
-            RoomStatus::Cleaning => "CLEANING",
-            RoomStatus::Maintenance => "MAINTENANCE",
-        };
+        let status_str = room_status_to_db(&status);
 
         let result = sqlx::query("UPDATE rooms SET status = $1 WHERE hotel_id = $2 AND id = $3")
             .bind(status_str)
@@ -170,6 +192,30 @@ impl RoomRepository for PostgresRoomRepository {
         tx.commit().await.map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+
+    async fn update_status_bulk(
+        &self,
+        hotel_id: Uuid,
+        ids: &[Uuid],
+        status: RoomStatus,
+    ) -> Result<usize, String> {
+        if ids.is_empty() {
+            return Ok(0);
+        }
+
+        let mut tx = begin_tenant_tx(&self.pool, hotel_id).await?;
+        let result =
+            sqlx::query("UPDATE rooms SET status = $1 WHERE hotel_id = $2 AND id = ANY($3)")
+                .bind(room_status_to_db(&status))
+                .bind(hotel_id)
+                .bind(ids)
+                .execute(&mut *tx)
+                .await
+                .map_err(|e| e.to_string())?;
+        tx.commit().await.map_err(|e| e.to_string())?;
+
+        Ok(result.rows_affected() as usize)
     }
 
     async fn find_available(
@@ -192,7 +238,15 @@ impl RoomRepository for PostgresRoomRepository {
                     AND b.room_id = r.id
                     AND b.check_in < $3
                     AND b.check_out > $2
-                    AND b.status != 'CANCELLED'
+                    AND b.status NOT IN ('CANCELLED', 'NO_SHOW')
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM room_holds h
+                  WHERE h.hotel_id = $1
+                    AND h.room_id = r.id
+                    AND h.start_date < $3
+                    AND h.end_date > $2
               )
             "#,
         )
@@ -213,12 +267,7 @@ impl RoomRepository for PostgresRoomRepository {
                     hotel_id: rec.try_get("hotel_id").unwrap(),
                     room_number: rec.try_get("room_number").unwrap(),
                     room_type: rec.try_get("room_type").unwrap(),
-                    status: match status.as_deref() {
-                        Some("AVAILABLE") => RoomStatus::Available,
-                        Some("OCCUPIED") => RoomStatus::Occupied,
-                        Some("DIRTY") => RoomStatus::Dirty,
-                        _ => RoomStatus::Maintenance,
-                    },
+                    status: room_status_from_db(status),
                     price_cents: rec.try_get("price_cents").unwrap(),
                 }
             })

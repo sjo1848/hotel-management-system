@@ -1,7 +1,8 @@
 use crate::domain::errors::DomainError;
 use crate::domain::models::{
-    AuditEvent, Booking, BookingStatus, CashClosure, ExtraCharge, Guest, Hotel, Invoice,
-    RefreshToken, Room, User,
+    AuditEvent, Booking, BookingOperationalUpdate, BookingStatus, CashClosure, ExtraCharge, Guest,
+    Hotel, Invoice, MaintenanceCase, MaintenancePriority, PaymentEntry, RefreshToken, Room,
+    RoomHold, RoomHoldBoardEntry, User,
 };
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -28,18 +29,67 @@ pub trait RoomRepository: Send + Sync {
         hotel_id: Uuid,
         room_number: &str,
     ) -> Result<Option<Room>, String>;
+    async fn update(&self, room: Room) -> Result<Room, String>;
     async fn update_status(
         &self,
         hotel_id: Uuid,
         id: Uuid,
         status: crate::domain::models::RoomStatus,
     ) -> Result<(), String>;
+    async fn update_status_bulk(
+        &self,
+        hotel_id: Uuid,
+        ids: &[Uuid],
+        status: crate::domain::models::RoomStatus,
+    ) -> Result<usize, String>;
     async fn find_available(
         &self,
         hotel_id: Uuid,
         start: NaiveDate,
         end: NaiveDate,
     ) -> Result<Vec<Room>, String>;
+}
+
+#[async_trait]
+pub trait MaintenanceCaseRepository: Send + Sync {
+    async fn find_open_by_hotel(&self, hotel_id: Uuid) -> Result<Vec<MaintenanceCase>, String>;
+    async fn open_case(
+        &self,
+        hotel_id: Uuid,
+        room_id: Uuid,
+        actor_user_id: Uuid,
+        priority: MaintenancePriority,
+        reason: String,
+        assigned_to: String,
+    ) -> Result<MaintenanceCase, DomainError>;
+    async fn resolve_open_case(
+        &self,
+        hotel_id: Uuid,
+        room_id: Uuid,
+        actor_user_id: Uuid,
+        resolution_note: String,
+    ) -> Result<MaintenanceCase, DomainError>;
+}
+
+#[async_trait]
+pub trait RoomHoldRepository: Send + Sync {
+    async fn create(&self, hold: RoomHold) -> Result<RoomHold, String>;
+    async fn find_by_room(&self, hotel_id: Uuid, room_id: Uuid) -> Result<Vec<RoomHold>, String>;
+    async fn find_in_range(
+        &self,
+        hotel_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<Vec<RoomHoldBoardEntry>, String>;
+    async fn update(&self, hold: RoomHold) -> Result<RoomHold, String>;
+    async fn delete(&self, hotel_id: Uuid, room_id: Uuid, hold_id: Uuid) -> Result<(), String>;
+    async fn overlaps(
+        &self,
+        hotel_id: Uuid,
+        room_id: Uuid,
+        start: NaiveDate,
+        end: NaiveDate,
+    ) -> Result<bool, String>;
 }
 
 #[async_trait]
@@ -98,9 +148,12 @@ pub trait BookingTransactionRepository: Send + Sync {
         actor_user_id: Option<Uuid>,
         guest_id: Option<Uuid>,
         guest_name: Option<String>,
+        room_id: Option<Uuid>,
         check_in: Option<NaiveDate>,
         check_out: Option<NaiveDate>,
         status: Option<BookingStatus>,
+        operational_note: Option<String>,
+        operational_update: Option<BookingOperationalUpdate>,
     ) -> Result<Booking, DomainError>;
 }
 
@@ -168,6 +221,16 @@ pub trait ExtraChargeRepository: Send + Sync {
 #[async_trait]
 pub trait InvoiceRepository: Send + Sync {
     async fn save(&self, invoice: Invoice) -> Result<Invoice, String>;
+    async fn update(&self, invoice: Invoice) -> Result<Invoice, String>;
+    async fn settle_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+        amount_cents: i64,
+        payment_method: crate::domain::models::PaymentMethod,
+        payment_reference: Option<String>,
+        paid_at: chrono::NaiveDateTime,
+    ) -> Result<Invoice, String>;
     async fn find_by_booking(
         &self,
         hotel_id: Uuid,
@@ -175,10 +238,32 @@ pub trait InvoiceRepository: Send + Sync {
     ) -> Result<Option<Invoice>, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<Invoice>, String>;
     async fn get_unclosed_total(&self, hotel_id: Uuid) -> Result<(i64, i64, i64), String>; // Total, Cash, Card
+    async fn get_outstanding_summary(&self, hotel_id: Uuid) -> Result<(i64, i64), String>;
+}
+
+#[async_trait]
+pub trait PaymentEntryRepository: Send + Sync {
+    async fn add(&self, entry: PaymentEntry) -> Result<PaymentEntry, String>;
+    async fn find_by_booking(
+        &self,
+        hotel_id: Uuid,
+        booking_id: Uuid,
+    ) -> Result<Vec<PaymentEntry>, String>;
+    async fn get_unclosed_summary(
+        &self,
+        hotel_id: Uuid,
+        opening_time: chrono::NaiveDateTime,
+    ) -> Result<(i64, i64, i64, i64), String>;
+    async fn get_earliest_unclosed_payment_at(
+        &self,
+        hotel_id: Uuid,
+        opening_time: chrono::NaiveDateTime,
+    ) -> Result<Option<chrono::NaiveDateTime>, String>;
 }
 
 #[async_trait]
 pub trait CashClosureRepository: Send + Sync {
     async fn create(&self, closure: CashClosure) -> Result<CashClosure, String>;
     async fn find_all(&self, hotel_id: Uuid) -> Result<Vec<CashClosure>, String>;
+    async fn find_latest(&self, hotel_id: Uuid) -> Result<Option<CashClosure>, String>;
 }

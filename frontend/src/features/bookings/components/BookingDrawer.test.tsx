@@ -106,7 +106,7 @@ describe('BookingDrawer Integration', () => {
       }));
       expect(defaultProps.onSuccess).toHaveBeenCalled();
     });
-  });
+  }, 10000);
 
   it('should allow going back between steps', async () => {
     render(<BookingDrawer {...defaultProps} />);

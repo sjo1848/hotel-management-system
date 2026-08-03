@@ -1,7 +1,8 @@
 use crate::application::audit_service::AuditService;
+use crate::application::room_hold_service::RoomHoldService;
 use crate::application::room_service::RoomService;
 use crate::domain::errors::DomainError;
-use crate::domain::models::{Booking, BookingStatus, Invoice, RoomStatus};
+use crate::domain::models::{Booking, BookingOperationalData, BookingStatus, Invoice, RoomStatus};
 use crate::domain::repositories::{
     BookingRepository, GuestRepository, InvoiceRepository, RoomRepository,
 };
@@ -14,6 +15,7 @@ pub struct BookingService {
     room_repo: Arc<dyn RoomRepository>,
     guest_repo: Arc<dyn GuestRepository>,
     room_service: Arc<RoomService>,
+    room_hold_service: Arc<RoomHoldService>,
     audit_service: Arc<AuditService>,
     invoice_repo: Arc<dyn InvoiceRepository>,
 }
@@ -24,6 +26,7 @@ impl BookingService {
         room_repo: Arc<dyn RoomRepository>,
         guest_repo: Arc<dyn GuestRepository>,
         room_service: Arc<RoomService>,
+        room_hold_service: Arc<RoomHoldService>,
         audit_service: Arc<AuditService>,
         invoice_repo: Arc<dyn InvoiceRepository>,
     ) -> Self {
@@ -32,6 +35,7 @@ impl BookingService {
             room_repo,
             guest_repo,
             room_service,
+            room_hold_service,
             audit_service,
             invoice_repo,
         }
@@ -80,6 +84,14 @@ impl BookingService {
             return Err(DomainError::RoomNotAvailable);
         }
 
+        let has_hold = self
+            .room_hold_service
+            .has_hold_overlap(hotel_id, room_id, check_in, check_out)
+            .await?;
+        if has_hold {
+            return Err(DomainError::RoomNotAvailable);
+        }
+
         let mut new_booking = Booking {
             id: Uuid::new_v4(),
             hotel_id,
@@ -90,6 +102,7 @@ impl BookingService {
             check_out,
             total_price_cents: 0,
             status: BookingStatus::Confirmed,
+            operational_data: BookingOperationalData::default(),
         };
 
         if !new_booking.is_valid() {
@@ -160,6 +173,12 @@ impl BookingService {
         }
 
         if let Some(new_status) = status {
+            if new_status != booking.status {
+                return Err(DomainError::InvalidInput(
+                    "Las transiciones operativas requieren el servicio transaccional de reservas"
+                        .to_string(),
+                ));
+            }
             booking.status = new_status;
         }
 

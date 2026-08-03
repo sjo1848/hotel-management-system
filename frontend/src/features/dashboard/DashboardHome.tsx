@@ -13,6 +13,8 @@ import {
   type RevenueReportItem,
 } from "@/features/dashboard/services/analyticsService";
 import { closeCash, getCashBalance, type CashBalance } from "@/features/dashboard/services/billingService";
+import type { CloseCashRequest } from "@/features/dashboard/services/billingService";
+import CashShiftCloseSheet from "@/features/dashboard/components/CashShiftCloseSheet";
 import { getFeatureFlags, type TenantFeatureFlags } from "@/features/dashboard/services/hotelService";
 import { getDirtyRooms } from "@/features/housekeeping/services/housekeepingService";
 import { useToast } from "@/components/ui/toast";
@@ -33,6 +35,7 @@ const DashboardHome = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isClosing, setIsClosing] = useState(false);
+  const [isCashCloseOpen, setIsCashCloseOpen] = useState(false);
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const hasTrackedLoadFailureRef = useRef(false);
@@ -60,7 +63,6 @@ const DashboardHome = () => {
     isLoading: loading,
     error: dashboardError,
     refetch: refetchDashboard,
-    invalidate: invalidateDashboard,
   } = useResourceQuery<DashboardData>({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: async () => {
@@ -189,8 +191,8 @@ const DashboardHome = () => {
         id: "pricing-health",
         title: "Pricing asistido estable",
         description: "Sin alertas críticas. Mantener monitoreo de ADR y RevPAR por segmento.",
-        actionLabel: "Abrir dashboard HQ",
-        route: "/network",
+        actionLabel: "Abrir tendencias",
+        route: "/reports",
         severity: "low",
       });
     }
@@ -225,28 +227,27 @@ const DashboardHome = () => {
     });
   }, [dailyPriorities.length, dashboardError, kpis]);
 
-  const handleCloseCash = useCallback(async () => {
-    if (!confirm("¿Deseas realizar el cierre de caja ahora? Se reseteará el balance para el próximo turno.")) {
-      return;
-    }
+  const handleCloseCash = useCallback(async (request: CloseCashRequest) => {
     setIsClosing(true);
     try {
-      await closeCash("Cierre manual desde dashboard");
+      const closure = await closeCash(request);
       trackUiEvent("close_cash_success", {
         total_amount_cents: balance?.total_amount_cents ?? 0,
+        cash_difference_cents: closure.cash_difference_cents,
       });
-      toast({ title: "Caja cerrada", description: "El reporte ha sido generado correctamente", variant: "success" });
-      invalidateDashboard();
+      toast({ title: "Turno cerrado", description: "Arqueo y handoff registrados correctamente", variant: "success" });
       await refetchDashboard();
+      return true;
     } catch (error) {
       trackUiEvent("close_cash_failure", {
         message: getErrorMessage(error, "No se pudo cerrar la caja"),
       });
       toast({ title: "Error", description: "No se pudo cerrar la caja", variant: "error" });
+      return false;
     } finally {
       setIsClosing(false);
     }
-  }, [balance?.total_amount_cents, invalidateDashboard, refetchDashboard, toast]);
+  }, [balance?.total_amount_cents, refetchDashboard, toast]);
 
   const handleRetryDashboard = useCallback(() => {
     trackUiEvent("dashboard_retry_clicked");
@@ -254,9 +255,8 @@ const DashboardHome = () => {
   }, [refetchDashboard]);
 
   const handleDrawerSuccess = useCallback(async () => {
-    invalidateDashboard();
     await refetchDashboard();
-  }, [invalidateDashboard, refetchDashboard]);
+  }, [refetchDashboard]);
 
   const handleAlertSelect = useCallback((bookingId: string) => {
     setSelectedBookingId(bookingId);
@@ -292,7 +292,8 @@ const DashboardHome = () => {
   );
 
   return (
-    <DashboardHomeView
+    <>
+      <DashboardHomeView
       loading={loading}
       loadError={loadError}
       isClosing={isClosing}
@@ -307,13 +308,22 @@ const DashboardHome = () => {
       selectedBookingId={selectedBookingId}
       onRetry={handleRetryDashboard}
       onNavigateBookings={() => navigate("/bookings")}
-      onCloseCash={() => void handleCloseCash()}
+      onCloseCash={() => setIsCashCloseOpen(true)}
       onRevenueCtaClick={handleRevenueCtaClick}
       onAutomationAction={handleAutomationAction}
       onAlertSelect={handleAlertSelect}
       onDrawerClose={handleDrawerClose}
       onDrawerSuccess={handleDrawerSuccess}
-    />
+      />
+      <CashShiftCloseSheet
+        open={isCashCloseOpen}
+        expectedCashAmountCents={balance?.cash_amount_cents ?? 0}
+        paymentCount={balance?.payment_count ?? 0}
+        isSubmitting={isClosing}
+        onOpenChange={setIsCashCloseOpen}
+        onSubmit={handleCloseCash}
+      />
+    </>
   );
 };
 

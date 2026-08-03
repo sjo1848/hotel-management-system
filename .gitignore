@@ -7,6 +7,8 @@ backend/target/
 # --- NODE/REACT ---
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
+frontend/test-results/
 frontend/.env.local
 frontend/package-lock.json.backup
 frontend/coverage/
@@ -20,6 +22,7 @@ hms_pgdata/
 .env
 .env.*
 !.env.example
+!.env.*.example
 
 # --- BACKUPS & SECRETS (Critical) ---
 scripts/backups/*.sql.gz
@@ -30,6 +33,8 @@ login_headers.txt
 # --- PRIVATE DOCUMENTATION & TEMP ---
 archivos/
 conductor/
+output/playwright/
+frontend/output/playwright/
 
 # --- OS ---
 .DS_Store

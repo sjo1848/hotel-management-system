@@ -20,17 +20,22 @@ use utoipa_swagger_ui::SwaggerUi;
 
 use crate::app_state::AppState;
 use crate::infrastructure::web::handlers::{
-    add_extra_charge_handler, close_cash_handler, create_booking_handler, create_guest_handler,
-    create_hotel_handler, create_room_handler, create_user_handler, delete_user_handler,
-    finish_cleaning_handler, get_audit_events_handler, get_current_balance_handler,
-    get_dashboard_kpis_handler, get_feature_flags_handler, get_hotel_network_kpis_handler,
-    get_invoice_by_booking_handler, get_occupancy_report_handler, get_revenue_report_handler,
-    get_rooms_handler, health_check, list_bookings_handler, list_dirty_rooms_handler,
-    list_extra_charges_handler, list_guests_handler, list_hotels_handler, list_invoices_handler,
-    list_users_handler, login_handler, logout_handler, me_handler, readiness_check,
-    refresh_handler, root_handler, search_rooms_handler, start_cleaning_handler,
+    add_extra_charge_handler, bulk_update_room_status_handler, close_cash_handler,
+    create_booking_handler, create_guest_handler, create_hotel_handler, create_room_handler,
+    create_room_hold_handler, create_user_handler, delete_room_hold_handler, delete_user_handler,
+    finish_cleaning_handler, front_desk_board_handler, get_audit_events_handler,
+    get_current_balance_handler, get_dashboard_kpis_handler, get_feature_flags_handler,
+    get_hotel_network_kpis_handler, get_invoice_by_booking_handler, get_occupancy_report_handler,
+    get_revenue_report_handler, get_room_handler, get_rooms_handler, health_check,
+    housekeeping_board_handler, list_booking_payments_handler, list_bookings_handler,
+    list_cash_closures_handler, list_dirty_rooms_handler, list_extra_charges_handler,
+    list_guests_handler, list_hotels_handler, list_invoices_handler, list_room_holds_board_handler,
+    list_room_holds_handler, list_users_handler, login_handler, logout_handler,
+    mark_maintenance_handler, me_handler, readiness_check, refresh_handler,
+    register_booking_payment_handler, return_room_to_dirty_handler, root_handler,
+    search_rooms_handler, settle_booking_payment_handler, start_cleaning_handler,
     track_ui_telemetry_handler, update_booking_handler, update_hotel_plan_handler,
-    update_room_status_handler,
+    update_room_handler, update_room_hold_handler, update_room_status_handler,
 };
 use crate::infrastructure::web::middleware::{
     api_contract::api_contract_headers_middleware,
@@ -142,14 +147,44 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(search_rooms_handler).layer(middleware::from_fn(rooms_search)),
         )
         .route(
+            "/api/v1/rooms/holds/board",
+            get(list_room_holds_board_handler).layer(middleware::from_fn(rooms_read)),
+        )
+        .route(
+            "/api/v1/rooms/bulk-status",
+            post(bulk_update_room_status_handler).layer(middleware::from_fn(rooms_status_write)),
+        )
+        .route(
+            "/api/v1/rooms/:id",
+            get(get_room_handler)
+                .layer(middleware::from_fn(rooms_read))
+                .merge(patch(update_room_handler).layer(middleware::from_fn(rooms_write))),
+        )
+        .route(
             "/api/v1/rooms/:id/status",
             patch(update_room_status_handler).layer(middleware::from_fn(rooms_status_write)),
+        )
+        .route(
+            "/api/v1/rooms/:id/holds",
+            get(list_room_holds_handler)
+                .layer(middleware::from_fn(rooms_read))
+                .merge(post(create_room_hold_handler).layer(middleware::from_fn(rooms_write))),
+        )
+        .route(
+            "/api/v1/rooms/:id/holds/:hold_id",
+            delete(delete_room_hold_handler)
+                .layer(middleware::from_fn(rooms_write))
+                .merge(patch(update_room_hold_handler).layer(middleware::from_fn(rooms_write))),
         )
         .route(
             "/api/v1/bookings",
             get(list_bookings_handler)
                 .layer(middleware::from_fn(bookings_read))
                 .merge(post(create_booking_handler).layer(middleware::from_fn(bookings_write))),
+        )
+        .route(
+            "/api/v1/front-desk/board",
+            get(front_desk_board_handler).layer(middleware::from_fn(bookings_read)),
         )
         .route(
             "/api/v1/bookings/:id",
@@ -193,6 +228,10 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(get_current_balance_handler).layer(middleware::from_fn(billing_balance_read)),
         )
         .route(
+            "/api/v1/billing/closures",
+            get(list_cash_closures_handler).layer(middleware::from_fn(billing_balance_read)),
+        )
+        .route(
             "/api/v1/billing/close-cash",
             post(close_cash_handler).layer(middleware::from_fn(billing_close_cash_write)),
         )
@@ -205,8 +244,25 @@ pub fn create_router(state: Arc<AppState>) -> Router {
             get(get_invoice_by_booking_handler).layer(middleware::from_fn(invoice_read)),
         )
         .route(
+            "/api/v1/bookings/:id/payments",
+            get(list_booking_payments_handler)
+                .layer(middleware::from_fn(invoice_read))
+                .merge(
+                    post(register_booking_payment_handler)
+                        .layer(middleware::from_fn(bookings_update)),
+                ),
+        )
+        .route(
+            "/api/v1/bookings/:id/settle-payment",
+            post(settle_booking_payment_handler).layer(middleware::from_fn(bookings_update)),
+        )
+        .route(
             "/api/v1/housekeeping/dirty",
             get(list_dirty_rooms_handler).layer(middleware::from_fn(housekeeping_read)),
+        )
+        .route(
+            "/api/v1/housekeeping/board",
+            get(housekeeping_board_handler).layer(middleware::from_fn(housekeeping_read)),
         )
         .route(
             "/api/v1/housekeeping/:id/start",
@@ -215,6 +271,14 @@ pub fn create_router(state: Arc<AppState>) -> Router {
         .route(
             "/api/v1/housekeeping/:id/finish",
             post(finish_cleaning_handler).layer(middleware::from_fn(housekeeping_write)),
+        )
+        .route(
+            "/api/v1/housekeeping/:id/maintenance",
+            post(mark_maintenance_handler).layer(middleware::from_fn(housekeeping_write)),
+        )
+        .route(
+            "/api/v1/housekeeping/:id/dirty",
+            post(return_room_to_dirty_handler).layer(middleware::from_fn(housekeeping_write)),
         )
         .route(
             "/api/v1/reports/revenue",

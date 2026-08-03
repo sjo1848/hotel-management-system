@@ -74,6 +74,24 @@ services:
     networks:
       - hms-net
 
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.58.2-noble
+    profiles:
+      - qa
+    working_dir: /work
+    volumes:
+      - ./frontend:/work
+    environment:
+      PLAYWRIGHT_BASE_URL: ${PLAYWRIGHT_BASE_URL:-http://hms-frontend:5173}
+      E2E_HOTEL_ID: ${E2E_HOTEL_ID:-00000000-0000-0000-0000-000000000001}
+      E2E_USERNAME: ${E2E_USERNAME:-admin}
+      E2E_PASSWORD: ${E2E_PASSWORD:-demo2026pass}
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - hms-net
+
   prometheus:
     image: prom/prometheus:v2.53.5
     container_name: hms-prometheus
