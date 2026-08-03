@@ -11,12 +11,11 @@ RUNNER="${RUNNER:-auto}"
 
 usage() {
   cat <<USAGE
-Usage: $0 [--runner host|docker]
 Usage: $0 [--runner auto|host|docker]
 
 Options:
   --runner MODE   Execution mode for tests.
-                  auto   -> prefer docker when compose backend is available (default)
+                  auto   -> use docker only when the compose backend is running (default)
                   host   -> run cargo tests on host
                   docker -> run cargo tests via docker compose backend container
   -h, --help      Show this help
@@ -53,7 +52,7 @@ resolve_runner() {
   fi
 
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
-    if docker compose config --services 2>/dev/null | grep -qx backend; then
+    if docker compose ps --status running --services 2>/dev/null | grep -qx backend; then
       echo "docker"
       return
     fi
