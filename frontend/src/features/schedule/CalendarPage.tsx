@@ -1,114 +1,120 @@
-import { useState, useEffect } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, BedDouble } from "lucide-react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { addDays, format, parseISO, startOfToday } from "date-fns";
+import { es } from "date-fns/locale";
+import { CalendarDays, ChevronLeft, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getAllRooms } from "@/features/rooms/services/roomService";
-import { getBookings } from "@/features/bookings/services/bookingService";
-import { Room, Booking } from "@/types/domain";
-import TapeChart from "./TapeChart";
-import BookingDetailsSheet from "../bookings/components/BookingDetailsSheet";
 import { PageHeader } from "@/components/ui/page-header";
+import { SectionCard } from "@/components/ui/section-card";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import { useResourceQuery } from "@/lib/useResourceQuery";
+import { AuthContext } from "@/features/auth/AuthContext";
+import { roleHasCapability } from "@/features/auth/capabilities";
+import { listRooms, getRoomHoldBoard } from "@/features/rooms/services/roomService";
+import { getBookings, updateBooking } from "@/features/bookings/services/bookingService";
+import BookingDetailsSheet from "@/features/bookings/components/BookingDetailsSheet";
+import type { Booking, Room, RoomHoldBoardEntry } from "@/types/domain";
+import CalendarAgenda from "./CalendarAgenda";
+import CalendarTimeline from "./CalendarTimeline";
+import {
+  buildCalendarAllocations,
+  calendarSummary,
+  type CalendarAllocation,
+  type CalendarConflict,
+} from "./calendarModel";
+
+type CalendarMode = "timeline" | "agenda";
+type RangeDays = 7 | 14 | 30;
 
 const CalendarPage = () => {
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const { user } = useContext(AuthContext);
+  const isDesktop = useMediaQuery("(min-width: 1280px)");
+  const canUpdate = roleHasCapability(user?.role, "bookings.update");
+  const canReadRooms = roleHasCapability(user?.role, "rooms.read");
+  const today = format(startOfToday(), "yyyy-MM-dd");
+  const [startDate, setStartDate] = useState(today);
+  const [rangeDays, setRangeDays] = useState<RangeDays>(14);
+  const [mode, setMode] = useState<CalendarMode>("agenda");
+  const [modeTouched, setModeTouched] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [search, setSearch] = useState("");
+  const [includeInactive, setIncludeInactive] = useState(false);
+  const [onlyConflicts, setOnlyConflicts] = useState(false);
+  const [onlyOutOfService, setOnlyOutOfService] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedContext, setSelectedContext] = useState<CalendarAllocation | CalendarConflict | null>(null);
+  const selectionReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [roomsData, bookingsData] = await Promise.all([
-          getAllRooms(),
-          getBookings(),
-        ]);
-        setRooms(roomsData);
-        setBookings(bookingsData);
-      } catch (error) {
-        console.error("Error fetching data for calendar", error);
-      }
-    };
-    fetchData();
-  }, []);
+    if (!modeTouched) setMode(isDesktop ? "timeline" : "agenda");
+  }, [isDesktop, modeTouched]);
+
+  const endDate = useMemo(() => format(addDays(parseISO(startDate), rangeDays), "yyyy-MM-dd"), [rangeDays, startDate]);
+  const dateKeys = useMemo(() => buildCalendarAllocations([], [], [], { startDate, rangeDays }).dates, [rangeDays, startDate]);
+  useEffect(() => setSelectedDate(dateKeys[0] ?? startDate), [dateKeys, startDate]);
+
+  const roomsQuery = useResourceQuery<Room[]>({ queryKey: "calendar:rooms", queryFn: listRooms, staleTimeMs: 30_000, retry: false });
+  const bookingsKey = `calendar:bookings:${startDate}:${endDate}`;
+  const bookingsQuery = useResourceQuery<Booking[]>({ queryKey: bookingsKey, queryFn: () => getBookings(startDate, endDate), retry: false });
+  const holdsKey = `calendar:holds:${startDate}:${endDate}`;
+  const holdsQuery = useResourceQuery<RoomHoldBoardEntry[]>({ queryKey: holdsKey, queryFn: () => getRoomHoldBoard(startDate, endDate), enabled: canReadRooms, retry: false });
+
+  const rooms = roomsQuery.data ?? [];
+  const bookings = bookingsQuery.data ?? [];
+  const holds = holdsQuery.data ?? [];
+  const model = useMemo(() => buildCalendarAllocations(rooms, bookings, holds, { startDate, rangeDays }, includeInactive), [bookings, holds, includeInactive, rangeDays, rooms, startDate]);
+  const filteredRooms = useMemo(() => rooms.filter((room) => {
+    const allocations = model.allocationsByRoom.get(room.id) ?? [];
+    const searchable = `${room.room_number} ${room.room_type} ${allocations.map((item) => item.kind === "booking" ? item.booking.guest_name : item.hold.hold_type).join(" ")}`.toLowerCase();
+    if (search && !searchable.includes(search.toLowerCase())) return false;
+    if (onlyOutOfService && room.status !== "Dirty" && room.status !== "Maintenance") return false;
+    if (onlyConflicts && !model.conflicts.some((conflict) => conflict.roomId === room.id)) return false;
+    return true;
+  }).sort((left, right) => left.room_number.localeCompare(right.room_number, "es", { numeric: true })), [model, onlyConflicts, onlyOutOfService, rooms, search]);
+  const filteredRoomIds = new Set(filteredRooms.map((room) => room.id));
+  const filteredItems = useMemo(() => (model.allocationsByDate.get(selectedDate) ?? []).filter((item) => filteredRoomIds.has(item.room.id)), [filteredRoomIds, model.allocationsByDate, selectedDate]);
+  const summary = useMemo(() => calendarSummary({ ...model, allocationsByRoom: new Map([...model.allocationsByRoom].filter(([roomId]) => filteredRoomIds.has(roomId))) }, filteredRooms), [filteredRoomIds, filteredRooms, model]);
+  const hasLoading = roomsQuery.isLoading || bookingsQuery.isLoading || (canReadRooms && holdsQuery.isLoading);
+  const retryAll = () => {
+    void roomsQuery.refetch();
+    void bookingsQuery.refetch();
+    if (canReadRooms) void holdsQuery.refetch();
+  };
+  const moveRange = (delta: number) => setStartDate(format(addDays(parseISO(startDate), delta * rangeDays), "yyyy-MM-dd"));
+  const selectContext = (context: CalendarAllocation | CalendarConflict) => {
+    selectionReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSelectedContext(context);
+    if ("kind" in context && context.kind === "booking") setSelectedBooking(context.booking);
+    else setSelectedBooking(null);
+  };
+  const clearFilters = () => { setSearch(""); setIncludeInactive(false); setOnlyConflicts(false); setOnlyOutOfService(false); };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-700">
-      <PageHeader
-        title="Calendario Maestro"
-        description="Vista de ocupación y disponibilidad en formato de cinta."
-        icon={<CalendarDays className="h-5 w-5" />}
-        actions={
-          <div className="flex w-full gap-2 sm:w-auto">
-            <Button variant="outline" size="sm" className="h-10 flex-1 sm:flex-none">
-              <ChevronLeft className="w-4 h-4 mr-2" /> Anterior
-            </Button>
-            <Button variant="outline" size="sm" className="h-10 flex-1 sm:flex-none">
-              Siguiente <ChevronRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
-        }
-      />
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-4 sm:gap-6">
-        {/* Sidebar Informativa */}
-        <div className="xl:col-span-1 space-y-6">
-          <Card className="overflow-hidden rounded-3xl border border-border bg-card/95 shadow-xl">
-            <CardHeader className="border-b border-border bg-muted/40 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Estadísticas</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <BedDouble className="w-4 h-4" />
-                  <span className="text-sm font-bold">Total Habitaciones</span>
-                </div>
-                <span className="text-lg font-black text-foreground">{rooms.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <CalendarDays className="w-4 h-4" />
-                  <span className="text-sm font-bold">Reservas Activas</span>
-                </div>
-                <span className="text-lg font-black text-primary">{bookings.length}</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="overflow-hidden rounded-3xl border border-border bg-card/95 shadow-xl">
-            <CardHeader className="border-b border-border bg-muted/40 py-4 px-6">
-              <CardTitle className="text-sm font-black uppercase tracking-widest text-muted-foreground">Leyenda</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded bg-indigo-500 shadow-sm" />
-                <span className="text-xs font-bold text-muted-foreground uppercase">Confirmada</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded bg-emerald-500 shadow-sm" />
-                <span className="text-xs font-bold text-muted-foreground uppercase">Check-in</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded bg-rose-200 shadow-sm" />
-                <span className="text-xs font-bold uppercase text-rose-700 dark:text-rose-300">Cancelada</span>
-              </div>
-            </CardContent>
-          </Card>
+    <div className="space-y-5">
+      <PageHeader title="Calendario" description="Ocupación, movimientos y bloqueos por fecha" icon={<CalendarDays className="h-5 w-5" />} actions={<Button type="button" variant="outline" className="h-10 rounded-xl" onClick={retryAll} disabled={hasLoading}><RefreshCw className="h-4 w-4" />{hasLoading ? "Actualizando…" : "Actualizar"}</Button>} />
+      <SectionCard className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" className="min-h-11" aria-label="Anterior" onClick={() => moveRange(-1)}><ChevronLeft className="h-4 w-4" />Anterior</Button>
+          <Button type="button" variant="outline" className="min-h-11" onClick={() => { setStartDate(today); setSelectedDate(today); }}>Hoy</Button>
+          <Button type="button" variant="outline" className="min-h-11" aria-label="Siguiente" onClick={() => moveRange(1)}>Siguiente<ChevronRight className="h-4 w-4" /></Button>
+          <span className="rounded-xl bg-muted px-3 py-2 text-sm font-bold text-foreground" aria-live="polite">{format(parseISO(startDate), "dd MMM", { locale: es })}–{format(addDays(parseISO(startDate), rangeDays - 1), "dd MMM", { locale: es })}</span>
+          <div className="ml-auto flex rounded-xl border border-border bg-muted p-1" aria-label="Cantidad de días">{([7, 14, 30] as const).map((days) => <button key={days} type="button" aria-pressed={rangeDays === days} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${rangeDays === days ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => setRangeDays(days)}>{days} días</button>)}</div>
+          <div className="flex rounded-xl border border-border bg-muted p-1" aria-label="Modo de calendario"><button type="button" aria-pressed={mode === "timeline"} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${mode === "timeline" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => { setMode("timeline"); setModeTouched(true); }}>Timeline</button><button type="button" aria-pressed={mode === "agenda"} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${mode === "agenda" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => { setMode("agenda"); setModeTouched(true); }}>Agenda</button></div>
         </div>
-
-        {/* Tape Chart Principal */}
-        <div className="xl:col-span-3">
-          <TapeChart />
+        <div className="grid gap-3 md:grid-cols-4">
+          <input aria-label="Buscar habitación o huésped" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Habitación o huésped" className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm" />
+          <label className="flex min-h-11 items-center gap-2 rounded-xl border border-input px-3 text-sm"><input type="checkbox" checked={includeInactive} onChange={(event) => setIncludeInactive(event.target.checked)} />Incluir canceladas/no-show</label>
+          <label className="flex min-h-11 items-center gap-2 rounded-xl border border-input px-3 text-sm"><input type="checkbox" checked={onlyConflicts} onChange={(event) => setOnlyConflicts(event.target.checked)} />Sólo conflictos</label>
+          <label className="flex min-h-11 items-center gap-2 rounded-xl border border-input px-3 text-sm"><input type="checkbox" checked={onlyOutOfService} onChange={(event) => setOnlyOutOfService(event.target.checked)} />Fuera de servicio</label>
         </div>
-      </div>
-
-      <BookingDetailsSheet
-        booking={selectedBooking}
-        isOpen={isDetailsOpen}
-        onClose={() => {
-          setIsDetailsOpen(false);
-          setSelectedBooking(null);
-        }}
-      />
+        {(search || includeInactive || onlyConflicts || onlyOutOfService) ? <Button type="button" variant="ghost" onClick={clearFilters}>Limpiar filtros</Button> : null}
+        <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground" aria-label="Resumen del rango"><span>{summary.bookings} reservas activas</span><span>{summary.arrivals} llegadas</span><span>{summary.departures} salidas</span><span>{summary.holds} bloqueos</span><span>{summary.conflicts} conflictos</span><span>{summary.rooms} habitaciones</span></div>
+      </SectionCard>
+      {roomsQuery.error ? <SectionCard className="border-destructive/30"><p className="font-semibold text-destructive">No se pudieron cargar las habitaciones</p><Button type="button" variant="outline" onClick={() => void roomsQuery.refetch()}>Reintentar</Button></SectionCard> : null}
+      {bookingsQuery.error ? <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-900">No se pudieron cargar las reservas <button type="button" className="ml-2 underline" onClick={() => void bookingsQuery.refetch()}>Reintentar</button></p> : null}
+      {holdsQuery.error ? <p role="status" className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm font-semibold text-amber-900">No se pudieron cargar los bloqueos <button type="button" className="ml-2 underline" onClick={() => void holdsQuery.refetch()}>Reintentar</button></p> : null}
+      {hasLoading ? <SectionCard><div className="flex items-center gap-2 py-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando planificación…</div></SectionCard> : mode === "timeline" ? <CalendarTimeline rooms={filteredRooms} dates={model.dates} allocationsByRoom={model.allocationsByRoom} conflicts={model.conflicts} onSelect={selectContext} onRoom={(room) => setSelectedContext({ kind: "hold", hold: { hold_id: `room-${room.id}`, room_id: room.id, room_number: room.room_number, room_type: room.room_type, start_date: startDate, end_date: endDate, hold_type: "Other", reason: `Estado actual: ${room.status}` }, startDate, endDate })} /> : <CalendarAgenda dates={model.dates} selectedDate={selectedDate} items={filteredItems} conflicts={model.conflicts.filter((conflict) => filteredRoomIds.has(conflict.roomId))} onDateChange={setSelectedDate} onSelect={selectContext} />}
+      {selectedContext && !selectedBooking ? <SectionCard><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Contexto seleccionado</p><h2 className="mt-1 text-lg font-black">{"hold" in selectedContext ? `Bloqueo · ${selectedContext.hold.hold_type}` : "Conflicto"}</h2><p className="mt-2 text-sm text-muted-foreground">{"hold" in selectedContext ? `${selectedContext.hold.reason} · ${selectedContext.hold.start_date} al ${selectedContext.hold.end_date}` : "allocations" in selectedContext ? `${selectedContext.allocations.length} elementos implicados en ${selectedContext.date}` : "Reserva seleccionada"}</p></div><Button type="button" variant="ghost" onClick={() => setSelectedContext(null)}>Cerrar</Button></div></SectionCard> : null}
+      <BookingDetailsSheet booking={selectedBooking} isOpen={Boolean(selectedBooking)} onClose={() => { setSelectedBooking(null); setSelectedContext(null); requestAnimationFrame(() => selectionReturnFocusRef.current?.focus()); }} onUpdateStatus={canUpdate ? async (id, status, frontDesk) => { await updateBooking(id, { status, front_desk: frontDesk }); await bookingsQuery.refetch(); } : undefined} onRefreshBooking={() => bookingsQuery.refetch()} />
     </div>
   );
 };
