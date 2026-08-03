@@ -23,7 +23,6 @@ jobs:
     name: Backend CI
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgres://admin:password123@localhost:5432/hms_core
       DOCS_GOVERNANCE_STRICT: "true"
     steps:
       - name: Checkout
@@ -84,7 +83,7 @@ jobs:
         run: ./scripts/qa-core-journeys.sh
 
       - name: Observability Smoke Gate
-        run: ./scripts/observability-smoke.sh
+        run: ./scripts/observability-smoke.sh --runner docker
 
       - name: Backend Coverage Threshold Gate
         env:
