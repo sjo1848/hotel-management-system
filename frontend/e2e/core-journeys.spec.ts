@@ -22,7 +22,7 @@ async function login(page: import("@playwright/test").Page) {
 
 test("auth lifecycle: login and logout", async ({ page }) => {
   await login(page);
-  await expect(page.getByText("Vista General")).toBeVisible();
+  await expect(page.getByText("Centro de control")).toBeVisible();
 
   await page.getByRole("button", { name: "Cerrar Sesión" }).click();
   await expect(page).toHaveURL(/\/login$/);
@@ -37,15 +37,13 @@ test("booking lifecycle: bookings list is accessible", async ({ page }) => {
 
 test("billing journey: cash closure widget is visible in dashboard", async ({ page }) => {
   await login(page);
-  await expect(page.getByText("Cierre de Caja")).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Finalizar Turno y Cerrar Caja" }),
-  ).toBeVisible();
+  await expect(page.getByText("Caja del turno")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar turno" })).toBeVisible();
 });
 
-test("dashboard journey: revenue cockpit and CTA are actionable", async ({ page }) => {
+test("dashboard journey: control center queue and CTA are actionable", async ({ page }) => {
   await login(page);
-  await expect(page.getByText("Revenue Cockpit")).toBeVisible();
+  await expect(page.getByText("Necesita atención")).toBeVisible();
 
   const cta = page
     .getByRole("button", {
