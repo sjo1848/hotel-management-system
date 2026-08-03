@@ -24,23 +24,24 @@ test("housekeeping role smoke: navigation is scoped correctly", async ({ page })
   await expect(page.getByRole("heading", { level: 2, name: /^Housekeeping$/ })).toBeVisible();
 });
 
-test("housekeeping role smoke: guided rail and board stay usable on mobile", async ({ page }) => {
+test("housekeeping role smoke: compact guide and queue stay usable on mobile", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
 
-  await expect(page.getByText("Modo guiado").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Salir del modo guiado" })).toBeVisible();
-  await expect(page.getByText("Que conviene mover primero")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Refrescar" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Asistente guiado" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Deshabilitar guía" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Turno/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualizar" })).toBeVisible();
 });
 
-test("housekeeping role smoke: rail card scrolls to the dirty column without executing", async ({ page }) => {
+test("housekeeping role smoke: guide selects dirty filter without executing", async ({ page }) => {
   await login(page);
-  await expect(page.getByText("Modo guiado").first()).toBeVisible();
+  await expect(page.getByRole("region", { name: "Asistente guiado" })).toBeVisible();
 
-  await page.getByRole("button", { name: /Ver habitaciones dirty/ }).last().click();
+  await page.getByRole("button", { name: /Siguiente:/ }).click();
+  await page.getByRole("button", { name: /Tomá una habitación dirty/ }).click();
 
-  await expect(page.locator("#housekeeping-column-dirty")).toBeFocused();
+  await expect(page.getByRole("button", { name: /Por limpiar/ })).toHaveAttribute("aria-pressed", "true");
 });
 
 test("housekeeping role smoke: layout has no horizontal overflow on common widths", async ({ page }) => {
