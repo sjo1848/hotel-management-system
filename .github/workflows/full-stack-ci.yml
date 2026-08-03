@@ -74,6 +74,9 @@ jobs:
       - name: Backend Unit Gate (fmt/clippy/lib/contract)
         run: ./scripts/ci-backend.sh
 
+      - name: Start Docker backend for integration gates
+        run: docker compose up -d db backend
+
       - name: Backend Integration Gate (sqlx)
         run: ./scripts/ci-backend-integration.sh
 
