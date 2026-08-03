@@ -17,9 +17,18 @@ type DomainEventEnvelope = {
 const DOMAIN_EVENT_NAME = "hms:domain-event";
 
 const EVENT_TO_QUERY_PREFIXES: Record<DomainEventName, string[]> = {
-  "bookings.changed": ["bookings:list", "dashboard:home", "reports:"],
+  "bookings.changed": ["bookings:list", "rooms:availability", "dashboard:home", "reports:"],
   "guests.changed": ["guests:list", "bookings:list", "dashboard:home"],
-  "rooms.changed": ["rooms:list", "dashboard:home", "reports:"],
+  "rooms.changed": [
+    "rooms:list",
+    "rooms:inventory",
+    "rooms:availability",
+    "rooms:holds-board",
+    "rooms:planner-bookings",
+    "rooms:detail",
+    "dashboard:home",
+    "reports:",
+  ],
   "users.changed": ["users:list"],
   "billing.changed": ["dashboard:home", "bookings:list", "reports:"],
   "hotels.changed": ["network:hotels", "hotels:list"],

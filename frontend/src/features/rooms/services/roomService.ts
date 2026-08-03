@@ -15,6 +15,18 @@ export type RoomHoldPayload = {
   reason: string;
 };
 
+export const listRooms = async () => {
+  return apiGet<Room[]>("/rooms");
+};
+
+export const searchAvailableRooms = async (start: string, end: string) => {
+  return apiGet<Room[]>("/rooms/available", { start, end });
+};
+
+/**
+ * Compatibilidad con módulos fuera del alcance de WF-016 (schedule, bookings,
+ * walk-in). El workspace de Habitaciones usa `listRooms` / `searchAvailableRooms`.
+ */
 export const getAllRooms = async (startDate?: string | null, endDate?: string | null) => {
   const endpoint = (startDate && endDate) ? "/rooms/available" : "/rooms";
   const params = (startDate && endDate) ? { start: startDate, end: endDate } : undefined;
@@ -83,6 +95,8 @@ export const deleteRoomHold = async (roomId: string, holdId: string) => {
 };
 
 const roomService = {
+  listRooms,
+  searchAvailableRooms,
   getAllRooms,
   getRoomById,
   updateRoomStatus,

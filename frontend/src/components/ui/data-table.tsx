@@ -27,6 +27,7 @@ interface DataTableProps<T> {
   searchable?: boolean;
   searchPlaceholder?: string;
   onSearch?: (query: string) => void;
+  onRowClick?: (item: T) => void;
   actions?: React.ReactNode;
   emptyMessage?: string;
   error?: string | null;
@@ -41,6 +42,7 @@ export function DataTable<T extends { id: string | number }>({
   searchable,
   searchPlaceholder = "Buscar...",
   onSearch,
+  onRowClick,
   actions,
   emptyMessage = "No se encontraron resultados.",
   error,
@@ -112,7 +114,11 @@ export function DataTable<T extends { id: string | number }>({
               data.map((item) => (
                 <TableRow
                   key={item.id}
-                  className="motion-surface group border-b border-border transition-colors hover:-translate-y-px hover:bg-muted/30 last:border-0"
+                  onClick={onRowClick ? () => onRowClick(item) : undefined}
+                  className={cn(
+                    "motion-surface group border-b border-border transition-colors hover:-translate-y-px hover:bg-muted/30 last:border-0",
+                    onRowClick ? "cursor-pointer" : "",
+                  )}
                 >
                   {columns.map((col, colIdx) => (
                     <TableCell key={colIdx} className={cn("py-4", col.className)}>

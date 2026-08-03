@@ -127,6 +127,56 @@ describe("App route guards", () => {
     expect(await screen.findByText("NetworkPage")).toBeInTheDocument();
   });
 
+  it("grants rooms to admin", async () => {
+    setRoute("/rooms");
+    authState.status = "authenticated";
+    authState.user = { role: "admin" };
+
+    renderApp();
+
+    expect(await screen.findByText("RoomsPage")).toBeInTheDocument();
+  });
+
+  it("grants rooms to ops", async () => {
+    setRoute("/rooms");
+    authState.status = "authenticated";
+    authState.user = { role: "ops" };
+
+    renderApp();
+
+    expect(await screen.findByText("RoomsPage")).toBeInTheDocument();
+  });
+
+  it("grants rooms to receptionist", async () => {
+    setRoute("/rooms");
+    authState.status = "authenticated";
+    authState.user = { role: "receptionist" };
+
+    renderApp();
+
+    expect(await screen.findByText("RoomsPage")).toBeInTheDocument();
+  });
+
+  it("blocks housekeeping from rooms", async () => {
+    setRoute("/rooms");
+    authState.status = "authenticated";
+    authState.user = { role: "housekeeping" };
+
+    renderApp();
+
+    expect(await screen.findByText("AccessDeniedPage")).toBeInTheDocument();
+  });
+
+  it("blocks saas_admin from rooms", async () => {
+    setRoute("/rooms");
+    authState.status = "authenticated";
+    authState.user = { role: "saas_admin" };
+
+    renderApp();
+
+    expect(await screen.findByText("AccessDeniedPage")).toBeInTheDocument();
+  });
+
   it("blocks tenant admin from the SaaS network route", async () => {
     setRoute("/network");
     authState.status = "authenticated";

@@ -33,9 +33,6 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
 
   const handleSelect = (value: DateRange | undefined) => {
     setDate(value);
-    if (value?.from && value?.to) {
-      onSearch(format(value.from, "yyyy-MM-dd"), format(value.to, "yyyy-MM-dd"));
-    }
   };
 
   const handleClear = () => {
@@ -51,7 +48,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
     <div className="flex flex-col md:flex-row items-end gap-4 bg-card p-6 rounded-2xl border border-border shadow-sm mb-10 transition-all hover:shadow-md">
       <div className="grid gap-2 flex-1">
         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
-          Rango de Estancia
+          Rango de estancia
         </label>
         <Popover>
           <PopoverTrigger asChild>
@@ -74,7 +71,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
                   format(date.from, "dd LLL, y", { locale: es })
                 )
               ) : (
-                <span className="text-muted-foreground">¿Cuándo vienes?</span>
+                <span className="text-muted-foreground">Seleccionar entrada y salida</span>
               )}
             </Button>
           </PopoverTrigger>
