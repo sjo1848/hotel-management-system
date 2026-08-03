@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const hotelId = process.env.E2E_HOTEL_ID ?? "00000000-0000-0000-0000-000000000001";
 const username = process.env.E2E_USERNAME ?? "admin";
-const password = process.env.E2E_PASSWORD ?? "demo2026pass";
+const password = process.env.E2E_PASSWORD ?? "admin123";
 
 test.describe.configure({ retries: 0 });
 
