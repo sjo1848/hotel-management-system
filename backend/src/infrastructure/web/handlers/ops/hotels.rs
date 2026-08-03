@@ -97,7 +97,7 @@ pub async fn get_hotel_network_kpis_handler(
         });
     }
 
-    hotel_summaries.sort_by(|a, b| b.revenue_cents.cmp(&a.revenue_cents));
+    hotel_summaries.sort_by_key(|hotel| std::cmp::Reverse(hotel.revenue_cents));
 
     let total_hotels = hotel_summaries.len() as i64;
     let average_occupancy_rate = if total_hotels > 0 {
