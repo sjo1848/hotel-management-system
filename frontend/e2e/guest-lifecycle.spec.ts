@@ -120,14 +120,20 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await expect(accountSection.getByText(formatArgentineCurrency(accountTotal), { exact: true }).first()).toBeVisible();
 
   await page.goto("/housekeeping");
-  await page.getByPlaceholder("Buscar habitacion, tipo o huesped").fill(roomNumber!);
-  const roomCard = page.locator("article").filter({ hasText: `Habitacion ${roomNumber}` }).first();
-  await expect(roomCard.getByText("Limpieza", { exact: true })).toBeVisible();
-  await roomCard.getByRole("button", { name: "Iniciar" }).click();
-  await expect(roomCard.getByText("En limpieza", { exact: true })).toBeVisible();
-  await roomCard.getByRole("button", { name: "Finalizar" }).click();
-  await expect(roomCard.getByText("Disponible", { exact: true })).toBeVisible();
-  await expect(roomCard.getByRole("button", { name: "Abrir incidencia" })).toBeVisible();
+  await page.getByPlaceholder("Buscar habitación, tipo o huésped").fill(roomNumber!);
+  await page.getByRole("button", { name: `Ver tarea habitación ${roomNumber}` }).click();
+
+  await expect(page.getByRole("heading", { name: `Habitación ${roomNumber}` })).toBeVisible();
+  await page.getByRole("tab", { name: "Acción" }).click();
+  await expect(page.getByRole("button", { name: "Iniciar limpieza" })).toBeVisible();
+  await expect(page.getByText("Por limpiar", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Iniciar limpieza" }).click();
+  await expect(page.getByRole("button", { name: "Finalizar limpieza" })).toBeVisible();
+  await expect(page.getByText("En limpieza", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Finalizar limpieza" }).click();
+  await expect(page.getByText("Lista", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "Mantenimiento" }).click();
+  await expect(page.getByRole("button", { name: "Abrir incidencia" })).toBeVisible();
 
   expect(relevantConsoleErrors).toEqual([]);
 });
