@@ -1,75 +1,84 @@
 # Handoff — Sesión HMS Elite (CI + consolidación de PRs UX/UI)
 
-> Fecha: 2026-08-03 · Rama en uso: `feature/gate-hardening-rbac-e2e`
+> Fecha cierre: 2026-08-03 · Estado: **SESION COMPLETADA**
 
-## Objetivo de la sesión (abiertos)
-1. Arreglar CI del PR #8 `fix(backend): satisfy Clippy sort_by_key lint` → **HECHO** (merged).
-2. Consolidar las mejoras de UX/UI actualmente dispersas en PRs DRAFT.
+## Resultado final
+Toda la cadena de workspaces quedó **consolidada en `main`** y no quedan PRs abiertos.
+Todos los PRs pasaron el pipeline `full-stack-ci` completo (Backend, Frontend, Secret,
+Perf, E2E, CI Stability Guard en verde).
 
-## Estado de los PRs (gh pr list)
+## Estado final de los PRs
 
-| PR | Branch | Estado | Notas |
-|----|--------|--------|-------|
-| #8 `fix(backend): satisfy Clippy sort_by_key lint` | `feature/fix-clippy-sort-by` | **MERGEADO** `ddf4c33` | Contiene el fix de CI (PoolTimedOut) + runbook |
-| #9 docs | main | MERGEADO `5df1de0` | docs cargo portfolio |
-| #2 `Complete guest lifecycle workflows and UX validation` | `feature/gate-hardening-rbac-e2e` | **DRAFT** | BASE de UX/UI (244 archivos). Working tree local actual. CI: Backend/Frontend/Secret/Perf **green**; E2E **en curso/fallando** |
-| #3 WF-014 Reception operational workspace | `feature/wf-014-reception-workspace` | DRAFT | Incremento ~3.5k líneas sobre PR #2 |
-| #4 WF-015 Dashboard control center | `feature/wf-015-dashboard-control-center` | DRAFT | |
-| #5 WF-016 Rooms inventory workspace | `feature/wf-016-rooms-inventory-workspace` | DRAFT | |
-| #6 WF-017 Calendar planning board | `feature/wf-017-calendar-planning-board` | DRAFT | ~15k líneas |
-| #7 WF-018 Housekeeping shift workspace | `feature/wf-018-housekeeping-shift-workspace` | DRAFT | ~17k líneas |
+| PR | Contenido | Estado |
+|----|-----------|--------|
+| #1 `Codex-generated pull request` | placeholder (rama `codex/analyze-hms...`) | **CERRADO** (higiene) |
+| #2 `Complete guest lifecycle workflows and UX validation` | BASE UX/UI (244 archivos) | **MERGED** `ddf2b0b` |
+| #3 WF-014 Reception operational workspace | Reception shift | **MERGED** `b95ecf2` |
+| #4 WF-015 Dashboard control center | Dashboard | **MERGED** `1df17ba6` |
+| #5 WF-016 Rooms inventory workspace | Rooms | **MERGED** `eac6647` |
+| #6 WF-017 Calendar planning board | Calendar | **MERGED** `e8f8b83` |
+| #7 WF-018 Housekeeping shift workspace | Housekeeping | **MERGED** `50e857e` |
 
-## Detalle: fix de CI en PR #8 (ya mergeado)
-**Problema** (`PoolTimedOut` en `full-stack-ci.yml`, job `Backend CI`):
-- El job tenía `services.postgres` (host `localhost:5432`) + el `db` de compose (`db:5432`). Dos instancias.
-- `observability-smoke.sh` fuerza `RUNNER=host` por defecto → usaba `localhost:5432`.
-- Al quitar `services.postgres` quedó vacío → `PoolTimedOut` en `setup test database`.
+El pipeline de CI (`full-stack-ci.yml`) NO aparece en run-history por PRs stacked; reporta
+normalmente solo contra `main`.
 
-**Solución aplicada (commits en history de PR #8):**
-1. `7f5e4e7 ci: remove redundant postgres service from backend job` — quita `services.postgres`.
-2. `0cbdfa9` + revert — intento de publicar puerto del db (descartado, reintrodujo fallo).
-3. `fda9163 ci: run observability smoke via docker runner` — **fix final**: `observability-smoke.sh --runner docker`.
-4. `4e2f2fb docs: add runbook for backend CI PoolTimedOut` → `docs/ops/runbooks/ci-backend-pooltimeout.md`.
+## Detalle: fix de CI en PR #8 (ya mergeado previamente)
+**Problema** (`PoolTimedOut` en job `Backend CI`):
+- Job tenía `services.postgres` (localhost:5432) + contenedor `db` de compose (db:5432).
+- `observability-smoke.sh` fuerza `RUNNER=host` → usaba localhost:5432 vacío.
+- Fix: quitar `services.postgres`, correr `observability-smoke.sh --runner docker`.
 
-**Reglas operativas:**
-- Fuente única de postgres = contenedor `db` de compose (red `hms-net`, host `db:5432`).
-- NO publicar puerto del `db` al host salvo necesidad (da colisión con postgres local del dev).
-- Gates `sqlx` deben correr por runner `docker` (`docker compose exec`).
-- `observability-smoke.sh` requiere `--runner docker`.
+Commits: `7f5e4e7` (remove services.postgres), `fda9163` (observability via docker runner),
+`8a6c2e2` (runbook `docs/ops/runbooks/ci-backend-pooltimeout.md`).
 
-**Validación:** `./scripts/ci-backend.sh` local (EXIT 0); `./scripts/ci-backend-integration.sh` local (19 tests, EXIT 0); CI completo de PR #8 **success**.
+## Detalle: problemas de CI encontrados en el camino y cómo se resolvieron
 
-## Incidente: contenedor `hms-db` local (entorno dev)
-- El `db` de compose local se recreó con port override `POSTGRES_HOST_PORT=55432` porque el host dev ya tiene un postgres en `5432`.
-- `docker-compose.yml` vuelto a estado original (puerto comentado) — el alias transito fue revertido. Verificar que `docker compose up -d db` arranque en dev (puede colidir con postgres local).
+### 1. `full-stack-ci` no se gatillaba en PRs stacked
+- **Síntoma:** al force-pushear un branch, solo corría `deploy-with-rollback.yml`
+  (workflow remoto divergente que corre en `push` a ramas feature y falla SIEMPRE — ruido).
+- **Causa raíz:** el base de cada PR apuntaba a `feature/wf-0XX-*` (stacked) y el
+  `full-stack-ci` solo se dispara con `branches: [main, master]`.
+- **Fix:** cambiar el base del PR a `main` (`gh api -X PATCH ... -f base=main`) y luego
+  hacer un push `--allow-empty` con mensaje "ci: retrigger checks after base change to
+  main" para reagstrap el evento `pull_request`. El cambio de base NO reagstraga de por sí.
 
-## Trabajo en curso en PR #2 — E2E `guest-lifecycle.spec.ts`
-**Síntoma inicial:** E2E fallaba: todas las `toHaveURL` → `/login` (auth no establecida).
-**Causa 1 (login):** el branch forzaba `E2E_PASSWORD="${E2E_PASSWORD:-demo2026pass}"` pero el backend de CI crea
-el admin con `ADMIN_PASSWORD` default `admin123` (el job E2E NO corre `seed-demo-data.sh`). Login con `demo2026pass` fallaba.
-**Fix (commit `dd920db`):** default → `admin123` en `scripts/qa-core-journeys-e2e.sh` y `frontend/e2e/guest-lifecycle.spec.ts`.
+### 2. E2E `guest-lifecycle.spec.ts` (repo), al mergear WF-018
+- WF-018 reemplazó la UI de housekeeping (cards `article` con badges "Limpieza"/"Disponible"
+  y botones "Iniciar"/"Finalizar") por un **shift workspace** (cola `ol>li` + detalle con tabs).
+- El spec viejo esperaba `article` con "Limpieza" → el E2E falló (`checkout-and-room-release`).
+- Fix `c5e4708` en `frontend/e2e/guest-lifecycle.spec.ts`: seleccionar la fila de la cola
+  (`aria-label="Ver tarea habitación <n>"`), usar tab "Acción", y labels nuevos
+  ("Iniciar limpieza"/"Finalizar limpieza"); estados "Por limpiar"/"En limpieza"/"Lista".
+- Nota: el mismo spec usaba `E2E_PASSWORD=demo2026pass` pero el backend de CI crea el admin
+  con `ADMIN_PASSWORD=admin123` → default del spec y de `qa-core-journeys-e2e.sh` = `admin123`.
 
-**Causa obs 2 (selectors desactualizados) — commit `6dd6dd1`:**
-- `getByText("Centro operativo de la estadia.")` → la UI real muestra `Revisá el bloqueo y completá una sola próxima acción.`
-  (descripción del Sheet de BookingDetailsSheet).
-- `getByRole("button", { name: "Marcar incidencia" })` → real es `"Abrir incidencia"` (MaintenanceCaseActions).
+### 3. Flake local de test (NO bloquea CI)
+- `frontend/src/features/users/components/UserCreateDrawer.test.tsx` sufre timeout 5000ms
+  (tarda ~5768ms) cuando corre el suite completo bajo carga local de `docker compose`.
+  Aislado pasa rápido. Es preexistente y NO relacionado con los workspaces; CI corre en
+  runners dedicados y pasa. No se modificó (fuera de alcance).
 
-**UI real mapeada (para futuros fixes):**
-- Centro operativo = `BookingDetailsSheet` (Sheet con `isOpen`), `SheetTitle` = guest_name, descripción = "Hab. ... Reserva ... · Revisá el bloqueo...".
-- Check-in checkboxes (es:E3 D/I menús): <label><input type=checkbox> <span>Identidad validada</span> etc → `getByRole("checkbox", {name:/.../})`.
-- Buttons: "Confirmar ato ingreso y ocupar habitacion", "En casa", "Cuenta y cargos", "Desayuno $15" (quickCharges hardcode), PaymentMethod buttons "CASH"/"CARD"/"TRANSFER", "Monto a registrar"/"Referencia de pago"/"Nota operativa", "Registrar cobro", "Cuenta cobrada" badge, checkout "Cuenta revisada"/"Habitacion liberada"/"Handoff a housekeeping", bottoon "Cuenta cobrada al cierre" + "Confirmar salida y enviar a limpieza", heading "Estadía cerrada" (`<h3>` del NextActionBanner).
-- Housekeeping: las columnas usan inglés (Dirty/Cleaning/Available) en resúmenes, PERO los badges de cada card vía `getRoomStatusBadge` en español: "Limpieza"/"En limpieza"/"Disponible"/"Mantenimiento". Botón "Iniciar"/"Finalizar". Botón incidencia = "Abrir incidencia" (en `MaintenanceCaseActions`).
-- Room card: `page.locator("article").filter({ hasText: "Habitacion <n>" })`. Buscar campo: `getByPlaceholder("Buscar habitacion, tipo o huesped")`.
+## Método usado para "rebase" de los WFs sobre main (repetir si hace falta)
+Los branches WF nacieron del base común `c6fa685` (antes del merge de PR #2) y contenían
+copias del contenido del PR #2. `git rebase --rebase` daba conflictos add/add. Por eso:
+1. `git checkout -B feature/wf-0XX origin/main` (recrear desde main).
+2. Calcular delta real feature-only:
+   `git diff origin/main origin/feature/wf-0XX -- $(nombre-only | grep -vE infra y docs de base vieja)`.
+3. `git apply` ese diff (solo frontend + docs/validation propios). Excluir: `.github/`,
+   `scripts/`, `backend/`, `.gitignore`, `README`, `docs/PORTFOLIO*`, `docs/PROJECT_STATUS`,
+   `docs/ops/runbooks/`.
+4. Restaurar `docs/ops/HANDOFF-*.md` (el diff de la base vieja lo borraba).
+5. Commit single + `git push --force-with-lease`.
+6. Cambiar base del PR a `main` + empty-commit retrillate.
+7. `gh pr ready`, esperar CI, mergear.
 
-**Estado E2E local:** NO reproducible en local dev porque el login local falla (el admin local tiene una password distinta a `admin123`; DB local con datos viejos). El E2E correcto es via CI (DB limpia). Para E2E local reproducir: reconstruir/limpiar DB con seed acorde o usar `seed-demo-data.sh`.
-
-## Plan recomendado para consolidación (no iniciado aún)
-1. Terminar de validar/mergear **PR #2** (base UI) — revert/validar el E2E en CI.
-2. En orden, rebasear sobre main actualizado y merge **WF-014 → WF-015 → WF-016 → WF-017 → WF-018**.
-   - Todos basados en `c6fa685`; mergearlos fuera de orden → conflictos por solapamiento.
-3. Actualizar runbook/DoD por PR.
+## Pendientes sugeridos (siguiente sesión si aplica)
+- **NO configurada aún: branch protection en `main`** (el API reporta 404 "Branch not
+  protected"). Sugerir: exigir revisión de PR, checks, conversaciones resueltas, prohibir
+  push directo. USAR con cuidado: no en régimen, decidir si exige UI/UX aprobación extra.
+- Evaluar tag/release `v0.1.0` + demo pública + capturas/README (recomendación del review).
+- Ramas feature/* y codex/* pueden limpiarse luego (fueron las bases de los PRs mergeados).
 
 ## Para reanudar
-- Branch actual: `feature/gate-hardening-rbac-e2e`. Working tree limpio.
-- Última acción: push `6dd6dd1` (fix selectores E2E), CI run `full-stack-ci` estaba en curso (ver `gh run list --branch feature/gate-hardening-rbac-e2e --limit 1`).
-- El objetivo de arreglar el E2E de PR #2 estaba pendiente de confirmar que CI queda green.
+- Rama: `main` (worktree limpio). Todos los PRs cerrados/mergeados.
+- `gh run list --branch cf...` para re-ver en TODO nuevo.
