@@ -25,7 +25,7 @@ test("reception role smoke: front desk navigation is scoped correctly", async ({
   await page.getByRole("link", { name: "Recepción" }).click();
   await expect(page).toHaveURL(/\/bookings$/);
   await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 3, name: "Turno de recepción" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Foco del turno" })).toBeVisible();
 });
 
 test("reception role smoke: walk-in sheet keeps CTA visible on mobile", async ({ page }) => {
@@ -46,6 +46,7 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
   await expect(page).toHaveURL(/\/bookings$/);
   await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
 
+  await page.getByRole("tab", { name: /Reservas/ }).click();
   await page.getByRole("button", { name: "Gestionar" }).first().click();
   await expect(
     page.getByText(/Revisá el bloqueo y completá una sola próxima acción/),
@@ -53,18 +54,21 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
   await expect(page.getByRole("button", { name: "Cerrar" })).toBeVisible();
 });
 
-test("reception role smoke: guided rail navigates without marking progress", async ({ page }) => {
+test("reception role smoke: compact guide navigates without marking progress", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
 
-  await expect(page.getByRole("button", { name: /Abrí un caso del turno/ })).toBeVisible();
-  await expect(page.getByText(/0\/5 completado/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Siguiente: Abrí un caso del turno/ })).toBeVisible();
+  await expect(page.getByText(/0\/5/).first()).toBeVisible();
 
-  await page.getByRole("button", { name: /Abrí un caso del turno/ }).click();
+  await page.getByRole("button", { name: /Siguiente: Abrí un caso del turno/ }).click();
 
   await expect(page.getByText(/0\/5 completado/)).toBeVisible();
-  await expect(page.locator("#front-desk-board")).toBeInViewport();
+  await expect(page.getByRole("button", { name: /Reiniciar/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Salir del modo guiado" })).toBeVisible();
+
+  await page.getByRole("button", { name: /Ir a la cola/ }).first().click();
+  await expect(page.locator("#front-desk-board")).toBeInViewport();
 });
 
 test("reception role smoke: board search shows the no-match state", async ({ page }) => {
