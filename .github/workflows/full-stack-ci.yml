@@ -77,6 +77,17 @@ jobs:
       - name: Start Docker backend for integration gates
         run: docker compose up -d db backend
 
+      - name: Wait for Docker integration database
+        run: |
+          for attempt in $(seq 1 30); do
+            if docker compose exec -T db pg_isready -U admin -d hms_core >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose ps
+          exit 1
+
       - name: Backend Integration Gate (sqlx)
         run: ./scripts/ci-backend-integration.sh
 
