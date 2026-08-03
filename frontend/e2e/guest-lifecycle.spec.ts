@@ -73,7 +73,7 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
       /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
   );
   await walkInSheet.getByRole("button", { name: "Crear y gestionar" }).click();
-  await expect(page.getByText("Centro operativo de la estadia.")).toBeVisible();
+  await expect(page.getByText("Revisá el bloqueo y completá una sola próxima acción.")).toBeVisible();
   expect((await initialInvoiceLookup).status()).toBe(404);
   await expect(page.getByText("Todavia no existe factura asociada para esta reserva.")).toBeVisible();
   await expect(page.getByText("La factura solicitada no existe")).toHaveCount(0);
@@ -121,7 +121,7 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await expect(roomCard.getByText("En limpieza", { exact: true })).toBeVisible();
   await roomCard.getByRole("button", { name: "Finalizar" }).click();
   await expect(roomCard.getByText("Disponible", { exact: true })).toBeVisible();
-  await expect(roomCard.getByRole("button", { name: "Marcar incidencia" })).toBeVisible();
+  await expect(roomCard.getByRole("button", { name: "Abrir incidencia" })).toBeVisible();
 
   expect(relevantConsoleErrors).toEqual([]);
 });
