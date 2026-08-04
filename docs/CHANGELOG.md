@@ -2,6 +2,25 @@
 
 Este documento rastrea los cambios importantes realizados en el proyecto.
 
+## [0.1.0] - 2026-08-03 (Primer release taggeado)
+
+### ✨ Workspaces operativos
+- **Reception (WF-014)**: workspace operativo de recepción con flujos de check-in/check-out y checkout guiado.
+- **Dashboard (WF-015)**: control center con KPIs de ocupación, ingresos y métricas de red.
+- **Rooms (WF-016)**: inventario de habitaciones con estados y transiciones en tiempo real.
+- **Calendar (WF-017)**: planning board de reservas por habitación y fecha.
+- **Housekeeping (WF-018)**: shift workspace con cola de limpieza, estados Por limpiar/En limpieza/Lista y detalle de habitación (resumen, acción, mantenimiento).
+
+### 🛡️ Calidad, gates y CI
+- **Gate hardening + RBAC/E2E**: coverage de pago y checkout en guest lifecycle, alineación de selectores E2E con la UI actual y password de login alineada con el bootstrap backend.
+- **Fix clippy**: satisfacer el lint de sorting de Rust 1.97 y corregir drift de fmt + guard de configuración de clippy.
+- **Consolidación del pipeline**: toda la cadena de workspaces integrada en `main` con `full-stack-ci` verde en cada merge.
+- **Branch protection activa en `main`**: check `CI Stability Guard` obligatorio, history linear (solo rebase), enforcement admin y resolución de conversaciones.
+
+### 📋 Proceso
+- Método de integración: rebase de PRs sobre `main`, retrigger de checks con empty commit tras cambio de base.
+- Handoff documentado en `docs/ops/HANDOFF-2026-08-03-CI-and-PR-consolidation.md`.
+
 ## [2.1.0] - 2026-02-11 (Refactor & Premium UI)
 
 ### 🚀 Mejoras Visuales (UX/UI)
