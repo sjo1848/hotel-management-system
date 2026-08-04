@@ -29,7 +29,7 @@ const RoomActionsMenu = ({
 }: RoomActionsMenuProps) => (
   <DropdownMenu>
     <DropdownMenuTrigger asChild>
-      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+      <Button variant="ghost" size="icon" aria-label="Acciones de la habitación" className="h-8 w-8 rounded-full">
         <MoreVertical className="h-4 w-4" />
       </Button>
     </DropdownMenuTrigger>

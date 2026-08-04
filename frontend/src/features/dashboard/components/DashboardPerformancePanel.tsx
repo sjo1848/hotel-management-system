@@ -114,9 +114,9 @@ const MetricChart = ({
   return (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
+        <h2 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
           {title}
-        </h3>
+        </h2>
         <span className="text-xs font-bold text-muted-foreground">{rangeLabel}</span>
       </div>
 

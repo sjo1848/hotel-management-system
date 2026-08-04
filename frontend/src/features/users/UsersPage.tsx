@@ -77,11 +77,11 @@ const UsersPage = () => {
       ),
     },
     {
-      header: "",
+      header: "Acciones",
       cell: (item) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" aria-label={`Acciones de ${item.username}`} className="h-8 w-8">
               <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>

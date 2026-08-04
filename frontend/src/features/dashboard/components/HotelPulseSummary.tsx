@@ -56,9 +56,9 @@ const HotelPulseSummary = ({ kpis, loading }: HotelPulseSummaryProps) => {
     >
       <div className="flex items-center gap-2">
         <BedDouble className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
+        <h2 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
           Pulso del hotel
-        </h3>
+        </h2>
       </div>
 
       {loading ? (
@@ -68,7 +68,7 @@ const HotelPulseSummary = ({ kpis, loading }: HotelPulseSummaryProps) => {
           ))}
         </div>
       ) : metrics.length === 0 ? null : (
-        <dl className="mt-4 grid grid-cols-2 gap-3">
+        <div className="mt-4 grid grid-cols-2 gap-3">
           {metrics.map((metric) => {
             const Icon = metric.icon;
             return (
@@ -78,20 +78,20 @@ const HotelPulseSummary = ({ kpis, loading }: HotelPulseSummaryProps) => {
               >
                 <div className="flex items-center gap-1.5">
                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                     {metric.label}
-                  </dt>
+                  </p>
                 </div>
-                <dd className="mt-1 text-xl font-black leading-none text-foreground">
+                <p className="mt-1 text-xl font-black leading-none text-foreground">
                   {metric.value}
-                </dd>
+                </p>
                 <p className="mt-1 text-[10px] font-semibold text-muted-foreground">
                   {metric.context}
                 </p>
               </div>
             );
           })}
-        </dl>
+        </div>
       )}
     </section>
   );

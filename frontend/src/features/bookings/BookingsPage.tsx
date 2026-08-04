@@ -342,7 +342,7 @@ const BookingsPage = () => {
       cell: (item) => getStatusBadge(item.status),
     },
     {
-      header: "",
+      header: "Acciones",
       cell: (item) => (
         <div className="flex items-center gap-2">
           <Button 

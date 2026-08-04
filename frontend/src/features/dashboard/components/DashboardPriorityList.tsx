@@ -30,9 +30,9 @@ const DashboardPriorityList = ({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Siren className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
+          <h2 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
             Necesita atención
-          </h3>
+          </h2>
         </div>
         {!loading && priorities.length > 0 ? (
           <span className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs font-bold text-muted-foreground md:hidden">
