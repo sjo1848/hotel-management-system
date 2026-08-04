@@ -72,10 +72,19 @@ copias del contenido del PR #2. `git rebase --rebase` daba conflictos add/add. P
 6. Cambiar base del PR a `main` + empty-commit retrillate.
 7. `gh pr ready`, esperar CI, mergear.
 
+## Branch protection de `main` (ACTIVA desde 2026-08-03)
+Configurada vía API (PUT `/branches/main/protection`):
+- Check requerido: `full-stack-ci`
+- Revisión de PR: 1 approval, `dismiss_stale_reviews=true`
+- `required_conversation_resolution=true` (conversaciones sin resolver bloquean merge)
+- `enforce_admins=true` (ni admins saltan las reglas)
+- `required_linear_history=true`
+- `allow_force_pushes=false`, `allow_deletions=false`
+
+Implicación operativa: los próximos cambios a `main` DEBEN ir por PR con CI `full-stack-ci`
+verde + 1 approval. Sin push directo ni force-push.
+
 ## Pendientes sugeridos (siguiente sesión si aplica)
-- **NO configurada aún: branch protection en `main`** (el API reporta 404 "Branch not
-  protected"). Sugerir: exigir revisión de PR, checks, conversaciones resueltas, prohibir
-  push directo. USAR con cuidado: no en régimen, decidir si exige UI/UX aprobación extra.
 - Evaluar tag/release `v0.1.0` + demo pública + capturas/README (recomendación del review).
 - Ramas feature/* y codex/* pueden limpiarse luego (fueron las bases de los PRs mergeados).
 
