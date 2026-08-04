@@ -425,17 +425,8 @@ export const RoomsInventoryPanel = ({
                 return (
                   <article
                     key={room.id}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={`Ver detalle de habitación ${room.room_number}`}
-                    onClick={() => onViewDetails(room)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onViewDetails(room);
-                      }
-                    }}
-                    className="group relative cursor-pointer overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                    aria-label={`Habitación ${room.room_number}`}
+                    className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
                   >
                     {canManageStatus ? (
                       <label
@@ -452,7 +443,12 @@ export const RoomsInventoryPanel = ({
                       </label>
                     ) : null}
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <button
+                        type="button"
+                        onClick={() => onViewDetails(room)}
+                        aria-label={`Ver detalle de habitación ${room.room_number}`}
+                        className="text-left"
+                      >
                         <div
                           className={cn(
                             "inline-flex rounded-xl px-3 py-1 text-sm font-black text-white shadow-sm",
@@ -464,7 +460,7 @@ export const RoomsInventoryPanel = ({
                         <h3 className="mt-3 text-base font-black tracking-tight text-foreground">
                           {room.room_type}
                         </h3>
-                      </div>
+                      </button>
                       {canManageInventory || canManageStatus ? (
                         <div onClick={(event) => event.stopPropagation()}>
                           <RoomActionsMenu

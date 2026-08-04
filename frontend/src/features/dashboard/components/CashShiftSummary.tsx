@@ -44,9 +44,9 @@ const CashShiftSummary = ({
     >
       <div className="flex items-center gap-2">
         <Wallet className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
+        <h2 className="text-sm font-black uppercase tracking-[0.16em] text-muted-foreground">
           Caja del turno
-        </h3>
+        </h2>
       </div>
 
       {error ? (

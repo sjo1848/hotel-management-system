@@ -495,7 +495,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           <div className="flex w-full items-center justify-end gap-2 md:ml-4 md:w-auto md:gap-4">
             <ThemeToggle className="hidden sm:inline-flex" compact />
-            <Button size="icon" variant="ghost" className="relative rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
+            <Button size="icon" variant="ghost" aria-label="Notificaciones" className="relative rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
               <Bell className="h-5 w-5" />
               <span className="absolute top-2 right-2 h-2 w-2 rounded-full border border-card bg-red-500" />
             </Button>

@@ -54,7 +54,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="theme-fade login-shell min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans px-4 py-8 sm:px-6">
+    <main className="theme-fade login-shell min-h-screen w-full flex items-center justify-center relative overflow-hidden font-sans px-4 py-8 sm:px-6">
       <div className="absolute right-3 top-3 z-20 sm:right-4 sm:top-4">
         <ThemeToggle compact className="sm:[&>button]:min-w-20" />
       </div>
@@ -163,7 +163,7 @@ const LoginPage = () => {
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

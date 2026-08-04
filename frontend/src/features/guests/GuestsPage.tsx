@@ -75,7 +75,7 @@ const GuestsPage = () => {
       ),
     },
     {
-      header: "",
+      header: "Acciones",
       cell: (item) => (
         <div className="flex justify-end">
           <Button 
