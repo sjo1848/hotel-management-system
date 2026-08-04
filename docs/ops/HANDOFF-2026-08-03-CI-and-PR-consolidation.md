@@ -74,15 +74,19 @@ copias del contenido del PR #2. `git rebase --rebase` daba conflictos add/add. P
 
 ## Branch protection de `main` (ACTIVA desde 2026-08-03)
 Configurada vía API (PUT `/branches/main/protection`):
-- Check requerido: `full-stack-ci`
-- Revisión de PR: 1 approval, `dismiss_stale_reviews=true`
+- Check requerido: **`CI Stability Guard`** (job del `full-stack-ci` que depende de todos
+  los demás jobs; actúa como gate global. NO usar `full-stack-ci` como contexto: GitHub
+  no reporta checks por nombre de workflow, sino por job → quedaría BLOCKED eternamente).
+- Revisión de PR: 0 approvals requeridos (repo de un solo mantenedor; un approval externo
+  bloquearía todo merge porque no se puede auto-aprobar y `enforce_admins` impide bypass).
 - `required_conversation_resolution=true` (conversaciones sin resolver bloquean merge)
 - `enforce_admins=true` (ni admins saltan las reglas)
-- `required_linear_history=true`
+- `required_linear_history=true` → los merges DEBEN ser `--rebase` o `--squash`
 - `allow_force_pushes=false`, `allow_deletions=false`
 
-Implicación operativa: los próximos cambios a `main` DEBEN ir por PR con CI `full-stack-ci`
-verde + 1 approval. Sin push directo ni force-push.
+Implicación operativa: los cambios a `main` DEBEN ir por PR con `CI Stability Guard` verde,
+sin force-push, merge con rebase/squash. Push directo es rechazado (verificado: el push
+directo del HANDOFF fue rechazado y se completó vía PR #10).
 
 ## Pendientes sugeridos (siguiente sesión si aplica)
 - Evaluar tag/release `v0.1.0` + demo pública + capturas/README (recomendación del review).
