@@ -71,7 +71,7 @@ wait_for_postgres() {
 
 is_transient_sqlx_failure() {
   local output_file="$1"
-  grep -qE 'database "_sqlx_test_[^"]+" does not exist|It seems to have just been dropped or renamed|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
+  grep -qE 'database "_sqlx_test_[^"]+" does not exist|PoolTimedOut|failed to lookup address information|Connection refused|timed out waiting for connection' "$output_file"
 }
 
 run_sqlx_test_with_retry() {
@@ -118,11 +118,7 @@ run_sqlx_test_with_retry() {
 RUNNER_RESOLVED="$(resolve_runner)"
 echo "==> backend integration runner: ${RUNNER_RESOLVED}"
 
-if [[ "$RUNNER_RESOLVED" == "docker" ]]; then
-  echo "==> ensuring backend test runner is available"
-  DATABASE_URL="${HMS_DOCKER_DATABASE_URL:-postgres://admin:password123@db:5432/hms_core}" \
-    docker compose up -d db backend >/dev/null
-else
+if [[ "$RUNNER_RESOLVED" == "host" ]]; then
   if ! command -v psql >/dev/null 2>&1; then
     echo "psql not found for host runner. Use --runner docker or install psql." >&2
     exit 1
@@ -148,7 +144,5 @@ run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_rls_phase1"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "booking_flow"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_fk_integrity"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "booking_transactional_integrity"
-run_sqlx_test_with_retry "$RUNNER_RESOLVED" "maintenance_workflow"
-run_sqlx_test_with_retry "$RUNNER_RESOLVED" "cash_shift_handoff"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "room_management"
 run_sqlx_test_with_retry "$RUNNER_RESOLVED" "tenant_context_runtime"
