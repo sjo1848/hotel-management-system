@@ -25,7 +25,7 @@ describe("HotelPulseSummary", () => {
     render(<HotelPulseSummary kpis={kpis()} loading={false} />);
     const labels = screen
       .getAllByText(/Ocupación|Llegadas|Salidas|Reservas activas/)
-      .filter((node) => node.tagName === "DT");
+      .filter((node) => node.tagName === "P");
     expect(labels.length).toBe(4);
   });
 
