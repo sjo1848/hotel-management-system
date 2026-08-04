@@ -200,12 +200,13 @@ The canonical contract is `backend/openapi.yaml`. Alignment with `docs/openapi.y
 - [Implementation status](docs/PROJECT_STATUS.md)
 - [OpenAPI contract](backend/openapi.yaml)
 - [Changelog](docs/CHANGELOG.md)
+- [Screenshots y walkthrough](docs/screenshots/README.md)
 
 ## Current priorities
 
-- Publish verified screenshots and a short product walkthrough.
+- [x] Publish verified screenshots and a short product walkthrough ([docs/screenshots](docs/screenshots/README.md)).
 - Provide a hosted read-only demonstration environment.
-- Tag a stable portfolio release.
+- [x] Tag a stable portfolio release (`v0.1.0`).
 - Continue validating usability and operational workflows with realistic hotel scenarios.
 
 ## Scope note
