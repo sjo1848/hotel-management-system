@@ -1,6 +1,6 @@
 # HMS Elite — Portfolio Review Checklist
 
-Use this checklist before merging the portfolio-curation branch and before publishing a tagged portfolio release.
+Use this checklist before the next release and periodically for portfolio hygiene.
 
 ## Repository presentation
 
@@ -15,16 +15,14 @@ Use this checklist before merging the portfolio-curation branch and before publi
 
 ## Visual evidence
 
-- [ ] Add a verified dashboard screenshot.
-- [ ] Add a booking workflow screenshot.
-- [ ] Add a housekeeping workflow screenshot.
-- [ ] Add a role/capability administration screenshot.
+- [x] Verified screenshots published in `docs/screenshots/` (login, dashboard, bookings, calendar, rooms, guests, housekeeping, network, users, reports).
+- [ ] Add a role-specific screenshot set (saas_admin, reception, housekeeping, admin) to match the tagged version.
 - [ ] Add a concise architecture image if Mermaid rendering is insufficient for external use.
 - [ ] Record a 60–90 second walkthrough.
 
 ## Technical validation
 
-- [ ] Run the full CI workflow on the final commit.
+- [x] Full CI workflow green (`CI Stability Guard`) on latest releases.
 - [ ] Verify quick start from a clean clone.
 - [ ] Confirm OpenAPI documentation renders correctly.
 - [ ] Confirm no secrets, local environment files or generated archives are tracked.
@@ -33,8 +31,9 @@ Use this checklist before merging the portfolio-curation branch and before publi
 
 ## Release readiness
 
-- [ ] Decide the portfolio release name, for example `v0.9.0-portfolio`.
-- [ ] Document known limitations in release notes.
+- [x] Release `v0.1.0` tagged and published with notes (2026-08-03).
+- [ ] Decide the next portfolio release name.
+- [ ] Document known limitations in upcoming release notes.
 - [ ] Attach or link the product walkthrough.
 - [ ] Publish a constrained read-only demo or explicitly state that no public demo is available.
 - [ ] Pin the release commit used by screenshots and demo.

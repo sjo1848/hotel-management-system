@@ -1,6 +1,6 @@
 # HMS Elite — Implementation Status
 
-Last portfolio review: **2026-08-03**
+Last portfolio review: **2026-08-04**
 
 This document separates implemented repository evidence from pending product and presentation work. It is intentionally conservative: an item is considered implemented only when the repository contains code, tests, scripts or configuration supporting it.
 
@@ -30,9 +30,14 @@ This document separates implemented repository evidence from pending product and
 | Cash closure | Implemented | Close-cash use case and persistence |
 | Occupancy and revenue reports | Implemented | Reporting endpoints and services |
 | Dashboard and network KPIs | Implemented | Analytics endpoints and runtime evidence gates |
+| Reception operational workspace | Implemented | Turn-based arrivals/departures and guided checkout (WF-014) |
+| Dashboard control center | Implemented | Operational pulse and priority alerts (WF-015) |
+| Room inventory workspace | Implemented | Status transitions and availability planner (WF-016) |
+| Calendar planning board | Implemented | Occupancy timeline/agenda by room and date (WF-017) |
+| Housekeeping shift workspace | Implemented | Cleaning queue with dirty/in-progress/clean states (WF-018) |
 | Public hosted demonstration | Pending | Controlled deployment still required |
-| Verified product screenshots | Pending | Capture from a reproducible build |
-| Stable tagged release | Pending | Portfolio release process still required |
+| Verified product screenshots | Implemented | `docs/screenshots/` captured from the local stack (Playwright, 2026-08-03) |
+| Stable tagged release | Implemented | Tag `v0.1.0` published 2026-08-03 with release notes |
 | Real hotel-user validation | Pending | Outside current repository evidence |
 
 ## Architecture and API
@@ -117,15 +122,16 @@ This document separates implemented repository evidence from pending product and
 
 ### Presentation gaps
 
-- No screenshots or short demo video.
-- No stable release tag.
+- No demo video (screenshots and walkthrough exist in `docs/screenshots/`).
 - No public read-only deployment.
 - Repository description and topics still need adjustment in GitHub settings.
-- The project would benefit from a small set of curated architecture and UX images.
+- A short set of curated architecture and UX images could strengthen the case study.
 
 ## Recommended release criteria
 
-A portfolio release such as `v0.9.0-portfolio` should be created only after:
+The `v0.1.0` release (2026-08-03) was published after main CI was green, seed data
+supported the principal journeys, screenshots matched the version, and known
+limitations were documented. Future portfolio releases should also satisfy:
 
 1. Main CI is green on the release commit.
 2. Quick-start instructions are verified from a clean clone.
@@ -138,10 +144,8 @@ A portfolio release such as `v0.9.0-portfolio` should be created only after:
 
 ## Next actions
 
-1. Capture role-based screenshots: SaaS admin, reception, housekeeping and management.
-2. Add a 60–90 second walkthrough covering one complete booking-to-checkout journey.
-3. Run the full quality gate and record the successful release commit.
-4. Create a tagged portfolio release.
-5. Publish a constrained demonstration environment.
-6. Add an accessibility audit and document findings.
-7. Create a concise threat model and operational runbook.
+1. Record a 60–90 second walkthrough covering one complete booking-to-checkout journey.
+2. Publish a constrained demonstration environment.
+3. Add a dedicated automated accessibility gate and document findings.
+4. Create a concise threat model and operational runbook.
+5. Set repository description and topics in GitHub settings.
