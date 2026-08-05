@@ -25,7 +25,7 @@ const CalendarAgenda = ({ dates, selectedDate, items, conflicts, onDateChange, o
   const groups = ["conflict", "arrival", "departure", "stay", "hold"] as const;
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-muted p-1" aria-label="Día de agenda">
+      <div role="group" className="flex gap-2 overflow-x-auto rounded-xl border border-border bg-muted p-1" aria-label="Día de agenda">
         {dates.map((date) => (
           <button key={date} type="button" aria-pressed={selectedDate === date} onClick={() => onDateChange(date)} className={`min-h-11 min-w-[74px] rounded-lg px-3 text-xs font-bold ${selectedDate === date ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`}>
             {format(parseISO(date), "EEE dd", { locale: es })}
