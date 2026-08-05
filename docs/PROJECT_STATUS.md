@@ -71,7 +71,7 @@ This document separates implemented repository evidence from pending product and
 | Coverage thresholds | Implemented | Backend coverage gate with module thresholds |
 | Secret scanning | Implemented | Gitleaks workflow job |
 | CI stability guard | Implemented | Historical success/consecutive-run threshold script |
-| Accessibility evidence | Partial | UI implementation exists, but a dedicated automated accessibility gate is not yet documented |
+| Accessibility evidence | Implemented | Automated WCAG gate with axe-core covering login + 8 admin routes (a11y-audit.spec.ts), violations fixed |
 | Usability validation | Pending | Requires scenario-based review with representative users |
 
 ## Security
@@ -146,6 +146,6 @@ limitations were documented. Future portfolio releases should also satisfy:
 
 1. Record a 60–90 second walkthrough covering one complete booking-to-checkout journey.
 2. Publish a constrained demonstration environment.
-3. Add a dedicated automated accessibility gate and document findings.
+3. ✅ Add a dedicated automated accessibility gate and document findings. (PR #19: axe-core audit on login + 8 admin routes, 0 violations)
 4. Create a concise threat model and operational runbook.
 5. Set repository description and topics in GitHub settings.
