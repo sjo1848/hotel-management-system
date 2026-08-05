@@ -89,7 +89,7 @@ This document separates implemented repository evidence from pending product and
 | Request IDs | Implemented | Middleware and observability tests |
 | Audit trail | Implemented | Audit-event persistence |
 | Environment security preflight | Implemented | CI and local script |
-| Formal threat model | Partial | Security controls are present; a consolidated threat-model document would improve reviewability |
+| Formal threat model | Implemented | Consolidated STRIDE threat model in docs/ops/threat-model.md mapping assets, controls and gaps |
 | Independent penetration test | Pending | Not part of the current portfolio scope |
 | Compliance certification | Pending | Depends on deployment jurisdiction and operator requirements |
 
@@ -107,7 +107,7 @@ This document separates implemented repository evidence from pending product and
 | Deploy with rollback | Implemented | Deployment script |
 | Production environment validation | Implemented | Readiness/preflight scripts |
 | Public production environment | Pending | No hosted environment is linked |
-| Operational runbook for external operators | Partial | Scripts and checks exist; a concise operator runbook would improve handoff |
+| Operational runbook for external operators | Implemented | Operator runbook + runbook index in docs/ops/ (deploy, rollback, backup/restore, health) |
 
 ## Portfolio readiness assessment
 
@@ -147,5 +147,5 @@ limitations were documented. Future portfolio releases should also satisfy:
 1. Record a 60–90 second walkthrough covering one complete booking-to-checkout journey.
 2. Publish a constrained demonstration environment.
 3. ✅ Add a dedicated automated accessibility gate and document findings. (PR #19: axe-core audit on login + 8 admin routes, 0 violations)
-4. Create a concise threat model and operational runbook.
-5. Set repository description and topics in GitHub settings.
+4. ✅ Create a concise threat model and operational runbook. (docs/ops/threat-model.md + operator-runbook.md + runbooks/README.md)
+5. ✅ Set repository description and topics in GitHub settings.
