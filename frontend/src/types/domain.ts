@@ -9,6 +9,7 @@ export type TenantUserRole = Exclude<UserRole, "saas_admin">;
 export type User = {
   id: string;
   hotel_id: string;
+  hotel_name?: string;
   username: string;
   role: UserRole;
 };

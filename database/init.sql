@@ -39,5 +39,6 @@
 \ir ../backend/migrations/0026_booking_arrival_exceptions.sql
 \ir ../backend/migrations/0027_maintenance_cases.sql
 \ir ../backend/migrations/0028_maintenance_legacy_backfill.sql
+\ir ../backend/migrations/0029_rename_default_hotel_to_viena.sql
 
 \echo '[hms] migraciones SQLx aplicadas desde database/init.sql (compat shim).'
