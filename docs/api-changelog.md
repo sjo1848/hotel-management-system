@@ -2,6 +2,11 @@
 
 ## v1
 
+### 2026-08-05
+- `GET /api/v1/auth/me` agrega al schema `UserView` los campos `hotel_id` y `hotel_name` (el nombre del hotel del tenant autenticado), ya serializados por el backend.
+- No hay breaking change de forma en API v1: se agregan dos campos aditivos; los clientes existentes pueden ignorarlos.
+- El frontend usa `hotel_name` para mostrar el nombre del hotel en el sidebar, reemplazando el texto fijo "SEDE CENTRAL".
+
 ### 2026-08-01
 - Los schemas de respuesta `Room`, `Booking` y `Guest` declaran como requeridos los campos que el backend siempre serializa, incluso cuando su valor puede ser `null`.
 - `Room` y `Guest` incorporan `hotel_id`; `Guest` incorpora `created_at`, corrigiendo omisiones documentales frente a la respuesta runtime.

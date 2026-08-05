@@ -1,6 +1,6 @@
 # HMS Elite — Screenshots y Walkthrough (v0.1.0)
 
-Capturas verificadas del stack local con el dataset demo (hotel "Sede Central",
+Capturas verificadas del stack local con el dataset demo (hotel "Viena",
 `00000000-0000-0000-0000-000000000001`), usuario `admin` / `demo2026pass`.
 Tomadas el 2026-08-03 con Playwright headless (viewport 1440x900).
 

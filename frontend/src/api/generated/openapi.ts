@@ -2276,6 +2276,9 @@ export interface components {
             /** Format: uuid */
             id?: string;
             username?: string;
+            /** Format: uuid */
+            hotel_id?: string;
+            hotel_name?: string;
             /**
              * @description Rol tenant administrable.
              * @enum {string}

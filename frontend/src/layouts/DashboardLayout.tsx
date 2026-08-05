@@ -392,7 +392,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                   HMS <span className="text-secondary">ELITE</span>
                 </h1>
                 <p className="sidebar-text-muted mt-1 text-xs font-semibold uppercase tracking-[0.2em]">
-                  {user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA"}
+                  {user?.hotel_name || (user?.hotel_id === "00000000-0000-0000-0000-000000000001" ? "SEDE CENTRAL" : "PROPIEDAD ASIGNADA")}
                 </p>
               </div>
             )}

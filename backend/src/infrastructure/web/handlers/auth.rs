@@ -259,6 +259,13 @@ pub async fn me_handler(
         .get_session_user(hotel_id, user_id)
         .await?;
 
+    let hotel_name = state
+        .hotel_service
+        .get_hotel(hotel_id)
+        .await
+        .map(|h| h.name)
+        .unwrap_or_default();
+
     Ok(Json(json!({
 
         "id": user.id,
@@ -266,6 +273,8 @@ pub async fn me_handler(
         "username": user.username,
 
         "hotel_id": user.hotel_id,
+
+        "hotel_name": hotel_name,
 
         "role": user.role
 

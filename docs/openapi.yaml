@@ -1839,6 +1839,11 @@ components:
           format: uuid
         username:
           type: string
+        hotel_id:
+          type: string
+          format: uuid
+        hotel_name:
+          type: string
         role:
           type: string
           description: Rol tenant administrable.
