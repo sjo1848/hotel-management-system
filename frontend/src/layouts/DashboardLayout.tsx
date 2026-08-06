@@ -186,9 +186,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   }, [isCollapsed, mobileNavOpen, location.pathname]);
 
   useEffect(() => {
-    if (!mobileNavOpen || typeof window === "undefined") return;
-    const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-    setMobileNavExpanded(canHover);
+    if (!mobileNavOpen) return;
+    setMobileNavExpanded(true);
   }, [mobileNavOpen]);
 
   useEffect(() => {
@@ -371,7 +370,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   );
 
   return (
-    <div className="theme-fade app-shell flex h-screen overflow-hidden font-sans text-foreground">
+    <div className="theme-fade app-shell flex h-dvh overflow-hidden font-sans text-foreground">
       <aside
         className={cn(
           "app-sidebar relative z-50 hidden shadow-2xl transition-all duration-500 ease-in-out md:flex md:flex-col",
@@ -475,7 +474,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </SheetContent>
       </Sheet>
 
-      <main className="relative flex h-full flex-1 flex-col overflow-hidden">
+      <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="app-header responsive-shell-header sticky top-0 z-40 md:relative">
           <div className="flex w-full items-center gap-3 md:max-w-xl md:flex-1">
             <Button size="icon" variant="ghost" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
@@ -502,8 +501,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </header>
 
-        <div className="motion-stage flex-1 overflow-auto bg-background/30 px-4 pb-4 pt-0 md:p-8 md:pt-0">
-          <div key={location.pathname} className="motion-page mx-auto max-w-7xl">
+        <div className="motion-stage min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-background/30 px-4 pb-4 pt-0 md:p-8 md:pt-0">
+          <div key={location.pathname} className="motion-page mx-auto min-w-0 max-w-7xl">
             {children}
           </div>
         </div>
