@@ -550,7 +550,7 @@ const BookingCaseWorkspace = ({
             <CalendarDays className="h-4 w-4" />
             Refrescar
           </Button>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-row sm:items-center">
             {primaryAction ? (
               <Button
                 variant={primaryAction.disabled ? "outline" : "default"}
