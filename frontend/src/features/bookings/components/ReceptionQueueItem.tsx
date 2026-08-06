@@ -99,7 +99,7 @@ export const ReceptionQueueItem = ({
           <Button
             type="button"
             size="sm"
-            className="h-8 rounded-xl"
+            className="min-h-9 rounded-xl"
             onClick={(event) => {
               event.stopPropagation();
               onPrepareCheckIn(item.entry.booking_id);

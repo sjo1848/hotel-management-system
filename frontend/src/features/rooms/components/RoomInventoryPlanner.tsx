@@ -114,9 +114,6 @@ const RoomInventoryPlanner = ({
             {format(plannerDays[0], "dd MMM", { locale: es })} al{" "}
             {format(plannerDays[plannerDays.length - 1], "dd MMM", { locale: es })}
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Usa la timeline completa de bloqueos abajo para ampliar rango y editar fechas.
-          </p>
           <p className="mt-2 text-xs font-semibold text-foreground">
             {occupancySummary.futureBookedRooms} habitaciones con ocupación futura visible ·{" "}
             {occupancySummary.checkedInCount} estancias activas en la ventana.
@@ -171,7 +168,7 @@ const RoomInventoryPlanner = ({
                     <Button
                       type="button"
                       variant="outline"
-                      className="motion-surface h-9 rounded-xl px-3 text-xs"
+                      className="motion-surface min-h-10 rounded-xl px-3 text-xs"
                       onClick={() => onManageRoom(room.id)}
                     >
                       Gestionar
@@ -270,7 +267,7 @@ const RoomInventoryPlanner = ({
         <div className="flex items-center justify-between gap-2">
           <Button
             variant="outline"
-            className="h-9 w-9 shrink-0 rounded-xl p-0"
+            className="min-h-10 min-w-10 shrink-0 rounded-xl p-0"
             aria-label="Día anterior"
             onClick={() =>
               setSelectedDayOffset((current) => Math.max(0, current - 1))
@@ -300,7 +297,7 @@ const RoomInventoryPlanner = ({
           </div>
           <Button
             variant="outline"
-            className="h-9 w-9 shrink-0 rounded-xl p-0"
+            className="min-h-10 min-w-10 shrink-0 rounded-xl p-0"
             aria-label="Día siguiente"
             onClick={() =>
               setSelectedDayOffset((current) => Math.min(plannerDays.length - 1, current + 1))
@@ -358,7 +355,7 @@ const RoomInventoryPlanner = ({
                 </div>
                 <Button
                   variant="outline"
-                  className="h-9 shrink-0 rounded-xl text-xs"
+                  className="min-h-10 shrink-0 rounded-xl text-xs"
                   onClick={() => onManageRoom(room.id)}
                 >
                   Ver detalle

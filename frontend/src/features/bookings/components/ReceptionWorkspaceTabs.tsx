@@ -70,7 +70,7 @@ export const ReceptionWorkspaceTabs = ({
             aria-selected={active}
             tabIndex={active ? 0 : -1}
             className={cn(
-              "h-10 shrink-0 rounded-xl px-3 text-sm font-bold transition",
+              "min-h-11 shrink-0 rounded-xl px-3 text-sm font-bold transition",
               active
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:bg-card/60 hover:text-foreground",

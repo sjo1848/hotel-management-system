@@ -554,7 +554,7 @@ const BookingCaseWorkspace = ({
             {primaryAction ? (
               <Button
                 variant={primaryAction.disabled ? "outline" : "default"}
-                className="w-full rounded-xl sm:w-auto"
+                className="min-w-0 w-full whitespace-normal rounded-xl leading-snug sm:w-auto"
                 disabled={primaryAction.disabled}
                 onClick={primaryAction.onClick}
               >

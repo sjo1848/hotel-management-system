@@ -63,7 +63,7 @@ export const TabStrip = <T extends string>({
             aria-selected={active}
             tabIndex={active ? 0 : -1}
             className={cn(
-              "h-10 shrink-0 rounded-xl px-4 text-sm font-bold transition",
+              "min-h-11 shrink-0 rounded-xl px-4 text-sm font-bold transition",
               active
                 ? "bg-card text-foreground shadow-sm ring-1 ring-border"
                 : "text-muted-foreground hover:bg-card/60 hover:text-foreground",

@@ -73,7 +73,7 @@ export function DataTable<T extends { id: string | number }>({
 
       <div className="motion-refresh overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
-          <Table className="min-w-[720px]">
+          <Table className="min-w-0 md:min-w-[720px]">
           <TableHeader className="border-b border-border bg-muted/35">
             <TableRow className="hover:bg-muted/35">
               {columns.map((col, idx) => (
@@ -81,6 +81,7 @@ export function DataTable<T extends { id: string | number }>({
                   key={idx}
                   className={cn(
                     "h-12 text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+                    idx === 0 && "sticky left-0 z-10 bg-muted/35",
                     col.className,
                   )}
                 >
@@ -121,7 +122,14 @@ export function DataTable<T extends { id: string | number }>({
                   )}
                 >
                   {columns.map((col, colIdx) => (
-                    <TableCell key={colIdx} className={cn("py-4", col.className)}>
+                    <TableCell
+                      key={colIdx}
+                      className={cn(
+                        "py-4",
+                        colIdx === 0 && "sticky left-0 z-10 bg-card",
+                        col.className,
+                      )}
+                    >
                       {col.cell
                         ? col.cell(item)
                         : col.accessorKey
@@ -141,10 +149,10 @@ export function DataTable<T extends { id: string | number }>({
         <div className="motion-refresh flex items-center justify-between px-2 text-xs text-muted-foreground">
           <div>Mostrando {data.length} resultados</div>
           <div className="flex gap-2 self-start sm:self-auto">
-            <Button variant="outline" size="sm" disabled className="h-8 text-xs">
+            <Button variant="outline" size="sm" disabled className="min-h-9 text-xs">
               Anterior
             </Button>
-            <Button variant="outline" size="sm" disabled className="h-8 text-xs">
+            <Button variant="outline" size="sm" disabled className="min-h-9 text-xs">
               Siguiente
             </Button>
           </div>

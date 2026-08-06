@@ -232,7 +232,7 @@ const ReportsPage = () => {
             {formatShortDate(startDate)} - {formatShortDate(endDate)}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            La UI responde bien en mobile y tablet; charts y cierres apilan sin romper el layout.
+            Rango seleccionado para los indicadores y cierres de esta vista.
           </p>
         </div>
       </SectionCard>
@@ -422,14 +422,12 @@ const ReportsPage = () => {
                           {closure.payment_count} cobros en el turno
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">
-                          Efectivo {formatCurrency(closure.cash_amount_cents)}
+                          Efectivo {formatCurrency(closure.cash_amount_cents)} · Contado{" "}
+                          {formatCurrency(closure.counted_cash_amount_cents)}
                         </span>
                         <span className="text-xs font-semibold text-muted-foreground">
-                          Contado {formatCurrency(closure.counted_cash_amount_cents)} · Diferencia{" "}
+                          Tarjeta/transfer {formatCurrency(closure.card_amount_cents)} · Diferencia{" "}
                           {formatCurrency(closure.cash_difference_cents)}
-                        </span>
-                        <span className="text-xs font-semibold text-muted-foreground">
-                          Tarjeta/transfer {formatCurrency(closure.card_amount_cents)}
                         </span>
                       </div>
                     </div>

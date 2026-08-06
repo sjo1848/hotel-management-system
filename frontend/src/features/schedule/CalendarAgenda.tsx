@@ -1,7 +1,16 @@
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { CalendarAgendaItem, CalendarAllocation, CalendarConflict } from "./calendarModel";
+
+const statusLabel = (booking: { status: string }) => ({
+  Confirmed: "Confirmada",
+  CheckedIn: "En casa",
+  CheckedOut: "Finalizada",
+  Cancelled: "Cancelada",
+  NoShow: "No-show",
+})[booking.status] ?? booking.status;
 
 type Props = {
   dates: string[];
@@ -46,8 +55,8 @@ const CalendarAgenda = ({ dates, selectedDate, items, conflicts, onDateChange, o
                 </Button>
               ))}
               {groupItems.map((item) => {
-                const label = item.kind === "hold" ? `${item.hold.hold_type} · ${item.hold.reason}` : `${item.booking.guest_name} · ${item.booking.status}`;
-                return <Button key={`${item.kind}-${item.kind === "hold" ? item.hold.hold_id : item.booking.id}`} type="button" variant="outline" className="min-h-11 justify-between text-left" onClick={() => onSelect(item)}><span><strong>Habitación {item.room.room_number}</strong> · {label}</span><span>Ver detalle</span></Button>;
+                const label = item.kind === "hold" ? `${item.hold.hold_type} · ${item.hold.reason}` : `${item.booking.guest_name} · ${statusLabel(item.booking)}`;
+                return <Button key={`${item.kind}-${item.kind === "hold" ? item.hold.hold_id : item.booking.id}`} type="button" variant="outline" className="min-h-11 justify-between text-left" onClick={() => onSelect(item)}><span><strong>Habitación {item.room.room_number}</strong> · {label}</span><ChevronRight className="h-4 w-4 shrink-0" /></Button>;
               })}
             </div>
           </section>

@@ -81,7 +81,7 @@ const GuestsPage = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
+            className="min-h-9 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => {
               setSelectedGuest(item);
               setIsDetailsOpen(true);

@@ -30,7 +30,7 @@ const GuideHint = ({
           <p className="mt-2 text-sm font-black text-foreground">{title}</p>
           <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           {ctaLabel && onCta ? (
-            <Button className="mt-3 h-9 rounded-xl" size="sm" onClick={onCta}>
+            <Button className="mt-3 min-w-0 whitespace-normal rounded-xl leading-snug" size="sm" onClick={onCta}>
               {ctaLabel}
               <ArrowRight className="h-4 w-4" />
             </Button>
