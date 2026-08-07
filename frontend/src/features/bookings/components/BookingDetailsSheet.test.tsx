@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import type { Booking } from "@/types/domain";
@@ -130,7 +131,7 @@ beforeEach(() => {
 });
 
 describe("BookingDetailsSheet", () => {
-  it("renders the queue context pill and guided hint when guided mode is on", () => {
+  it("renders the queue context dropdown and guided hint when guided mode is on", async () => {
     render(
       <BookingDetailsSheet
         booking={booking}
@@ -140,6 +141,8 @@ describe("BookingDetailsSheet", () => {
       />,
     );
 
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Más opciones del caso/i }));
     expect(screen.getByText(/Cola del turno/i)).toBeDefined();
     expect(screen.getByText(/Caso 1 de 3/i)).toBeDefined();
     expect(screen.getByText(/Recepción guiada/i)).toBeDefined();

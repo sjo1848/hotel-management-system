@@ -275,7 +275,7 @@ const FrontDeskBoardPanel = ({
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Filtrar casos
               </p>
-              <div className="mt-2 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filtrar cola de recepcion">
+              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Filtrar cola de recepcion">
                 {queueFilters.map((filter) => (
                   <Button
                     key={filter.value}
@@ -363,11 +363,11 @@ const FrontDeskBoardPanel = ({
       ) : null}
 
       {!loading && holdsToday.length > 0 ? (
-        <div className="stagger-list mt-4 flex gap-3 overflow-x-auto pb-1">
+        <div className="stagger-list mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {holdsToday.slice(0, 4).map((hold) => (
             <div
               key={hold.hold_id}
-              className="min-w-[200px] rounded-2xl border border-border bg-background/70 px-4 py-3 shadow-sm sm:min-w-[220px]"
+              className="rounded-2xl border border-border bg-background/70 px-4 py-3 shadow-sm"
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Hold del dia

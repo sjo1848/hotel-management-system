@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 import type { Booking } from "@/types/domain";
@@ -302,15 +303,19 @@ describe("BookingCaseWorkspace", () => {
     expect(onOpenQueuedBooking).toHaveBeenCalledWith("booking-2");
   });
 
-  it("keeps the turn queue context with previous and next case navigation", () => {
+  it("keeps the turn queue context with previous and next case navigation", async () => {
     const onOpenQueuedBooking = vi.fn();
     renderWorkspace({
       queueBookingIds: ["booking-1", "booking-2", "booking-3"],
       onOpenQueuedBooking,
     });
 
+    expect(screen.getByRole("button", { name: /Más opciones del caso/i })).toBeDefined();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Más opciones del caso/i }));
     expect(screen.getByText(/Caso 1 de 3/i)).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: /Continuar con siguiente/i }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: /Continuar con siguiente/i }));
     expect(onOpenQueuedBooking).toHaveBeenCalledWith("booking-2");
   });
 });

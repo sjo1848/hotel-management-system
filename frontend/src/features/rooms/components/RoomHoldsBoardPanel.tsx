@@ -196,7 +196,7 @@ const RoomHoldsBoardPanel = ({
 
             {!loading && holdRows.length > 0 ? (
               <div className="space-y-4">
-                <div className="overflow-x-auto rounded-2xl border border-border bg-background/60">
+                <div className="hidden overflow-x-auto rounded-2xl border border-border bg-background/60 md:block">
                   <div
                     className="grid min-w-[760px] gap-px bg-border md:min-w-[860px]"
                     style={{
