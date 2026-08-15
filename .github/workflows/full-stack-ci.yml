@@ -154,8 +154,41 @@ jobs:
         run: npx playwright install --with-deps chromium chromium-headless-shell
         working-directory: frontend
 
+      - name: Start synthetic E2E stack
+        run: |
+          docker compose up -d db backend frontend
+          for _ in $(seq 1 60); do
+            if docker compose exec -T db pg_isready -U admin -d hms_core >/dev/null 2>&1 && \
+              curl -fsS http://localhost:3001/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Synthetic E2E stack did not become ready" >&2
+          docker compose ps
+          exit 1
+
+      - name: Seed synthetic E2E data
+        run: ./scripts/seed-demo-data.sh
+
       - name: Run E2E Core Journeys
+        env:
+          # The backend CI profile bootstraps this synthetic admin credential;
+          # make the browser gate independent of per-spec local defaults.
+          E2E_USERNAME: admin
+          E2E_PASSWORD: demo2026pass
         run: bash ./scripts/qa-core-journeys-e2e.sh
+
+      - name: Run E2E Reception Lifecycle on Mobile Widths
+        env:
+          E2E_USERNAME: admin
+          E2E_PASSWORD: demo2026pass
+          E2E_GREP: "guest lifecycle: walk-in, check-in, charge, payment, checkout and room release"
+        run: |
+          for width in 375 390 430; do
+            echo "==> Reception lifecycle mobile width: ${width}px"
+            E2E_VIEWPORT_WIDTH="$width" bash ./scripts/qa-core-journeys-e2e.sh
+          done
 
   perf-smoke:
     name: Performance Smoke Gate

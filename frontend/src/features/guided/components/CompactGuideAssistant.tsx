@@ -59,7 +59,12 @@ const CompactGuideAssistant = ({
           />
         </button>
         {hasCta ? (
-          <Button type="button" size="sm" className="h-9 shrink-0 rounded-xl" onClick={onCta}>
+          <Button
+            type="button"
+            size="sm"
+            className="min-w-0 whitespace-normal rounded-xl leading-snug"
+            onClick={onCta}
+          >
             {ctaLabel}
             <ArrowRight className="h-4 w-4" />
           </Button>

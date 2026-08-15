@@ -46,11 +46,18 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
   await expect(page).toHaveURL(/\/bookings$/);
   await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
 
+  // At mobile widths the fourth and fifth workspace views are intentionally
+  // behind the "Más" overflow menu. Select the current UI surface first.
+  await page.getByRole("tab", { name: /^Más/ }).click();
   await page.getByRole("tab", { name: /Reservas/ }).click();
-  await page.getByRole("button", { name: "Gestionar" }).first().click();
-  await expect(
-    page.getByText(/Revisá el bloqueo y completá una sola próxima acción/),
-  ).toBeVisible();
+  const firstBookingCard = page.locator(".motion-refresh.space-y-3 > div").first();
+  await expect(firstBookingCard).toBeVisible();
+  await firstBookingCard.getByRole("button").first().click();
+  await firstBookingCard.getByRole("button", { name: "Gestionar" }).click();
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+  await page.getByRole("button", { name: /Más opciones del caso/i }).click();
+  await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   await expect(page.getByRole("button", { name: "Cerrar" })).toBeVisible();
 });
 

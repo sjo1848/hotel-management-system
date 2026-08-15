@@ -83,25 +83,24 @@ export const RoomBulkActionBar = ({
                 {outOfFilterCount} fuera del filtro
               </span>
             ) : null}
-            <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
-              Disp. {breakdown.Available}
-            </span>
-            <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
-              Ocupadas {breakdown.Occupied}
-            </span>
-            <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
-              Limpieza {cleaningCount}
-            </span>
-            <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
-              Mant. {breakdown.Maintenance}
+            <span className="hidden flex-wrap items-center gap-2 sm:flex">
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                Disp. {breakdown.Available}
+              </span>
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                Ocupadas {breakdown.Occupied}
+              </span>
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                Limpieza {cleaningCount}
+              </span>
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-muted-foreground">
+                Mant. {breakdown.Maintenance}
+              </span>
             </span>
           </div>
           {allBlocking.length > 0 ? (
             <p className="text-sm text-muted-foreground">
               Bloquean: {allBlocking.map((status) => STATUS_LABELS[status]).join(" · ")}.
-              <span className="ml-1 font-semibold text-foreground">
-                El backend valida el lote completo.
-              </span>
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">

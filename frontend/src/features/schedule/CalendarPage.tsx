@@ -46,7 +46,12 @@ const CalendarPage = () => {
 
   useEffect(() => {
     if (!modeTouched) setMode(isDesktop ? "timeline" : "agenda");
+    else if (!isDesktop) setMode("agenda");
   }, [isDesktop, modeTouched]);
+
+  useEffect(() => {
+    if (!isDesktop && mode === "timeline") setMode("agenda");
+  }, [isDesktop, mode]);
 
   const endDate = useMemo(() => format(addDays(parseISO(startDate), rangeDays), "yyyy-MM-dd"), [rangeDays, startDate]);
   const dateKeys = useMemo(() => buildCalendarAllocations([], [], [], { startDate, rangeDays }).dates, [rangeDays, startDate]);
@@ -97,8 +102,8 @@ const CalendarPage = () => {
           <Button type="button" variant="outline" className="min-h-11" onClick={() => { setStartDate(today); setSelectedDate(today); }}>Hoy</Button>
           <Button type="button" variant="outline" className="min-h-11" aria-label="Siguiente" onClick={() => moveRange(1)}>Siguiente<ChevronRight className="h-4 w-4" /></Button>
           <span className="rounded-xl bg-muted px-3 py-2 text-sm font-bold text-foreground" aria-live="polite">{format(parseISO(startDate), "dd MMM", { locale: es })}–{format(addDays(parseISO(startDate), rangeDays - 1), "dd MMM", { locale: es })}</span>
-          <div role="group" className="ml-auto flex rounded-xl border border-border bg-muted p-1" aria-label="Cantidad de días">{([7, 14, 30] as const).map((days) => <button key={days} type="button" aria-pressed={rangeDays === days} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${rangeDays === days ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => setRangeDays(days)}>{days} días</button>)}</div>
-          <div role="group" className="flex rounded-xl border border-border bg-muted p-1" aria-label="Modo de calendario"><button type="button" aria-pressed={mode === "timeline"} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${mode === "timeline" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => { setMode("timeline"); setModeTouched(true); }}>Timeline</button><button type="button" aria-pressed={mode === "agenda"} className={`min-h-9 rounded-lg px-3 text-xs font-bold ${mode === "agenda" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => { setMode("agenda"); setModeTouched(true); }}>Agenda</button></div>
+          <div role="group" className="ml-auto flex rounded-xl border border-border bg-muted p-1" aria-label="Cantidad de días">{([7, 14, 30] as const).map((days) => <button key={days} type="button" aria-pressed={rangeDays === days} className={`min-h-10 rounded-lg px-3 text-xs font-bold ${rangeDays === days ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => setRangeDays(days)}>{days} días</button>)}</div>
+          <div role="group" className="flex rounded-xl border border-border bg-muted p-1 aria-hidden:hidden" aria-label="Modo de calendario"><button type="button" aria-pressed={mode === "timeline" && isDesktop} disabled={!isDesktop} className={`min-h-10 rounded-lg px-3 text-xs font-bold ${mode === "timeline" ? "bg-card text-foreground shadow-sm" : isDesktop ? "text-muted-foreground hover:bg-card/60" : "cursor-not-allowed text-muted-foreground/40"}`} onClick={() => { setMode("timeline"); setModeTouched(true); }}>Timeline</button><button type="button" aria-pressed={mode === "agenda"} className={`min-h-10 rounded-lg px-3 text-xs font-bold ${mode === "agenda" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"}`} onClick={() => { setMode("agenda"); setModeTouched(true); }}>Agenda</button></div>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
           <input aria-label="Buscar habitación o huésped" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Habitación o huésped" className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm" />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import { SheetFooter, SheetHeader } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -263,45 +264,55 @@ const BookingCaseWorkspace = ({
                 {bookingState.guest_name}
               </h2>
               <p className="mt-2 max-w-[58ch] text-sm text-muted-foreground">
-                Hab. {room?.room_number ?? bookingState.room_id.slice(0, 6)} · Reserva {bookingState.id.slice(0, 8).toUpperCase()} · Revisá el bloqueo y completá una sola próxima acción.
+                Hab. {room?.room_number ?? bookingState.room_id.slice(0, 6)} · Reserva {bookingState.id.slice(0, 8).toUpperCase()}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-3 sm:min-w-[220px]">
-            {hasQueueSession ? (
-              <div className="motion-live-pill rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 shadow-sm">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">
-                  Cola del turno
-                </p>
-                <p className="mt-2 text-sm font-semibold text-foreground">
-                  Caso {currentQueueIndex + 1} de {normalizedQueueBookingIds.length}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Quedan {normalizedQueueBookingIds.length - currentQueueIndex - 1} después de este caso.
-                </p>
-              </div>
-            ) : null}
-            <div
-              className={cn(
-                "rounded-2xl border px-4 py-3 shadow-sm",
-                pendingControlCount > 0
-                  ? "border-amber-500/20 bg-amber-500/10"
-                  : "border-primary/20 bg-primary/10",
-              )}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Próxima acción
-              </p>
-              <p className="mt-2 text-sm font-semibold text-foreground">
-                {nextAction.title}
-              </p>
-              {pendingControlCount > 0 ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {pendingControlCount} control(es) pendiente(s)
-                </p>
-              ) : null}
-            </div>
+          <div className="flex items-start">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Más opciones del caso"
+                  className="flex max-h-11 min-h-11 min-w-11 items-center justify-center rounded-xl border border-border bg-card p-2 text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                >
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                {hasQueueSession ? (
+                  <>
+                    <div className="px-2 py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                        Cola del turno
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        Caso {currentQueueIndex + 1} de {normalizedQueueBookingIds.length}
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Quedan {normalizedQueueBookingIds.length - currentQueueIndex - 1} después de este caso.
+                      </p>
+                    </div>
+                    <DropdownMenuSeparator />
+                  </>
+                ) : null}
+                <div className="px-2 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Próxima acción
+                  </p>
+                  <p className="mt-1 text-sm font-semibold leading-snug text-foreground">{nextAction.title}</p>
+                  {nextAction.description ? (
+                    <p className="mt-1 text-xs text-muted-foreground">{nextAction.description}</p>
+                  ) : null}
+                  {pendingControlCount > 0 ? (
+                    <p className="mt-1.5 text-xs font-semibold text-amber-600 dark:text-amber-300">
+                      {pendingControlCount} control(es) pendiente(s)
+                    </p>
+                  ) : null}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </SheetHeader>
@@ -554,7 +565,7 @@ const BookingCaseWorkspace = ({
             {primaryAction ? (
               <Button
                 variant={primaryAction.disabled ? "outline" : "default"}
-                className="w-full rounded-xl sm:w-auto"
+                className="min-w-0 w-full whitespace-normal rounded-xl leading-snug sm:w-auto"
                 disabled={primaryAction.disabled}
                 onClick={primaryAction.onClick}
               >

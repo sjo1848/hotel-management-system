@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { User, Mail, Phone, Calendar, Plus } from "lucide-react";
+import { User, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { getGuests } from "./services/guestService";
@@ -49,21 +49,6 @@ const GuestsPage = () => {
       ),
     },
     {
-      header: "Contacto",
-      cell: (item) => (
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Mail className="w-3 h-3" /> {item.email}
-          </div>
-          {item.phone && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Phone className="w-3 h-3" /> {item.phone}
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
       header: "Miembro Desde",
       cell: (item) => (
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -81,7 +66,7 @@ const GuestsPage = () => {
           <Button 
             variant="ghost" 
             size="sm" 
-            className="h-8 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
+            className="min-h-9 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => {
               setSelectedGuest(item);
               setIsDetailsOpen(true);

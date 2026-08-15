@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -23,6 +24,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
     from: undefined,
     to: undefined,
   });
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const handleSearch = () => {
     if (date?.from && date?.to) {
@@ -85,7 +87,7 @@ const AvailabilityPicker = ({ onSearch, onClear }: AvailabilityPickerProps) => {
               defaultMonth={date?.from || new Date()}
               selected={date}
               onSelect={handleSelect}
-              numberOfMonths={2}
+              numberOfMonths={isDesktop ? 2 : 1}
               locale={es}
               disabled={{ before: new Date() }}
             />

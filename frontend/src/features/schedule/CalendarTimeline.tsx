@@ -17,10 +17,10 @@ type Props = {
 const statusLabel = (booking: Booking) => ({
   Confirmed: "Confirmada",
   CheckedIn: "En casa",
-  CheckedOut: "Histórica",
+  CheckedOut: "Finalizada",
   Cancelled: "Cancelada",
-  NoShow: "No show",
-}[booking.status]);
+  NoShow: "No-show",
+} as Record<Booking["status"], string>)[booking.status] ?? booking.status;
 
 const CalendarTimeline = ({ rooms, dates, allocationsByRoom, conflicts, onSelect, onRoom }: Props) => {
   const conflictKeys = new Set(conflicts.map((conflict) => `${conflict.roomId}:${conflict.date}`));
@@ -71,7 +71,7 @@ const CalendarTimeline = ({ rooms, dates, allocationsByRoom, conflicts, onSelect
                           {active.map((allocation) => {
                             const label = allocation.kind === "hold" ? allocation.hold.hold_type : `${allocation.booking.guest_name} · ${statusLabel(allocation.booking)}`;
                             return (
-                              <button key={`${allocation.kind}-${allocation.kind === "hold" ? allocation.hold.hold_id : allocation.booking.id}`} type="button" onClick={() => onSelect(allocation)} className={`min-h-11 w-full rounded-lg border px-1 text-left text-[10px] font-bold ${allocation.kind === "hold" ? "border-dashed border-amber-600 bg-amber-100 text-amber-900" : "border-indigo-600 bg-indigo-600 text-white"}`} aria-label={`${allocation.kind === "hold" ? "Bloqueo" : "Reserva"}: ${label}`}>
+                              <button key={`${allocation.kind}-${allocation.kind === "hold" ? allocation.hold.hold_id : allocation.booking.id}`} type="button" onClick={() => onSelect(allocation)} className={`min-h-11 w-full rounded-lg border px-1 text-left text-[10px] font-bold leading-tight ${allocation.kind === "hold" ? "border-dashed border-amber-600 bg-amber-100 text-amber-900" : "border-indigo-600 bg-indigo-600 text-white"} ${label.length > 12 ? "line-clamp-2 whitespace-normal" : "whitespace-nowrap"}`} aria-label={`${allocation.kind === "hold" ? "Bloqueo" : "Reserva"}: ${label}`}>
                                 {label}
                               </button>
                             );

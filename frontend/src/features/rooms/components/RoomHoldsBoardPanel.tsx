@@ -196,14 +196,14 @@ const RoomHoldsBoardPanel = ({
 
             {!loading && holdRows.length > 0 ? (
               <div className="space-y-4">
-                <div className="overflow-x-auto rounded-2xl border border-border bg-background/60">
+                <div className="hidden overflow-x-auto rounded-2xl border border-border bg-background/60 md:block">
                   <div
                     className="grid min-w-[760px] gap-px bg-border md:min-w-[860px]"
                     style={{
                       gridTemplateColumns: `minmax(180px, 220px) repeat(${timelineDates.length}, minmax(36px, 1fr))`,
                     }}
                   >
-                    <div className="bg-card px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    <div className="sticky left-0 z-10 bg-card px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                       Habitación / timeline
                     </div>
                     {timelineDates.map((date) => (
@@ -218,7 +218,7 @@ const RoomHoldsBoardPanel = ({
 
                     {holdRows.map((row) => (
                       <Fragment key={row.roomId}>
-                        <div key={`${row.roomId}-meta`} className="bg-card px-4 py-4">
+                        <div key={`${row.roomId}-meta`} className="sticky left-0 z-10 bg-card px-4 py-4">
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="text-sm font-black text-foreground">
@@ -229,7 +229,7 @@ const RoomHoldsBoardPanel = ({
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-9 rounded-xl px-3 text-xs"
+                              className="min-h-10 rounded-xl px-3 text-xs"
                               onClick={() => onManageRoom(row.roomId)}
                             >
                               Gestionar

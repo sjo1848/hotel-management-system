@@ -55,7 +55,7 @@ export const BookingCaseTabs = ({
       <div
         role="tablist"
         aria-label="Secciones del caso"
-        className="flex gap-1 overflow-x-auto rounded-2xl border border-border bg-muted p-1"
+        className="flex flex-wrap gap-1 rounded-2xl border border-border bg-muted p-1"
       >
         {bookingCaseTabs.map((tab) => {
           const active = tab.id === activeTab;

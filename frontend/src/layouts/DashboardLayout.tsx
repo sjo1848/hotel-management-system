@@ -359,7 +359,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           <Button
             variant="ghost"
             onClick={handleLogout}
-            className="sidebar-text-muted h-9 w-full justify-start text-xs hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-foreground"
+            className="sidebar-text-muted min-h-10 w-full justify-start text-xs hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-foreground"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión

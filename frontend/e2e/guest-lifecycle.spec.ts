@@ -28,6 +28,10 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   page,
 }) => {
   test.setTimeout(120_000);
+  const viewportWidth = Number.parseInt(process.env.E2E_VIEWPORT_WIDTH ?? "", 10);
+  if (Number.isFinite(viewportWidth) && viewportWidth > 0) {
+    await page.setViewportSize({ width: viewportWidth, height: 900 });
+  }
   const uniqueToken = `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
   const guestName = `E2E Lifecycle ${uniqueToken}`;
   const paymentReference = `POS-${uniqueToken}`;
@@ -73,7 +77,10 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
       /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
   );
   await walkInSheet.getByRole("button", { name: "Crear y gestionar" }).click();
-  await expect(page.getByText(/Revisá el bloqueo y completá una sola próxima acción/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+  await page.getByRole("button", { name: /Más opciones del caso/i }).click();
+  await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
   expect((await initialInvoiceLookup).status()).toBe(404);
 
   await page.getByRole("tab", { name: /Cuenta/ }).click();
