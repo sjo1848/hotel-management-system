@@ -39,7 +39,7 @@ Desktop and mobile browser evidence passed. The original failure was a stale/amb
 
 - Scoped stale “Próxima acción” assertions to the current menu surface.
 - Updated reception role E2E navigation for responsive “Más” overflow and mobile booking cards.
-- Made the reception lifecycle E2E use the responsive “Más → Cuenta/Operación” path when booking tabs collapse at 375px.
+- Kept the reception lifecycle E2E aligned with the current booking-case surface: direct tabs with responsive wrapping; the generic overflow fallback remains defensive and is not counted as booking-workspace evidence.
 - Added viewport propagation to the canonical E2E runner.
 - Added deterministic synthetic stack/data bootstrap to GitHub E2E.
 - Fixed CI credentials to match the synthetic seed (`demo2026pass`).
