@@ -1,0 +1,8 @@
+task_id=HMS-TRANSFER-BASELINE-001
+timestamp=2026-08-15T17:03:00-03:00
+repository=sjo1848/hotel-management-system
+main_sha=de805aa99ec5c4a324db47c87ab0d0e56b291709
+open_prs=#27 fix/mobile-checkin-layout OPEN UNSTABLE; #26 docs/mobile-ux-audit OPEN UNSTABLE
+canonical_ci_state=NOT_GREEN: latest main full-stack-ci failed with backend PASS and remaining jobs cancelled/skipped; latest deploy-with-rollback failed with no inspectable jobs/log
+report=HMS-TRANSFER-BASELINE-001-REPORT.md
+final_verdict=NOT_READY

@@ -12,6 +12,7 @@ BASE_URL="${PLAYWRIGHT_BASE_URL:-http://127.0.0.1:5173}"
 E2E_HOTEL_ID="${E2E_HOTEL_ID:-00000000-0000-0000-0000-000000000001}"
 E2E_USERNAME="${E2E_USERNAME:-admin}"
 E2E_PASSWORD="${E2E_PASSWORD:-admin123}"
+E2E_VIEWPORT_WIDTH="${E2E_VIEWPORT_WIDTH:-}"
 GREP_PATTERN="${E2E_GREP:-journey|lifecycle|billing|rbac|a11y}"
 ORIGINAL_RATE_LIMIT_PER_MINUTE="${RATE_LIMIT_PER_MINUTE:-60}"
 E2E_RATE_LIMIT_PER_MINUTE="${E2E_RATE_LIMIT_PER_MINUTE:-600}"
@@ -120,6 +121,7 @@ if [[ "$RUNNER" == "docker" ]]; then
     -e E2E_HOTEL_ID="$E2E_HOTEL_ID" \
     -e E2E_USERNAME="$E2E_USERNAME" \
     -e E2E_PASSWORD="$E2E_PASSWORD" \
+    -e E2E_VIEWPORT_WIDTH="$E2E_VIEWPORT_WIDTH" \
     -e E2E_GREP="$GREP_PATTERN" \
     frontend sh -lc '
     if ! command -v chromium-browser >/dev/null 2>&1 && ! command -v chromium >/dev/null 2>&1; then
@@ -152,6 +154,7 @@ elif [[ "$RUNNER" == "pw-container" ]]; then
     -e E2E_HOTEL_ID="$E2E_HOTEL_ID" \
     -e E2E_USERNAME="$E2E_USERNAME" \
     -e E2E_PASSWORD="$E2E_PASSWORD" \
+    -e E2E_VIEWPORT_WIDTH="$E2E_VIEWPORT_WIDTH" \
     -e E2E_GREP="$GREP_PATTERN" \
     -v "$(pwd)/frontend:/work" \
     -w /work \
@@ -170,6 +173,7 @@ else
     E2E_HOTEL_ID="$E2E_HOTEL_ID" \
     E2E_USERNAME="$E2E_USERNAME" \
     E2E_PASSWORD="$E2E_PASSWORD" \
+    E2E_VIEWPORT_WIDTH="$E2E_VIEWPORT_WIDTH" \
       npm run test:e2e -- --grep "$GREP_PATTERN" --fail-on-flaky-tests
   )
 fi
