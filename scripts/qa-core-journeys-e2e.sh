@@ -15,7 +15,9 @@ E2E_PASSWORD="${E2E_PASSWORD:-admin123}"
 E2E_VIEWPORT_WIDTH="${E2E_VIEWPORT_WIDTH:-}"
 GREP_PATTERN="${E2E_GREP:-journey|lifecycle|billing|rbac|a11y}"
 ORIGINAL_RATE_LIMIT_PER_MINUTE="${RATE_LIMIT_PER_MINUTE:-60}"
+ORIGINAL_LOGIN_LIMIT_PER_MINUTE="${LOGIN_LIMIT_PER_MINUTE:-10}"
 E2E_RATE_LIMIT_PER_MINUTE="${E2E_RATE_LIMIT_PER_MINUTE:-600}"
+E2E_LOGIN_LIMIT_PER_MINUTE="${E2E_LOGIN_LIMIT_PER_MINUTE:-600}"
 MANAGED_SERVICES=(db tempo otel-collector backend frontend)
 STARTED_SERVICES=()
 
@@ -95,12 +97,16 @@ NODE
 }
 
 echo "==> Starting stack for browser E2E (db/backend/frontend)"
-RATE_LIMIT_PER_MINUTE="$E2E_RATE_LIMIT_PER_MINUTE" docker compose up -d db backend frontend
+RATE_LIMIT_PER_MINUTE="$E2E_RATE_LIMIT_PER_MINUTE" \
+LOGIN_LIMIT_PER_MINUTE="$E2E_LOGIN_LIMIT_PER_MINUTE" \
+  docker compose up -d db backend frontend
 
 cleanup() {
   if [[ "$E2E_RATE_LIMIT_PER_MINUTE" != "$ORIGINAL_RATE_LIMIT_PER_MINUTE" ]]; then
     echo "==> Restoring backend rate limit"
-    RATE_LIMIT_PER_MINUTE="$ORIGINAL_RATE_LIMIT_PER_MINUTE" docker compose up -d backend >/dev/null 2>&1 || true
+    RATE_LIMIT_PER_MINUTE="$ORIGINAL_RATE_LIMIT_PER_MINUTE" \
+    LOGIN_LIMIT_PER_MINUTE="$ORIGINAL_LOGIN_LIMIT_PER_MINUTE" \
+      docker compose up -d backend >/dev/null 2>&1 || true
   fi
   if [[ "${#STARTED_SERVICES[@]}" -gt 0 ]]; then
     echo "==> Restoring services started by browser E2E"
