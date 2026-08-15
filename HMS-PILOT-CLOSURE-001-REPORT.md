@@ -13,10 +13,11 @@ Desktop and mobile browser evidence passed. The original failure was a stale/amb
 ## Candidate and canonical evidence
 
 - Repository: `sjo1848/hotel-management-system`
-- Branch: `fix/mobile-checkin-layout`
-- Candidate SHA: `4cc43c0185b195f6793d5c00099392904cc30f94`
-- PR: [#27](https://github.com/sjo1848/hotel-management-system/pull/27)
-- GitHub Actions run: [31910741629](https://github.com/sjo1848/hotel-management-system/actions/runs/31910741629)
+- Branch: `feature/pilot-closure-evidence`
+- Candidate SHA: `4437bcf86120e0249d8a95bb7f1347187be5b581`
+- Integrated `main` SHA: `bd7722d53db7e8bfe466a0325d262700e71b59c4`
+- Product PR: [#27](https://github.com/sjo1848/hotel-management-system/pull/27); evidence PR: [#28](https://github.com/sjo1848/hotel-management-system/pull/28)
+- GitHub Actions run: [31913330496](https://github.com/sjo1848/hotel-management-system/actions/runs/31913330496)
 - Canonical checks: Backend PASS, Frontend PASS, E2E Browser Core PASS, Performance PASS, Secret Scanning PASS, CI Stability Guard PASS.
 
 ## Acceptance evidence
@@ -38,6 +39,7 @@ Desktop and mobile browser evidence passed. The original failure was a stale/amb
 
 - Scoped stale “Próxima acción” assertions to the current menu surface.
 - Updated reception role E2E navigation for responsive “Más” overflow and mobile booking cards.
+- Kept the reception lifecycle E2E aligned with the current booking-case surface: direct tabs with responsive wrapping; the generic overflow fallback remains defensive and is not counted as booking-workspace evidence.
 - Added viewport propagation to the canonical E2E runner.
 - Added deterministic synthetic stack/data bootstrap to GitHub E2E.
 - Fixed CI credentials to match the synthetic seed (`demo2026pass`).
@@ -69,4 +71,3 @@ Sebastián must perform Product Acceptance of the reception workflow and decide 
 - Remaining npm audit findings are dev/toolchain or require breaking Vite upgrades; no high runtime Axios/React Router finding remains after targeted updates.
 - Existing React `act(...)` warnings remain outside this slice.
 - Node 20 deprecation annotations are emitted by GitHub Actions and are not a product blocker.
-

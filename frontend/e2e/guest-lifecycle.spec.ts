@@ -24,6 +24,17 @@ function formatArgentineCurrency(value: number): string {
   return `$${value.toLocaleString("es-AR")}`;
 }
 
+async function openBookingTab(page: Page, label: RegExp) {
+  const directTab = page.getByRole("tab", { name: label }).filter({ visible: true });
+  if (await directTab.count()) {
+    await directTab.first().click();
+    return;
+  }
+
+  await page.getByRole("tab", { name: "Más" }).click();
+  await page.getByRole("menu").getByRole("tab", { name: label }).click();
+}
+
 test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room release", async ({
   page,
 }) => {
@@ -83,11 +94,11 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.keyboard.press("Escape");
   expect((await initialInvoiceLookup).status()).toBe(404);
 
-  await page.getByRole("tab", { name: /Cuenta/ }).click();
+  await openBookingTab(page, /Cuenta/);
   await expect(page.getByText("Sin cargos extra registrados por el momento.")).toBeVisible();
   await expect(page.getByText("La factura solicitada no existe")).toHaveCount(0);
 
-  await page.getByRole("tab", { name: /Operación/ }).click();
+  await openBookingTab(page, /Operación/);
   await page.getByRole("checkbox", { name: /Identidad validada/ }).check();
   await page.getByRole("checkbox", { name: /Fechas y tarifa confirmadas/ }).check();
   await page.getByRole("checkbox", { name: /Contacto verificado/ }).check();
@@ -95,7 +106,7 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
   await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("tab", { name: /Cuenta/ }).click();
+  await openBookingTab(page, /Cuenta/);
   const accountSection = page
     .getByText("Cuenta y cargos", { exact: true })
     .locator("xpath=ancestor::div[contains(@class, 'rounded-3xl')][1]");
@@ -116,14 +127,14 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await expect(accountSection.getByText("Cuenta cobrada", { exact: true })).toBeVisible();
   await expect(accountSection.getByText(formatArgentineCurrency(accountTotal), { exact: true }).first()).toBeVisible();
 
-  await page.getByRole("tab", { name: /Operación/ }).click();
+  await openBookingTab(page, /Operación/);
   await page.getByRole("checkbox", { name: /Cuenta revisada/ }).check();
   await page.getByRole("checkbox", { name: /Habitacion liberada/ }).check();
   await page.getByRole("checkbox", { name: /Handoff a housekeeping/ }).check();
   await page.getByRole("button", { name: "Cuenta cobrada al cierre" }).click();
   await page.getByRole("button", { name: "Confirmar salida y enviar a limpieza" }).click();
   await expect(page.getByRole("button", { name: "Estadía cerrada" })).toBeVisible();
-  await page.getByRole("tab", { name: /Cuenta/ }).click();
+  await openBookingTab(page, /Cuenta/);
   await expect(accountSection.getByText(formatArgentineCurrency(accountTotal), { exact: true }).first()).toBeVisible();
 
   await page.goto("/housekeeping");

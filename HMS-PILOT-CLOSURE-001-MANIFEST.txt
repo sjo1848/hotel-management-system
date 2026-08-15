@@ -1,10 +1,10 @@
 task_id=HMS-PILOT-CLOSURE-001
-timestamp=2026-08-15T19:06:19-03:00
+timestamp=2026-08-15T20:05:00-03:00
 repository=sjo1848/hotel-management-system
-candidate_sha=4cc43c0185b195f6793d5c00099392904cc30f94
-main_sha=pending_merge
-pr=https://github.com/sjo1848/hotel-management-system/pull/27
-canonical_ci_state=PASS; run=31910741629; backend=PASS; frontend=PASS; e2e=PASS; performance=PASS; secret_scanning=PASS; stability_guard=PASS
+candidate_sha=4437bcf86120e0249d8a95bb7f1347187be5b581
+main_sha=bd7722d53db7e8bfe466a0325d262700e71b59c4
+pr=product:https://github.com/sjo1848/hotel-management-system/pull/27; evidence:https://github.com/sjo1848/hotel-management-system/pull/28
+canonical_ci_state=PASS; run=31913330496; backend=PASS; frontend=PASS; e2e=PASS; performance=PASS; secret_scanning=PASS; stability_guard=PASS
 reception_e2e=PASS desktop; PASS 375px; PASS 390px; PASS 430px
 postgresql_integration=PASS canonical Backend CI
 tenant_security=PASS slice evidence and canonical Backend CI
