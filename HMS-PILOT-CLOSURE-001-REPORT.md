@@ -15,6 +15,7 @@ Desktop and mobile browser evidence passed. The original failure was a stale/amb
 - Repository: `sjo1848/hotel-management-system`
 - Branch: `fix/mobile-checkin-layout`
 - Candidate SHA: `4cc43c0185b195f6793d5c00099392904cc30f94`
+- Integrated `main` SHA: `bd7722d53db7e8bfe466a0325d262700e71b59c4`
 - PR: [#27](https://github.com/sjo1848/hotel-management-system/pull/27)
 - GitHub Actions run: [31910741629](https://github.com/sjo1848/hotel-management-system/actions/runs/31910741629)
 - Canonical checks: Backend PASS, Frontend PASS, E2E Browser Core PASS, Performance PASS, Secret Scanning PASS, CI Stability Guard PASS.
@@ -69,4 +70,3 @@ Sebastián must perform Product Acceptance of the reception workflow and decide 
 - Remaining npm audit findings are dev/toolchain or require breaking Vite upgrades; no high runtime Axios/React Router finding remains after targeted updates.
 - Existing React `act(...)` warnings remain outside this slice.
 - Node 20 deprecation annotations are emitted by GitHub Actions and are not a product blocker.
-
