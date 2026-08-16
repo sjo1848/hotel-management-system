@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
@@ -36,7 +36,7 @@ type SidebarTooltip = {
   left: number;
 };
 
-const SidebarItem = ({
+const SidebarItem = React.memo(function SidebarItem({
   icon: Icon,
   label,
   description,
@@ -62,7 +62,7 @@ const SidebarItem = ({
   onCompactExpand?: () => void;
   requireExpandBeforeNavigate?: boolean;
   onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
-}) => {
+}) {
   const showTooltip = (target: HTMLAnchorElement) => {
     if (!collapsed || !onTooltipChange) return;
     const rect = target.getBoundingClientRect();
@@ -146,7 +146,7 @@ const SidebarItem = ({
       </div>
     </Link>
   );
-};
+});
 
 type NavItem = {
   icon: LucideIcon;
@@ -168,6 +168,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     label: string;
     description?: string;
   } | null>(null);
+
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const expandMobileNav = useCallback(() => setMobileNavExpanded(true), []);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -224,44 +227,53 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const principalItems: NavItem[] = [
+  const principalItems = useMemo<NavItem[]>(() => [
     { icon: ClipboardList, label: "Recepción", description: "Llegadas, salidas, cobros y reservas", path: "/bookings", capability: "bookings.read" },
     { icon: LayoutDashboard, label: "Dashboard", description: "KPIs y salud operativa general", path: "/", capability: "analytics.kpis.read" },
     { icon: CalendarDays, label: "Calendario", description: "Ocupación y disponibilidad por fecha", path: "/calendar", capability: "bookings.read" },
-  ];
+  ], []);
 
-  const managementItems: NavItem[] = [
+  const managementItems = useMemo<NavItem[]>(() => [
     { icon: BedDouble, label: "Habitaciones", description: "Inventario, estados y disponibilidad", path: "/rooms", capability: "rooms.read" },
     { icon: Users, label: "Huéspedes", description: "Directorio y fichas de clientes", path: "/guests", capability: "guests.read" },
     { icon: Brush, label: "Housekeeping", description: "Limpieza, handoff y mantenimiento", path: "/housekeeping", capability: "housekeeping.read" },
-  ];
+  ], []);
 
-  const settingsItems: NavItem[] = [
+  const settingsItems = useMemo<NavItem[]>(() => [
     { icon: Globe, label: "Red Global", description: "Visión multi-hotel y planes", path: "/network", capability: "saas.hotels.read" },
     { icon: Settings, label: "Usuarios", description: "Accesos, roles y operadores", path: "/users", capability: "users.read" },
     { icon: TrendingUp, label: "Tendencias", description: "Ingresos, ocupación y reportes", path: "/reports", capability: "reports.revenue.read" },
-  ];
+  ], []);
 
   const canSee = (capability: Capability) => roleHasCapability(user?.role, capability);
-  const visiblePrincipalItems = principalItems.filter((item) => canSee(item.capability));
-  const visibleManagementItems = managementItems.filter((item) => canSee(item.capability));
-  const visibleSettingsItems = settingsItems.filter((item) => canSee(item.capability));
-  const visibleNavItems = [
+  const visiblePrincipalItems = useMemo(() => principalItems.filter((item) => canSee(item.capability)), [principalItems, user?.role]);
+  const visibleManagementItems = useMemo(() => managementItems.filter((item) => canSee(item.capability)), [managementItems, user?.role]);
+  const visibleSettingsItems = useMemo(() => settingsItems.filter((item) => canSee(item.capability)), [settingsItems, user?.role]);
+  const visibleNavItems = useMemo(() => [
     ...visiblePrincipalItems,
     ...visibleManagementItems,
     ...visibleSettingsItems,
-  ];
-  const activeNavItem = visibleNavItems.find((item) =>
+  ], [visiblePrincipalItems, visibleManagementItems, visibleSettingsItems]);
+  const activeNavItem = useMemo(() => visibleNavItems.find((item) =>
     item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path),
-  );
+  ), [location.pathname, visibleNavItems]);
+  const defaultMobilePreview = activeNavItem
+    ? { label: activeNavItem.label, description: activeNavItem.description }
+    : { label: "Menu", description: "Navegacion principal" };
 
-  useEffect(() => {
-    setMobileNavPreview(
-      activeNavItem
-        ? { label: activeNavItem.label, description: activeNavItem.description }
-        : { label: "Menu", description: "Navegacion principal" },
-    );
-  }, [activeNavItem?.description, activeNavItem?.label, location.pathname, mobileNavOpen]);
+  const handleSidebarTooltipChange = useCallback(
+    (tooltip: SidebarTooltip | null) => {
+      setSidebarTooltip(tooltip);
+      if (isCollapsed && mobileNavOpen) {
+        setMobileNavPreview(
+          tooltip
+            ? { label: tooltip.label, description: tooltip.description }
+            : defaultMobilePreview,
+        );
+      }
+    },
+    [activeNavItem?.description, activeNavItem?.label, isCollapsed, mobileNavOpen],
+  );
 
   const renderNavSection = (
     title: string,
@@ -299,23 +311,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               showDescription={showDescription}
               showCompactLabel={showCompactLabel}
               onNavigate={onNavigate}
-              onCompactExpand={() => setMobileNavExpanded(true)}
+              onCompactExpand={expandMobileNav}
               requireExpandBeforeNavigate={requireExpandBeforeNavigate}
-              onTooltipChange={(tooltip) => {
-                setSidebarTooltip(tooltip);
-                if (collapsed && mobileNavOpen) {
-                  setMobileNavPreview(
-                    tooltip
-                      ? { label: item.label, description: item.description }
-                      : activeNavItem
-                        ? {
-                            label: activeNavItem.label,
-                            description: activeNavItem.description,
-                          }
-                        : { label: "Menu", description: "Navegacion principal" },
-                  );
-                }
-              }}
+              onTooltipChange={handleSidebarTooltipChange}
             />
           ))}
         </div>
@@ -419,6 +417,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           className={cn(
             "app-sidebar sidebar-text-fg flex h-dvh max-h-dvh flex-col overflow-hidden border-r p-0 transition-[width,max-width] duration-300 ease-out md:hidden",
             mobileNavExpanded ? "w-[18rem] max-w-[18rem]" : "w-28 max-w-28",
+            "data-[state=open]:duration-200 data-[state=closed]:duration-150",
           )}
           onMouseEnter={() => setMobileNavExpanded(true)}
           onMouseMove={() => setMobileNavExpanded(true)}
@@ -458,26 +457,28 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
             <div className="relative mt-4 text-center">
               <p className={cn("sidebar-text-fg font-bold", mobileNavExpanded ? "text-sm" : "text-xs")}>
-                {mobileNavPreview?.label ?? "Menu"}
+                {mobileNavPreview?.label ?? defaultMobilePreview.label}
               </p>
               <p className={cn("sidebar-text-muted mt-1 font-medium leading-4", mobileNavExpanded ? "px-3 text-xs" : "text-xs")}>
-                {mobileNavPreview?.description ?? "Navegacion principal"}
+                {mobileNavPreview?.description ?? defaultMobilePreview.description}
               </p>
             </div>
           </div>
-          {navigationContent(
-            !mobileNavExpanded,
-            () => setMobileNavOpen(false),
-            !mobileNavExpanded,
-            !mobileNavExpanded,
-          )}
+          {mobileNavOpen
+            ? navigationContent(
+                !mobileNavExpanded,
+                closeMobileNav,
+                !mobileNavExpanded,
+                !mobileNavExpanded,
+              )
+            : null}
         </SheetContent>
       </Sheet>
 
       <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="app-header responsive-shell-header sticky top-0 z-40 md:relative">
           <div className="flex w-full items-center gap-3 md:max-w-xl md:flex-1">
-            <Button size="icon" variant="ghost" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
+            <Button size="icon" variant="ghost" aria-label="Abrir menú móvil" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="group relative min-w-0 flex-1">

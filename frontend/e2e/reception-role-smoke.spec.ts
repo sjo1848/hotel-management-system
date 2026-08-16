@@ -40,6 +40,71 @@ test("reception role smoke: walk-in sheet keeps CTA visible on mobile", async ({
   await expect(page.getByRole("button", { name: "Crear y gestionar" })).toBeVisible();
 });
 
+test("reception role smoke: mobile walk-in selection preserves state at common widths", async ({ page }) => {
+  test.setTimeout(180_000);
+  await login(page);
+
+  for (const width of [375, 390, 430]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/bookings");
+    await page.getByRole("button", { name: "Nueva Reserva" }).first().click();
+    await expect(page.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
+
+    await page.getByRole("button", { name: /Elegir de la base de huéspedes/ }).click();
+    await expect(page.getByRole("heading", { name: "Seleccionar huésped" })).toBeVisible();
+    await page.getByLabel("Buscar huésped").fill("Laura");
+    await page.getByRole("button", { name: /Laura Mendez/ }).click();
+    await expect(page.getByRole("button", { name: /Laura Mendez/ }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: /Habitación disponible/ }).click();
+    await expect(page.getByRole("heading", { name: "Seleccionar habitación" })).toBeVisible();
+    const roomSearch = page.getByLabel("Buscar habitación");
+    await roomSearch.fill("2");
+    await roomSearch.fill("");
+    const roomOption = page.getByRole("dialog").getByRole("button").filter({ hasText: /Habitaci[oó]n/ }).first();
+    await expect(roomOption).toBeVisible();
+    await roomOption.click();
+    await expect(page.getByRole("button", { name: /Asignada/ })).toBeVisible();
+
+    await page.getByRole("button", { name: "Crear y gestionar" }).click();
+    await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+  }
+});
+
+test("reception performance: mobile menu opens without extra requests", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 900 });
+  await login(page);
+
+  const requestUrls: string[] = [];
+  page.on("request", (request) => requestUrls.push(request.url()));
+  const openButton = page.getByRole("button", { name: "Abrir menú móvil" });
+  const samples: number[] = [];
+
+  await page.waitForTimeout(1000);
+  requestUrls.length = 0;
+  await openButton.click();
+  await page.getByRole("dialog").waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await page.getByRole("dialog").waitFor({ state: "hidden" });
+  requestUrls.length = 0;
+
+  for (let index = 0; index < 10; index += 1) {
+    const startedAt = await page.evaluate(() => performance.now());
+    await openButton.click();
+    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await expect(page.getByRole("dialog").getByText("Recepción y control", { exact: true })).toBeVisible();
+    samples.push((await page.evaluate(() => performance.now())) - startedAt);
+    await page.keyboard.press("Escape");
+    await page.getByRole("dialog").waitFor({ state: "hidden" });
+  }
+
+  const sortedSamples = [...samples].sort((left, right) => left - right);
+  const median = sortedSamples[Math.floor(sortedSamples.length / 2)];
+  console.log(`[mobile-menu-perf] samples_ms=${samples.map((sample) => sample.toFixed(1)).join(",")} median_ms=${median.toFixed(1)} requests=${requestUrls.length}`);
+  expect(median).toBeLessThan(350);
+  expect(requestUrls).toEqual([]);
+});
+
 test("reception role smoke: booking center opens from bookings list", async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 });
   await login(page);

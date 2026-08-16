@@ -1,4 +1,7 @@
-import { BedDouble, Loader2 } from "lucide-react";
+import { BedDouble, Loader2, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { WalkInRoomSelectionSectionProps } from "@/features/bookings/components/WalkInShared";
 
@@ -9,8 +12,20 @@ export const WalkInRoomSelectionSection = ({
   rooms,
   selectedRoomId,
   onSelectRoom,
-}: WalkInRoomSelectionSectionProps) => (
-  <div className="rounded-3xl border border-border bg-background/70 p-5 shadow-sm">
+  roomPickerOpen,
+  onRoomPickerOpenChange,
+}: WalkInRoomSelectionSectionProps) => {
+  const [roomSearch, setRoomSearch] = useState("");
+  const filteredRooms = useMemo(() => {
+    const term = roomSearch.trim().toLowerCase();
+    if (!term) return rooms;
+    return rooms.filter((room) =>
+      `${room.room_number} ${room.room_type}`.toLowerCase().includes(term),
+    );
+  }, [roomSearch, rooms]);
+
+  return (
+  <div className="rounded-3xl border border-border bg-background/70 p-4 shadow-sm sm:p-5">
     <div className="flex items-start gap-3">
       <div className="rounded-2xl bg-primary/10 p-3 text-primary">
         <BedDouble className="h-5 w-5" />
@@ -41,7 +56,24 @@ export const WalkInRoomSelectionSection = ({
             No hay habitaciones disponibles para ese rango.
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2">
+          <>
+          <div className="md:hidden">
+            <Button type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onRoomPickerOpenChange(true)}>
+              <span>
+                <span className="block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Habitación disponible</span>
+                <span className="mt-1 block text-sm font-semibold text-foreground">
+                  {selectedRoomId
+                    ? `Habitacion ${rooms.find((room) => room.id === selectedRoomId)?.room_number ?? "seleccionada"}`
+                    : `Habitacion ${rooms[0]?.room_number ?? "disponible"}`}
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {selectedRoomId ? "Asignada · tocar para cambiar" : `Sugerida · Total estimado $${((rooms[0]?.price_cents ?? 0) * nights / 100).toLocaleString("es-AR")}`}
+                </span>
+              </span>
+              <BedDouble className="ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
+            </Button>
+          </div>
+          <div className="hidden gap-3 md:grid md:grid-cols-2">
             {rooms.map((room) => {
               const estimatedTotal = room.price_cents * nights;
               const selected = selectedRoomId === room.id;
@@ -92,8 +124,41 @@ export const WalkInRoomSelectionSection = ({
               );
             })}
           </div>
+          <Sheet open={roomPickerOpen} onOpenChange={onRoomPickerOpenChange}>
+            <SheetContent side="bottom" className="max-h-[88vh] rounded-t-3xl p-0">
+              <SheetHeader className="border-b px-4 py-4 text-left">
+                <SheetTitle>Seleccionar habitación</SheetTitle>
+                <SheetDescription>Elegí una habitación disponible para estas fechas.</SheetDescription>
+              </SheetHeader>
+              <div className="max-h-[calc(88vh-116px)] overflow-y-auto px-4 py-4">
+                <label htmlFor="mobile-room-search" className="sr-only">Buscar habitación</label>
+                <div className="relative mb-4">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input id="mobile-room-search" value={roomSearch} onChange={(event) => setRoomSearch(event.target.value)} placeholder="Buscar por número o tipo" className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring" />
+                </div>
+                <div className="space-y-2">
+                {filteredRooms.length === 0 ? <div className="rounded-2xl border border-border px-4 py-4 text-sm text-muted-foreground">No hay habitaciones que coincidan.</div> : filteredRooms.map((room) => {
+                  const selected = selectedRoomId === room.id;
+                  return (
+                    <button key={room.id} type="button" className={cn("w-full rounded-2xl border px-4 py-4 text-left", selected ? "border-primary/20 bg-primary/10" : "border-border bg-background")} onClick={() => { onSelectRoom(room.id); onRoomPickerOpenChange(false); }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-black text-foreground">Habitación {room.room_number}</p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">{room.room_type}</p>
+                        </div>
+                        <p className="text-sm font-bold text-foreground">${(room.price_cents / 100).toLocaleString("es-AR")} / noche</p>
+                      </div>
+                    </button>
+                  );
+                })}
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+          </>
         )}
       </div>
     </div>
   </div>
-);
+  );
+};

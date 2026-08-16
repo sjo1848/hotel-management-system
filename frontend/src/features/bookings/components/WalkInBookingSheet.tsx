@@ -40,7 +40,9 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
   const [guestMode, setGuestMode] = useState<GuestMode>("existing");
   const [guestSearch, setGuestSearch] = useState("");
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
+  const [guestPickerOpen, setGuestPickerOpen] = useState(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [roomPickerOpen, setRoomPickerOpen] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
   const [roomsError, setRoomsError] = useState<string | null>(null);
@@ -143,7 +145,9 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
       setGuestMode("existing");
       setGuestSearch("");
       setSelectedGuestId(null);
+      setGuestPickerOpen(false);
       setSelectedRoomId(null);
+      setRoomPickerOpen(false);
       setRooms([]);
       setRoomsError(null);
       setRoomsLoading(false);
@@ -251,7 +255,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-full overflow-hidden border-l border-border bg-card p-0 sm:max-w-[880px]">
         <div className="flex min-h-0 flex-1 flex-col">
-        <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
+        <SheetHeader className="border-b px-4 py-4 sm:px-6 sm:py-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -310,6 +314,8 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                   void refetchGuests();
                 }}
                 onSelectGuest={setSelectedGuestId}
+                guestPickerOpen={guestPickerOpen}
+                onGuestPickerOpenChange={setGuestPickerOpen}
                 onNewGuestChange={(patch) =>
                   setNewGuest((current) => ({ ...current, ...patch }))
                 }
@@ -322,10 +328,12 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                 rooms={rooms}
                 selectedRoomId={selectedRoomId}
                 onSelectRoom={setSelectedRoomId}
+                roomPickerOpen={roomPickerOpen}
+                onRoomPickerOpenChange={setRoomPickerOpen}
               />
             </div>
 
-            <aside className="space-y-4">
+            <aside className="hidden space-y-4 lg:block">
               <WalkInSidebarPanels
                 guestMode={guestMode}
                 selectedGuest={selectedGuest}
@@ -339,9 +347,9 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
           </section>
           </div>
 
-          <SheetFooter className="border-t bg-card/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+          <SheetFooter className="border-t bg-card/95 px-4 py-3 backdrop-blur sm:px-6 sm:py-5">
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
+              <p className="hidden text-sm text-muted-foreground sm:block">
                 Al crear, la reserva abre directo en el centro operativo para continuar con check-in o cuenta.
               </p>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">

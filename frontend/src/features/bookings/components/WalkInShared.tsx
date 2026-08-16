@@ -40,6 +40,8 @@ export type WalkInGuestSectionProps = {
   onRefreshGuests: () => void;
   onSelectGuest: (guestId: string) => void;
   onNewGuestChange: (patch: Partial<WalkInGuestDraft>) => void;
+  guestPickerOpen: boolean;
+  onGuestPickerOpenChange: (open: boolean) => void;
 };
 
 export type WalkInRoomSelectionSectionProps = {
@@ -49,4 +51,6 @@ export type WalkInRoomSelectionSectionProps = {
   rooms: Room[];
   selectedRoomId: string | null;
   onSelectRoom: (roomId: string) => void;
+  roomPickerOpen: boolean;
+  onRoomPickerOpenChange: (open: boolean) => void;
 };
