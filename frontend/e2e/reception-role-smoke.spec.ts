@@ -37,11 +37,11 @@ test("reception role smoke: walk-in sheet keeps CTA visible on mobile", async ({
   await page.getByRole("button", { name: "Nueva Reserva" }).first().click();
   await expect(page.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Cancelar" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Crear y gestionar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Siguiente" })).toBeVisible();
 });
 
 test("reception role smoke: mobile walk-in selection preserves state at common widths", async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(60_000);
   await login(page);
 
   for (const width of [375, 390, 430]) {
@@ -49,25 +49,30 @@ test("reception role smoke: mobile walk-in selection preserves state at common w
     await page.goto("/bookings");
     await page.getByRole("button", { name: "Nueva Reserva" }).first().click();
     await expect(page.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
+    await page.getByRole("button", { name: "Siguiente" }).click();
 
     await page.getByRole("button", { name: /Elegir de la base de huéspedes/ }).click();
-    await expect(page.getByRole("heading", { name: "Seleccionar huésped" })).toBeVisible();
-    await page.getByLabel("Buscar huésped").fill("Laura");
-    await page.getByRole("button", { name: /Laura Mendez/ }).click();
+    const guestPicker = page.locator('[aria-labelledby="mobile-guest-picker-title"]');
+    await expect(guestPicker).toBeVisible();
+    await guestPicker.getByLabel("Buscar huésped").fill("Laura");
+    await guestPicker.getByRole("button", { name: /Laura Mendez/ }).click();
     await expect(page.getByRole("button", { name: /Laura Mendez/ }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Siguiente" }).click();
 
     await page.getByRole("button", { name: /Habitación disponible/ }).click();
-    await expect(page.getByRole("heading", { name: "Seleccionar habitación" })).toBeVisible();
-    const roomSearch = page.getByLabel("Buscar habitación");
+    const roomPicker = page.locator('[aria-labelledby="mobile-room-picker-title"]');
+    await expect(roomPicker).toBeVisible();
+    const roomSearch = roomPicker.getByLabel("Buscar habitación");
     await roomSearch.fill("2");
     await roomSearch.fill("");
-    const roomOption = page.getByRole("dialog").getByRole("button").filter({ hasText: /Habitaci[oó]n/ }).first();
+    const roomOption = roomPicker.getByRole("button").filter({ hasText: /Habitaci[oó]n/ }).first();
     await expect(roomOption).toBeVisible();
     await roomOption.click();
     await expect(page.getByRole("button", { name: /Asignada/ })).toBeVisible();
 
-    await page.getByRole("button", { name: "Crear y gestionar" }).click();
-    await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await expect(page.locator('[aria-current="step"]')).toContainText("Revisar");
+    await expect(page.getByText("Huésped", { exact: true })).toBeVisible();
   }
 });
 

@@ -7,8 +7,10 @@ import {
   MoreVertical,
   Filter,
   Download,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/ui/data-table";
 import {
@@ -390,20 +392,28 @@ const BookingsPage = () => {
     <div className="space-y-6">
       <PageHeader
         title="Recepción"
-        description="Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista."
+        className="gap-2 sm:gap-4"
         actions={
           <>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-xl" aria-label="Ayuda sobre recepción" title="Ayuda sobre recepción">
+                  <Info className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 text-sm">Priorizá Nueva Reserva para iniciar una operación. Las colas de llegadas, estadías y salidas están organizadas en las vistas operativas.</PopoverContent>
+            </Popover>
             <Button
               variant="outline"
               size="sm"
-              className="h-10 w-full rounded-xl border-border sm:w-auto"
+              className="hidden h-10 rounded-xl border-border sm:inline-flex sm:w-auto"
               onClick={handleExport}
             >
               <Download className="mr-2 h-4 w-4" /> Exportar
             </Button>
             <Button
               size="sm"
-              className="h-10 w-full rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 sm:w-auto"
+              className="h-10 flex-1 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 sm:w-auto"
               onClick={openWalkIn}
             >
               <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
@@ -411,7 +421,7 @@ const BookingsPage = () => {
             <Button
               variant={guidedModeEnabled ? "secondary" : "outline"}
               size="sm"
-              className="h-10 w-full rounded-xl sm:w-auto"
+              className="hidden h-10 rounded-xl sm:inline-flex sm:w-auto"
               onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}
             >
               {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
@@ -419,6 +429,9 @@ const BookingsPage = () => {
           </>
         }
       />
+      <p className="hidden text-sm font-medium text-muted-foreground sm:block">
+        Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista.
+      </p>
 
       {guidedModeEnabled ? (
         <CompactGuideAssistant

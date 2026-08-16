@@ -63,6 +63,9 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
 
   const walkInSheet = page.getByRole("dialog");
   await expect(walkInSheet.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
+  if (Number.isFinite(viewportWidth) && viewportWidth <= 430) {
+    await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
+  }
   await walkInSheet.getByRole("button", { name: "Alta rapida" }).click();
   await walkInSheet.getByLabel("Nombre completo").fill(guestName);
   await walkInSheet.getByLabel("Email").fill(`e2e.lifecycle.${uniqueToken}@hmselite.local`);
@@ -83,12 +86,13 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await roomButton.click();
 
   if (Number.isFinite(viewportWidth) && viewportWidth <= 430) {
-    const roomPicker = page.getByRole("dialog").last();
-    await expect(roomPicker.getByRole("heading", { name: "Seleccionar habitación" })).toBeVisible();
+    const roomPicker = page.locator('[aria-labelledby="mobile-room-picker-title"]');
+    await expect(roomPicker).toBeVisible();
     const roomOption = roomPicker.getByRole("button").filter({ hasText: /Habitaci[oó]n/ }).first();
     await expect(roomOption).toBeVisible();
     await roomOption.click();
     await expect(walkInSheet.getByRole("button", { name: /Asignada/ })).toBeVisible();
+    await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
   }
 
   const initialInvoiceLookup = page.waitForResponse(

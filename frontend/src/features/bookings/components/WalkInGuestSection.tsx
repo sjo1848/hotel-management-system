@@ -1,8 +1,7 @@
-import { Loader2, Mail, Phone, Search, UserPlus, Users } from "lucide-react";
+import { Loader2, Mail, Phone, Search, UserPlus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { WalkInGuestSectionProps } from "@/features/bookings/components/WalkInShared";
 
@@ -155,13 +154,26 @@ export const WalkInGuestSection = ({
             </div>
             </div>
 
-            <Sheet open={guestPickerOpen} onOpenChange={onGuestPickerOpenChange}>
-              <SheetContent side="bottom" className="max-h-[88vh] rounded-t-3xl p-0">
-                <SheetHeader className="border-b px-4 py-4 text-left">
-                  <SheetTitle>Seleccionar huésped</SheetTitle>
-                  <SheetDescription>Busca por nombre, email o teléfono. Las fechas se conservan.</SheetDescription>
-                </SheetHeader>
-                <div className="max-h-[calc(88vh-116px)] overflow-y-auto px-4 py-4">
+            {guestPickerOpen ? (
+              <div
+                role="region"
+                aria-labelledby="mobile-guest-picker-title"
+                className="mt-3 rounded-2xl border border-primary/20 bg-card p-4 shadow-sm md:hidden"
+                tabIndex={-1}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") onGuestPickerOpenChange(false);
+                }}
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
+                  <div>
+                    <h3 id="mobile-guest-picker-title" className="text-base font-bold text-foreground">Seleccionar huésped</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">Busca por nombre, email o teléfono.</p>
+                  </div>
+                  <Button type="button" variant="ghost" aria-label="Cerrar selección de huésped" className="h-11 w-11 shrink-0 rounded-xl p-0" onClick={() => onGuestPickerOpenChange(false)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="max-h-[52vh] overflow-y-auto pt-4">
                   <Label htmlFor="mobile-guest-search">Buscar huésped</Label>
                   <div className="relative mt-2">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -176,8 +188,8 @@ export const WalkInGuestSection = ({
                     ))}
                   </div>
                 </div>
-              </SheetContent>
-            </Sheet>
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">

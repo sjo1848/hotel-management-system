@@ -252,18 +252,18 @@ const BookingCaseWorkspace = ({
 
   return (
     <>
-      <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
+      <SheetHeader className="border-b px-4 py-3 sm:px-6 sm:py-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <Badge className={cn("inline-flex items-center gap-1.5 border px-3 py-1", statusMeta.badge)}>
+          <div className="min-w-0 space-y-1">
+            <Badge className={cn("inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10px]", statusMeta.badge)}>
               <StatusIcon className="h-3.5 w-3.5" />
               {statusMeta.label}
             </Badge>
             <div>
-              <h2 id={titleId} className="pr-8 text-2xl font-black tracking-tight">
+              <h2 id={titleId} className="truncate pr-8 text-lg font-black tracking-tight sm:text-2xl">
                 {bookingState.guest_name}
               </h2>
-              <p className="mt-2 max-w-[58ch] text-sm text-muted-foreground">
+              <p className="mt-1 max-w-[58ch] text-xs text-muted-foreground sm:mt-2 sm:text-sm">
                 Hab. {room?.room_number ?? bookingState.room_id.slice(0, 6)} · Reserva {bookingState.id.slice(0, 8).toUpperCase()}
               </p>
             </div>
@@ -424,6 +424,7 @@ const BookingCaseWorkspace = ({
                     checkInBlockers={checkInBlockers}
                     canCompleteFormalCheckIn={canCompleteFormalCheckIn}
                     statusLoading={statusLoading}
+                    roomLabel={room?.room_number ? `Habitación ${room.room_number}` : undefined}
                     onFormChange={updateCheckInForm}
                     onStatusAction={(status) => {
                       void handleGuidedStatusAction(status);
@@ -549,11 +550,11 @@ const BookingCaseWorkspace = ({
         />
       </div>
 
-      <SheetFooter className="border-t bg-card/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+      <SheetFooter className="border-t bg-card/95 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-5">
         <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <Button
             variant="outline"
-            className="w-full rounded-xl lg:w-auto"
+            className="hidden w-full rounded-xl lg:inline-flex lg:w-auto"
             onClick={() => {
               void refreshOperationalData();
             }}
@@ -603,7 +604,7 @@ const BookingCaseWorkspace = ({
               </>
             ) : null}
             {onEditBooking ? (
-              <Button variant="outline" className="w-full rounded-xl sm:w-auto" onClick={onEditBooking}>
+              <Button variant="outline" className="hidden w-full rounded-xl sm:inline-flex sm:w-auto" onClick={onEditBooking}>
                 Editar reserva
               </Button>
             ) : null}
