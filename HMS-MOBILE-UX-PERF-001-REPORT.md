@@ -21,6 +21,8 @@ Final state: READY FOR HUMAN UX ACCEPTANCE.
 - Changes are limited to mobile booking/reception surfaces, dashboard mobile navigation, and browser evidence.
 - Base SHA: `109e1b8cb269c782271619e672a9f7fa000db316`.
 - Branch: `feature/mobile-ux-perf`.
+- Candidate commit: `d128e50`.
+- GitHub PR: `#29` — all required checks PASS (Backend CI, Frontend CI, Secret Scanning, Performance Smoke Gate, E2E Browser Core Journeys, CI Stability Guard).
 
 ## 3. Changes Implemented
 
@@ -74,6 +76,7 @@ PASS:
 - Desktop reception smoke PASS
 - Mobile menu performance E2E — 10 samples, median 278.4 ms, 0 requests
 - `./scripts/gate.sh --full` backend/integration/security/tenant/observability/coverage sections PASS
+- GitHub PR #29 checks: PASS — Backend CI, Frontend CI, Secret Scanning, Performance Smoke Gate, E2E Browser Core Journeys, CI Stability Guard
 
 Known gate limitation:
 
