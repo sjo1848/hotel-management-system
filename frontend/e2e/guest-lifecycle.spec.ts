@@ -63,44 +63,73 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
 
   const walkInSheet = page.getByRole("dialog");
   await expect(walkInSheet.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
-  if (Number.isFinite(viewportWidth) && viewportWidth <= 430) {
+  const isMobile = Number.isFinite(viewportWidth) && viewportWidth <= 430;
+  if (isMobile) {
+    const futureCheckIn = new Date();
+    futureCheckIn.setDate(futureCheckIn.getDate() + 7);
+    const futureCheckOut = new Date(futureCheckIn);
+    futureCheckOut.setDate(futureCheckOut.getDate() + 1);
+    await walkInSheet.getByLabel("Check-in").fill(futureCheckIn.toISOString().slice(0, 10));
+    await walkInSheet.getByLabel("Check-out").fill(futureCheckOut.toISOString().slice(0, 10));
     await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
   }
   await walkInSheet.getByRole("button", { name: "Alta rapida" }).click();
   await walkInSheet.getByLabel("Nombre completo").fill(guestName);
   await walkInSheet.getByLabel("Email").fill(`e2e.lifecycle.${uniqueToken}@hmselite.local`);
   await walkInSheet.getByLabel("Telefono").fill("+54 11 5555 9901");
+  if (isMobile) {
+    await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
+  }
 
-  const roomButton = walkInSheet
-    .getByRole("button")
-    .filter({ hasText: /Habitaci[oó]n \d+/ })
-    .first();
-  await expect(roomButton).toBeVisible();
-  const roomText = (await roomButton.textContent()) ?? "";
-  const roomNumber = roomText.match(/Habitacion\s+(\d+)/)?.[1];
-  const estimatedTotalText = roomText.match(/Total estimado\s*(\$[\d.,]+)/)?.[1];
-  expect(roomNumber).toBeTruthy();
-  expect(estimatedTotalText).toBeTruthy();
-  const accommodationTotal = parseArgentineCurrency(estimatedTotalText!);
-  const accountTotal = accommodationTotal + 15;
-  await roomButton.click();
-
-  if (Number.isFinite(viewportWidth) && viewportWidth <= 430) {
+  let roomNumber: string | undefined;
+  let accommodationTotal: number;
+  if (isMobile) {
+    await walkInSheet.getByRole("button", { name: /Habitación disponible/ }).click();
     const roomPicker = page.locator('[aria-labelledby="mobile-room-picker-title"]');
     await expect(roomPicker).toBeVisible();
     const roomOption = roomPicker.getByRole("button").filter({ hasText: /Habitaci[oó]n/ }).first();
     await expect(roomOption).toBeVisible();
+    const roomText = (await roomOption.textContent()) ?? "";
+    roomNumber = roomText.match(/Habitaci[oó]n\s+(\d+)/)?.[1];
+    const nightlyRateText = roomText.match(/(\$[\d.,]+)\s*\/\s*noche/)?.[1];
+    expect(roomNumber).toBeTruthy();
+    expect(nightlyRateText).toBeTruthy();
+    accommodationTotal = parseArgentineCurrency(nightlyRateText!);
     await roomOption.click();
     await expect(walkInSheet.getByRole("button", { name: /Asignada/ })).toBeVisible();
     await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
+  } else {
+    const roomButton = walkInSheet
+      .getByRole("button")
+      .filter({ hasText: /Habitaci[oó]n \d+/ })
+      .first();
+    await expect(roomButton).toBeVisible();
+    const roomText = (await roomButton.textContent()) ?? "";
+    roomNumber = roomText.match(/Habitaci[oó]n\s+(\d+)/)?.[1];
+    const estimatedTotalText = roomText.match(/Total estimado\s*(\$[\d.,]+)/)?.[1];
+    expect(roomNumber).toBeTruthy();
+    expect(estimatedTotalText).toBeTruthy();
+    accommodationTotal = parseArgentineCurrency(estimatedTotalText!);
+    await roomButton.click();
   }
+  const accountTotal = accommodationTotal + 15;
 
   const initialInvoiceLookup = page.waitForResponse(
     (response) =>
       response.request().method() === "GET" &&
       /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
   );
-  await walkInSheet.getByRole("button", { name: "Crear y gestionar" }).click();
+  const createBookingRequest = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      /\/api\/v1\/bookings$/.test(response.url()),
+  );
+  const createButton = page.getByRole("button", { name: "Crear y gestionar" });
+  if (await createButton.count()) {
+    await expect(createButton).toBeVisible();
+    await createButton.click({ noWaitAfter: true });
+    expect((await createBookingRequest).status()).toBe(201);
+  }
   await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
   await page.getByRole("button", { name: /Más opciones del caso/i }).click();
   await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
@@ -115,8 +144,16 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.getByRole("checkbox", { name: /Identidad validada/ }).check();
   await page.getByRole("checkbox", { name: /Fechas y tarifa confirmadas/ }).check();
   await page.getByRole("checkbox", { name: /Contacto verificado/ }).check();
-  await page.getByLabel("Referencia interna").fill(`Arrival ${uniqueToken}`);
-  await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
+  if (isMobile) {
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await page.locator("#mobile-checkin-arrival-reference").fill(`Arrival ${uniqueToken}`);
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await page.getByRole("button", { name: "Siguiente" }).click();
+    await page.getByRole("button", { name: "Confirmar ingreso" }).click();
+  } else {
+    await page.getByLabel("Referencia interna").fill(`Arrival ${uniqueToken}`);
+    await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
+  }
   await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
 
   await openBookingTab(page, /Cuenta/);

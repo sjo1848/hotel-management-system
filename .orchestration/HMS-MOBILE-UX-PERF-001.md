@@ -1,6 +1,6 @@
 # HMS-MOBILE-UX-PERF-001 — Human UX Acceptance Rework #1
 
-current_status: PHASE_1_LOCAL_GREEN_PENDING_CANONICAL_CI
+current_status: PHASE_1_REPAIR_PUSHED_PENDING_CANONICAL_CI_RETRY
 branch: feature/mobile-ux-perf
 scope: Lane A — Mobile Interaction / UX
 write_scope: MOBILE-INTERACTION-CONTRACT.md; reservation, reception and check-in surfaces only
@@ -40,8 +40,8 @@ base_sha: b8cd43fb0000b0cd736f2e7b08ee875e05b4c523
 ## Integration
 
 integration_status: PHASE_1_LOCAL_GREEN
-gaps_detected: canonical CI must validate desktop preservation; exact performance comparison remains INCONCLUSIVE/POSSIBLE_REGRESSION (268.7ms baseline vs 295.4ms prior post-change, same prior protocol)
-final_verdict: READY_FOR_CHECKPOINT_DECISION_PENDING_CANONICAL_CI
+gaps_detected: canonical CI run 32075045526 exposed stale mobile lifecycle fixture/flow assumptions; exact performance comparison remains INCONCLUSIVE/POSSIBLE_REGRESSION (268.7ms baseline vs 295.4ms prior post-change, same prior protocol)
+final_verdict: REPAIR_PUSHED_PENDING_CANONICAL_CI_RETRY
 
 ## Phase 1 stabilization evidence
 
@@ -52,6 +52,7 @@ final_verdict: READY_FOR_CHECKPOINT_DECISION_PENDING_CANONICAL_CI
 - Browser E2E: desktop guest lifecycle PASS with synthetic `admin`; mobile selection journey PASS at 375/390/430 with synthetic `recepcion_demo`.
 - Fixture classification: running the desktop lifecycle with `recepcion_demo`, or the reception smoke with `admin`, fails only because those helpers assert the other role's expected landing route; tests were not changed.
 - Concurrent runner failures were classified as ENVIRONMENT_DEFECT (Cargo/package/build lock contention), then cleared by isolated reruns.
+- Canonical run `32075045526` exposed a TEST_DEFECT in the mobile lifecycle: it reused desktop selectors, did not advance mobile check-in stages, and reused same-day room inventory after the desktop journey. The test now follows the mobile picker/task surfaces, uses a future synthetic one-night date, and passes local at 375/390/430.
 
 ## Human Gate
 
