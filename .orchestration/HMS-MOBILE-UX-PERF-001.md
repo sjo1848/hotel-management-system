@@ -1,6 +1,6 @@
 # HMS-MOBILE-UX-PERF-001 — Human UX Acceptance Rework #1
 
-current_status: REWORK_IMPLEMENTED_PENDING_BROWSER_RETRY_AND_INTEGRATION
+current_status: PHASE_1_LOCAL_GREEN_PENDING_CANONICAL_CI
 branch: feature/mobile-ux-perf
 scope: Lane A — Mobile Interaction / UX
 write_scope: MOBILE-INTERACTION-CONTRACT.md; reservation, reception and check-in surfaces only
@@ -39,9 +39,19 @@ base_sha: b8cd43fb0000b0cd736f2e7b08ee875e05b4c523
 
 ## Integration
 
-integration_status: BLOCKED_ON_BROWSER_EVIDENCE
-gaps_detected: mobile E2E multi-width test still times out; picker locator update pending retry; menu after median 295.4ms is inconclusive/slower than baseline
-final_verdict: PENDING
+integration_status: PHASE_1_LOCAL_GREEN
+gaps_detected: canonical CI must validate desktop preservation; exact performance comparison remains INCONCLUSIVE/POSSIBLE_REGRESSION (268.7ms baseline vs 295.4ms prior post-change, same prior protocol)
+final_verdict: READY_FOR_CHECKPOINT_DECISION_PENDING_CANONICAL_CI
+
+## Phase 1 stabilization evidence
+
+- Desktop regression classified as IMPLEMENTATION_DEFECT: `mobileStep` controlled the desktop footer and hid the direct `Crear y gestionar` submit.
+- Repair: desktop now renders the pre-existing direct submit footer; mobile alone renders the sequential footer.
+- Local frontend: lint PASS; build PASS; unit tests PASS (49 files, 322 tests) on isolated rerun with two workers.
+- Local backend: CI/unit PASS (70 unit + 5 OpenAPI contract tests); integration PASS when rerun isolated; security regression PASS; core journey QA PASS.
+- Browser E2E: desktop guest lifecycle PASS with synthetic `admin`; mobile selection journey PASS at 375/390/430 with synthetic `recepcion_demo`.
+- Fixture classification: running the desktop lifecycle with `recepcion_demo`, or the reception smoke with `admin`, fails only because those helpers assert the other role's expected landing route; tests were not changed.
+- Concurrent runner failures were classified as ENVIRONMENT_DEFECT (Cargo/package/build lock contention), then cleared by isolated reruns.
 
 ## Human Gate
 

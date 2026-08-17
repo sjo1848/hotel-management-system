@@ -390,19 +390,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                 >
                   Cancelar
                 </Button>
-                {mobileStep > 0 ? <Button type="button" variant="outline" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => setMobileStep((step) => step - 1)}><ChevronLeft className="h-4 w-4" /> Atrás</Button> : null}
-                {mobileStep < 3 ? <Button type="button" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => {
-                  const ready = mobileStep === 0
-                    ? Boolean(stay.check_in && stay.check_out && nights > 0)
-                    : mobileStep === 1
-                      ? guestMode === "existing" ? Boolean(selectedGuest) : Boolean(newGuest.full_name.trim() && newGuest.email.trim())
-                      : Boolean(selectedRoom);
-                  if (!ready) {
-                    toast({ title: "Falta completar este paso", description: "Completá la decisión principal para continuar.", variant: "default" });
-                    return;
-                  }
-                  setMobileStep((step) => step + 1);
-                }}>Siguiente <ChevronRight className="h-4 w-4" /></Button> : <Button
+                {isDesktop ? <Button
                   type="submit"
                   disabled={submitting}
                   className="min-h-11 flex-1 rounded-xl bg-primary text-primary-foreground shadow-lg sm:w-auto sm:flex-none"
@@ -418,7 +406,37 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                       Crear y gestionar
                     </>
                   )}
-                </Button>}
+                </Button> : <>
+                  {mobileStep > 0 ? <Button type="button" variant="outline" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => setMobileStep((step) => step - 1)}><ChevronLeft className="h-4 w-4" /> Atrás</Button> : null}
+                  {mobileStep < 3 ? <Button type="button" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => {
+                    const ready = mobileStep === 0
+                      ? Boolean(stay.check_in && stay.check_out && nights > 0)
+                      : mobileStep === 1
+                        ? guestMode === "existing" ? Boolean(selectedGuest) : Boolean(newGuest.full_name.trim() && newGuest.email.trim())
+                        : Boolean(selectedRoom);
+                    if (!ready) {
+                      toast({ title: "Falta completar este paso", description: "Completá la decisión principal para continuar.", variant: "default" });
+                      return;
+                    }
+                    setMobileStep((step) => step + 1);
+                  }}>Siguiente <ChevronRight className="h-4 w-4" /></Button> : <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="min-h-11 flex-1 rounded-xl bg-primary text-primary-foreground shadow-lg sm:w-auto sm:flex-none"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Creando...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Crear y gestionar
+                      </>
+                    )}
+                  </Button>}
+                </>}
               </div>
             </div>
           </SheetFooter>
