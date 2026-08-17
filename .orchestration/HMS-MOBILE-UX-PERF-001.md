@@ -1,12 +1,12 @@
 # HMS-MOBILE-UX-PERF-001 — Human UX Acceptance Rework #1
 
-current_status: PHASE_1_REPAIR_PUSHED_PENDING_CANONICAL_CI_RETRY
+current_status: PHASE_1_CANONICAL_GREEN_PHASE_2_AUDIT_IN_PROGRESS
 branch: feature/mobile-ux-perf
 scope: Lane A — Mobile Interaction / UX
 write_scope: MOBILE-INTERACTION-CONTRACT.md; reservation, reception and check-in surfaces only
 
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
-base_sha: b8cd43fb0000b0cd736f2e7b08ee875e05b4c523
+base_sha: 5ff365b31a4d94056351c5de150c2799f6607f65
 
 ## Workers
 
@@ -32,16 +32,16 @@ base_sha: b8cd43fb0000b0cd736f2e7b08ee875e05b4c523
 
 | Lane | Cause | Rework count | Repair | Re-critique |
 |---|---|---:|---|---|
-| A | Human acceptance identified desktop-compressed mobile interaction | 2 | Added task flow, real review, inline help, compact operational surfaces | Pending re-critique |
-| B | Critic found small touch targets and reduced-motion gap | 1 | Hardened shared Radix primitives without API/dependency changes | Pending re-critique |
-| C | Check-in remained a long mobile landing | 1 | Added active-stage mobile check-in flow | Pending re-critique |
-| A | Nested Sheets remained inside task Sheet | 1 | Replaced mobile pickers with inline contained regions | Pending browser re-critique |
+| A | Human acceptance identified desktop-compressed mobile interaction | 2 | Added task flow, real review, inline help, compact operational surfaces | PASS after documentation rework |
+| B | Critic found small touch targets and reduced-motion gap | 1 | Hardened shared Radix primitives without API/dependency changes | PASS after documentation rework |
+| C | Check-in remained a long mobile landing | 1 | Added active-stage mobile check-in flow | PASS after documentation rework |
+| A | Nested Sheets remained inside task Sheet | 1 | Replaced mobile pickers with inline contained regions | PASS after documentation rework |
 
 ## Integration
 
-integration_status: PHASE_1_LOCAL_GREEN
-gaps_detected: canonical CI run 32075045526 exposed stale mobile lifecycle fixture/flow assumptions; exact performance comparison remains INCONCLUSIVE/POSSIBLE_REGRESSION (268.7ms baseline vs 295.4ms prior post-change, same prior protocol)
-final_verdict: REPAIR_PUSHED_PENDING_CANONICAL_CI_RETRY
+integration_status: PHASE_2_AUDIT_INTEGRATED
+gaps_detected: UX friction reduction, focus return, physical-device comfort, and complete mobile workflows outside reception remain unvalidated; exact performance comparison remains INCONCLUSIVE/POSSIBLE_REGRESSION (268.7ms baseline vs 295.4ms prior post-change, same prior protocol)
+final_verdict: READY_FOR_MOBILE_ARCHITECTURE_REVIEW
 
 ## Phase 1 stabilization evidence
 
@@ -52,9 +52,29 @@ final_verdict: REPAIR_PUSHED_PENDING_CANONICAL_CI_RETRY
 - Browser E2E: desktop guest lifecycle PASS with synthetic `admin`; mobile selection journey PASS at 375/390/430 with synthetic `recepcion_demo`.
 - Fixture classification: running the desktop lifecycle with `recepcion_demo`, or the reception smoke with `admin`, fails only because those helpers assert the other role's expected landing route; tests were not changed.
 - Concurrent runner failures were classified as ENVIRONMENT_DEFECT (Cargo/package/build lock contention), then cleared by isolated reruns.
-- Canonical run `32075045526` exposed a TEST_DEFECT in the mobile lifecycle: it reused desktop selectors, did not advance mobile check-in stages, and reused same-day room inventory after the desktop journey. The test now follows the mobile picker/task surfaces, uses a future synthetic one-night date, and passes local at 375/390/430.
+- Canonical run `32075045526` exposed a TEST_DEFECT in the mobile lifecycle: it reused desktop selectors, did not advance mobile check-in stages, and reused same-day room inventory after the desktop journey. The test now follows the mobile picker/task surfaces, uses isolated future synthetic dates, and passes local at 375/390/430.
+- Contract correction: `POST /api/v1/bookings` now returns documented `201 Created`; stale RBAC security expectation was aligned and passed.
+- Canonical run `32079554969` at `5ff365b` passed Backend, Frontend, Secret Scanning, Performance Smoke, E2E core plus reception lifecycle at 375/390/430, and CI Stability Guard.
+
+## Phase 2 audit lanes
+
+| Lane | Scope | State | Output |
+|---|---|---|---|
+| Mobile UX Auditor | All mobile routes/surfaces and task friction | COMPLETE | Systemic gaps; reservation/check-in partial; other operational workflows unvalidated |
+| Mobile Interaction Architect | Shell / task flows / temporary surfaces | COMPLETE | Three-level architecture; benefits marked proposed/unvalidated |
+| Component / Design System Specialist | Radix/local components and shadcn matrix | COMPLETE | Targeted reuse/adapt/import-deferred/reject decisions |
+| Performance Specialist | mounts, renders, requests, lists, interaction latency | COMPLETE | Menu 0 requests; global UI performance remains unvalidated risk |
+
+## Phase 2 critics
+
+| Critic | Scope | State | Verdict |
+|---|---|---|---|
+| UX Critic | systemic mobile interaction findings | COMPLETE | REWORK → documented: severities/evidence/focus and task metrics bounded |
+| Technical / Design System Critic | dependencies, primitives, a11y, desktop risk | COMPLETE | REWORK → documented: ARIA, toast, AlertDialog deferred, desktop isolation |
+| Product Workflow Critic | operational steps and cognitive load | COMPLETE | REWORK → documented: proven/partial/unknown and slice DoD |
+| Final Integration Reviewer | all three artifacts, canonical state, orphan requirements | COMPLETE | REWORK → documented and rechecked |
 
 ## Human Gate
 
 required: yes
-reason: Sebastián must perform final mobile UX acceptance on a phone; no technical coordination required before then.
+reason: Sebastián must review the proposed mobile architecture and later perform UX acceptance on a phone; no technical coordination is required before that gate.
