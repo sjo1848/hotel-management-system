@@ -22,7 +22,7 @@ pub async fn create_booking_handler(
     State(state): State<Arc<AppState>>,
     Extension(claims): Extension<crate::infrastructure::web::jwt::Claims>,
     Json(payload): Json<CreateBookingRequest>,
-) -> Result<Json<Value>, DomainError> {
+) -> Result<(StatusCode, Json<Value>), DomainError> {
     let booking_ctx = state.booking_context();
     let hotel_id = Uuid::parse_str(&claims.hotel_id).map_err(|_| DomainError::Unauthorized)?;
     let hotel_id_str = hotel_id.to_string();
@@ -49,7 +49,7 @@ pub async fn create_booking_handler(
         "Booking created"
     );
 
-    Ok(Json(json!(booking)))
+    Ok((StatusCode::CREATED, Json(json!(booking))))
 }
 
 pub async fn list_bookings_handler(

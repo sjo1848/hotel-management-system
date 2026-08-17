@@ -64,13 +64,14 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   const walkInSheet = page.getByRole("dialog");
   await expect(walkInSheet.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
   const isMobile = Number.isFinite(viewportWidth) && viewportWidth <= 430;
+  const futureCheckIn = new Date();
+  const dateOffset = Number.isFinite(viewportWidth) && viewportWidth > 0 ? 7 + (viewportWidth % 100) : 7;
+  futureCheckIn.setDate(futureCheckIn.getDate() + dateOffset);
+  const futureCheckOut = new Date(futureCheckIn);
+  futureCheckOut.setDate(futureCheckOut.getDate() + 1);
+  await walkInSheet.getByLabel("Check-in").fill(futureCheckIn.toISOString().slice(0, 10));
+  await walkInSheet.getByLabel("Check-out").fill(futureCheckOut.toISOString().slice(0, 10));
   if (isMobile) {
-    const futureCheckIn = new Date();
-    futureCheckIn.setDate(futureCheckIn.getDate() + 7);
-    const futureCheckOut = new Date(futureCheckIn);
-    futureCheckOut.setDate(futureCheckOut.getDate() + 1);
-    await walkInSheet.getByLabel("Check-in").fill(futureCheckIn.toISOString().slice(0, 10));
-    await walkInSheet.getByLabel("Check-out").fill(futureCheckOut.toISOString().slice(0, 10));
     await walkInSheet.getByRole("button", { name: "Siguiente" }).click();
   }
   await walkInSheet.getByRole("button", { name: "Alta rapida" }).click();
