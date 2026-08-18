@@ -24,7 +24,7 @@ test("reception role smoke: front desk navigation is scoped correctly", async ({
 
   await page.getByRole("link", { name: "Recepción" }).click();
   await expect(page).toHaveURL(/\/bookings$/);
-  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Recepción$/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "Foco del turno" })).toBeVisible();
 });
 
@@ -32,7 +32,7 @@ test("reception role smoke: walk-in sheet keeps CTA visible on mobile", async ({
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
   await expect(page).toHaveURL(/\/bookings$/);
-  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Recepción$/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Nueva Reserva" }).first().click();
   await expect(page.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
@@ -49,13 +49,22 @@ test("reception role smoke: mobile walk-in selection preserves state at common w
     await page.goto("/bookings");
     await page.getByRole("button", { name: "Nueva Reserva" }).first().click();
     await expect(page.getByRole("heading", { name: "Walk-in / nueva reserva" })).toBeVisible();
+    const futureCheckIn = new Date();
+    const runOffset = Math.floor(Date.now() / 1000) % 365;
+    futureCheckIn.setDate(futureCheckIn.getDate() + 60 + runOffset + width);
+    const futureCheckOut = new Date(futureCheckIn);
+    futureCheckOut.setDate(futureCheckOut.getDate() + 1);
+    await page.getByLabel("Check-in").fill(futureCheckIn.toISOString().slice(0, 10));
+    await page.getByLabel("Check-out").fill(futureCheckOut.toISOString().slice(0, 10));
     await page.getByRole("button", { name: "Siguiente" }).click();
 
-    await page.getByRole("button", { name: /Elegir de la base de huéspedes/ }).click();
+    const guestTrigger = page.getByRole("button", { name: /Elegir de la base de huéspedes/ });
+    await guestTrigger.click();
     const guestPicker = page.locator('[aria-labelledby="mobile-guest-picker-title"]');
     await expect(guestPicker).toBeVisible();
     await guestPicker.getByLabel("Buscar huésped").fill("Laura");
     await guestPicker.getByRole("button", { name: /Laura Mendez/ }).click();
+    await expect(page.locator("button:focus")).toContainText("Laura Mendez");
     await expect(page.getByRole("button", { name: /Laura Mendez/ }).first()).toBeVisible();
     await page.getByRole("button", { name: "Siguiente" }).click();
 
@@ -72,7 +81,7 @@ test("reception role smoke: mobile walk-in selection preserves state at common w
 
     await page.getByRole("button", { name: "Siguiente" }).click();
     await expect(page.locator('[aria-current="step"]')).toContainText("Revisar");
-    await expect(page.getByText("Huésped", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("mobile-review-summary")).toContainText("Laura Mendez");
   }
 });
 
@@ -97,7 +106,7 @@ test("reception performance: mobile menu opens without extra requests", async ({
     const startedAt = await page.evaluate(() => performance.now());
     await openButton.click();
     await page.getByRole("dialog").waitFor({ state: "visible" });
-    await expect(page.getByRole("dialog").getByText("Recepción y control", { exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("link", { name: "Recepción" })).toBeVisible();
     samples.push((await page.evaluate(() => performance.now())) - startedAt);
     await page.keyboard.press("Escape");
     await page.getByRole("dialog").waitFor({ state: "hidden" });
@@ -114,7 +123,7 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
   await page.setViewportSize({ width: 430, height: 932 });
   await login(page);
   await expect(page).toHaveURL(/\/bookings$/);
-  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Recepción$/ })).toBeVisible();
 
   // At mobile widths the fourth and fifth workspace views are intentionally
   // behind the "Más" overflow menu. Select the current UI surface first.
@@ -133,7 +142,7 @@ test("reception role smoke: booking center opens from bookings list", async ({ p
 
 test("reception role smoke: compact guide navigates without marking progress", async ({ page }) => {
   await login(page);
-  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Recepción$/ })).toBeVisible();
 
   await expect(page.getByRole("button", { name: /Siguiente: Abrí un caso del turno/ })).toBeVisible();
   await expect(page.getByText(/0\/5/).first()).toBeVisible();
@@ -161,7 +170,7 @@ test("reception role smoke: board search shows the no-match state", async ({ pag
 
 test("reception role smoke: layout has no horizontal overflow on common widths", async ({ page }) => {
   await login(page);
-  await expect(page.getByRole("heading", { level: 2, name: /^Recepción$/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Recepción$/ })).toBeVisible();
 
   for (const width of [375, 390, 430, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });

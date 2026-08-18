@@ -390,9 +390,66 @@ const BookingsPage = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2 lg:hidden" aria-label="Barra de recepción móvil">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h1 className="truncate text-xl font-black tracking-tight text-foreground">Recepción</h1>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 rounded-xl"
+                  aria-label="Ayuda sobre recepción"
+                  title="Ayuda sobre recepción"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72 text-sm">
+                Priorizá Nueva Reserva para iniciar una operación. Las colas de llegadas,
+                estadías y salidas están organizadas en las vistas operativas.
+              </PopoverContent>
+            </Popover>
+          </div>
+          <p className="truncate text-xs font-medium text-muted-foreground">Operaciones del turno</p>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 shrink-0 rounded-xl"
+              aria-label="Más acciones de recepción"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" /> Exportar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}>
+              {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button
+          size="sm"
+          className="h-10 shrink-0 rounded-xl bg-primary px-3 text-primary-foreground shadow-lg hover:bg-primary/90"
+          onClick={openWalkIn}
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Nueva reserva
+        </Button>
+      </div>
+
       <PageHeader
         title="Recepción"
-        className="gap-2 sm:gap-4"
+        className="hidden gap-2 sm:gap-4 lg:flex"
         actions={
           <>
             <Popover>

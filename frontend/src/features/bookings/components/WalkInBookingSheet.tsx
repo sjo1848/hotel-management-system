@@ -324,6 +324,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                 guestMode={guestMode}
                 guestSearch={guestSearch}
                 selectedGuestId={selectedGuestId}
+                selectedGuest={selectedGuest}
                 filteredGuests={filteredGuests}
                 guestsLoading={guestsLoading}
                 guestsError={guestsError}
@@ -351,7 +352,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                 roomPickerOpen={roomPickerOpen}
                 onRoomPickerOpenChange={handleRoomPickerChange}
               /></div> : null}
-              <div className="rounded-2xl border border-border bg-muted/30 p-4 lg:hidden" hidden={mobileStep !== 3}>
+              <div data-testid="mobile-review-summary" className="rounded-2xl border border-border bg-muted/30 p-4 lg:hidden" hidden={mobileStep !== 3}>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Revisar</p>
                 <dl className="mt-3 space-y-3 text-sm">
                   <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Estadía</dt><dd className="text-right font-semibold">{stay.check_in ? format(parseISO(stay.check_in), "dd/MM/yyyy") : "—"} → {stay.check_out ? format(parseISO(stay.check_out), "dd/MM/yyyy") : "—"}<span className="block text-xs font-normal text-muted-foreground">{nights} {nights === 1 ? "noche" : "noches"}</span></dd></div>

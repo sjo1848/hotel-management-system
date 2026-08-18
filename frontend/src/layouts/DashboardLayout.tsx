@@ -17,8 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -162,15 +161,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   const [searchValue, setSearchValue] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
+  const [mobileSecondaryOpen, setMobileSecondaryOpen] = useState(false);
   const [sidebarTooltip, setSidebarTooltip] = useState<SidebarTooltip | null>(null);
-  const [mobileNavPreview, setMobileNavPreview] = useState<{
-    label: string;
-    description?: string;
-  } | null>(null);
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
-  const expandMobileNav = useCallback(() => setMobileNavExpanded(true), []);
+  const expandMobileNav = useCallback(() => setMobileSecondaryOpen(true), []);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -184,14 +179,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     setSidebarTooltip(null);
     if (!mobileNavOpen) {
-      setMobileNavExpanded(false);
+      setMobileSecondaryOpen(false);
     }
   }, [isCollapsed, mobileNavOpen, location.pathname]);
-
-  useEffect(() => {
-    if (!mobileNavOpen) return;
-    setMobileNavExpanded(true);
-  }, [mobileNavOpen]);
 
   useEffect(() => {
     const dismissTooltip = () => setSidebarTooltip(null);
@@ -264,15 +254,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const handleSidebarTooltipChange = useCallback(
     (tooltip: SidebarTooltip | null) => {
       setSidebarTooltip(tooltip);
-      if (isCollapsed && mobileNavOpen) {
-        setMobileNavPreview(
-          tooltip
-            ? { label: tooltip.label, description: tooltip.description }
-            : defaultMobilePreview,
-        );
-      }
     },
-    [activeNavItem?.description, activeNavItem?.label, isCollapsed, mobileNavOpen],
+    [],
   );
 
   const renderNavSection = (
@@ -367,6 +350,81 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     </>
   );
 
+  const mobileNavigationContent = (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+        <nav aria-label="Navegación móvil" className="space-y-1">
+          {visiblePrincipalItems.map((item) => (
+            <SidebarItem
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              description={item.description}
+              active={item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path)}
+              collapsed={false}
+              onNavigate={closeMobileNav}
+            />
+          ))}
+        </nav>
+
+        {(visibleManagementItems.length > 0 || visibleSettingsItems.length > 0) && (
+          <div className="mt-4 border-t border-border/40 pt-3">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-10 w-full justify-between rounded-xl px-3 text-sm font-semibold"
+              aria-expanded={mobileSecondaryOpen}
+              onClick={() => setMobileSecondaryOpen((open) => !open)}
+            >
+              <span>Más operaciones</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", mobileSecondaryOpen && "rotate-180")} />
+            </Button>
+            {mobileSecondaryOpen && (
+              <div className="mt-1 space-y-1">
+                {visibleManagementItems.map((item) => (
+                  <SidebarItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    path={item.path}
+                    description={item.description}
+                    active={location.pathname.startsWith(item.path)}
+                    collapsed={false}
+                    onNavigate={closeMobileNav}
+                  />
+                ))}
+                {visibleSettingsItems.map((item) => (
+                  <SidebarItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    path={item.path}
+                    description={item.description}
+                    active={location.pathname.startsWith(item.path)}
+                    collapsed={false}
+                    onNavigate={closeMobileNav}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-border/40 p-3">
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="min-h-11 w-full justify-start rounded-xl text-sm"
+        >
+          <LogOut className="mr-3 h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="theme-fade app-shell flex h-dvh overflow-hidden font-sans text-foreground">
       <aside
@@ -416,62 +474,23 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
           side="left"
           className={cn(
             "app-sidebar sidebar-text-fg flex h-dvh max-h-dvh flex-col overflow-hidden border-r p-0 transition-[width,max-width] duration-300 ease-out md:hidden",
-            mobileNavExpanded ? "w-[18rem] max-w-[18rem]" : "w-28 max-w-28",
+            "w-[min(22rem,calc(100vw-1rem))] max-w-[22rem]",
             "data-[state=open]:duration-200 data-[state=closed]:duration-150",
           )}
-          onMouseEnter={() => setMobileNavExpanded(true)}
-          onMouseMove={() => setMobileNavExpanded(true)}
-          onMouseLeave={() => setMobileNavExpanded(false)}
         >
-          <div className="relative px-3 py-5">
-            <div className={cn("mb-4 flex", mobileNavExpanded ? "justify-end" : "justify-center")}>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 rounded-xl"
-                aria-label={mobileNavExpanded ? "Colapsar menú móvil" : "Expandir menú móvil"}
-                onClick={() => setMobileNavExpanded((current) => !current)}
-              >
-                {mobileNavExpanded ? (
-                  <PanelLeftClose className="h-4 w-4" />
-                ) : (
-                  <PanelLeftOpen className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className={cn("relative flex", mobileNavExpanded ? "items-center gap-4 px-2" : "justify-center")}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary to-amber-700 shadow-lg shadow-amber-900/20">
-                <span className="text-xl font-bold text-secondary-foreground">H</span>
+          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-secondary to-amber-700">
+                <span className="text-lg font-bold text-secondary-foreground">H</span>
               </div>
-              {mobileNavExpanded ? (
-                <div>
-                  <p className="sidebar-text-fg text-sm font-black tracking-tight">
-                    HMS ELITE
-                  </p>
-                  <p className="sidebar-text-muted mt-1 text-xs font-semibold uppercase tracking-[0.18em]">
-                    Navegacion
-                  </p>
-                </div>
-              ) : null}
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black tracking-tight">HMS ELITE</p>
+                <p className="truncate text-xs text-muted-foreground">{defaultMobilePreview.label}</p>
+              </div>
             </div>
-            <div className="relative mt-4 text-center">
-              <p className={cn("sidebar-text-fg font-bold", mobileNavExpanded ? "text-sm" : "text-xs")}>
-                {mobileNavPreview?.label ?? defaultMobilePreview.label}
-              </p>
-              <p className={cn("sidebar-text-muted mt-1 font-medium leading-4", mobileNavExpanded ? "px-3 text-xs" : "text-xs")}>
-                {mobileNavPreview?.description ?? defaultMobilePreview.description}
-              </p>
-            </div>
+            <span className="sr-only">Navegación móvil</span>
           </div>
-          {mobileNavOpen
-            ? navigationContent(
-                !mobileNavExpanded,
-                closeMobileNav,
-                !mobileNavExpanded,
-                !mobileNavExpanded,
-              )
-            : null}
+          {mobileNavOpen ? mobileNavigationContent : null}
         </SheetContent>
       </Sheet>
 

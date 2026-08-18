@@ -1,12 +1,36 @@
 # HMS-MOBILE-UX-PERF-001 — Human UX Acceptance Rework #1
 
-current_status: PHASE_1_CANONICAL_GREEN_PHASE_2_AUDIT_IN_PROGRESS
+current_status: IMPLEMENTATION_SLICE_A_B_VALIDATED_PENDING_CANONICAL_CI
 branch: feature/mobile-ux-perf
 scope: Lane A — Mobile Interaction / UX
 write_scope: MOBILE-INTERACTION-CONTRACT.md; reservation, reception and check-in surfaces only
 
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
-base_sha: 5ff365b31a4d94056351c5de150c2799f6607f65
+base_sha: 8bfc2823bcd2fe88d2a188f77572ae0f55c46ce9
+
+## Human Gate
+
+- Architecture review approved by Sebastián; implementation may continue within the approved mobile-first scope.
+- Desktop preservation, backend/API freeze and no new UI framework remain mandatory constraints.
+
+## Implementation slice
+
+| Lane | Scope | State | Result |
+|---|---|---|---|
+| Mobile shell | `DashboardLayout.tsx` mobile composition | COMPLETE | Frequent destinations first; secondary operations collapsed; desktop sidebar preserved |
+| Reception | `BookingsPage.tsx` mobile header/actions | COMPLETE | Compact operational header; Nueva reserva primary; export/guide secondary; desktop branch preserved |
+| Reservation | Walk-in selector/context preservation | COMPLETE | Selected guest remains visible outside filtered first results; existing task flow preserved |
+| Integration | Tests, build and E2E | VALIDATED_LOCAL | Unit suite 49/322 PASS; Docker build PASS; reception smoke PASS except pre-existing billing lifecycle remains separate; focused mobile reservation PASS at 375/390/430 |
+
+## Slice evidence
+
+- `npm run lint`: PASS.
+- `npm run test -- --run`: 49 files / 322 tests PASS.
+- `docker compose exec -T frontend npm run build`: PASS.
+- Focused Playwright reception reservation: PASS at 375/390/430 using host Chrome and synthetic data; menu samples recorded p50 286.3ms and requests 0 in the full smoke run.
+- Full reception smoke: 7/8 passed in the first run; the reservation test became PASS after deterministic future-date fixtures and Review/focus assertions. Re-run focused PASS.
+- Full guest lifecycle E2E: billing assertion remains an existing separate failure after the breakfast charge (`accountTotal` expectation); no billing code changed in this slice.
+- Host Playwright direct run used `/tmp` output because Docker-owned `frontend/test-results` is not writable by the host user.
 
 ## Workers
 

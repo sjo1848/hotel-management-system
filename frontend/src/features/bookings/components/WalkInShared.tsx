@@ -31,6 +31,7 @@ export type WalkInGuestSectionProps = {
   guestMode: WalkInGuestMode;
   guestSearch: string;
   selectedGuestId: string | null;
+  selectedGuest: Guest | null;
   filteredGuests: Guest[];
   guestsLoading: boolean;
   guestsError?: unknown;

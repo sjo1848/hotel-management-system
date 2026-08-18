@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Loader2, Mail, Phone, Search, UserPlus, Users, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ export const WalkInGuestSection = ({
   guestMode,
   guestSearch,
   selectedGuestId,
+  selectedGuest,
   filteredGuests,
   guestsLoading,
   guestsError,
@@ -20,7 +22,18 @@ export const WalkInGuestSection = ({
   onNewGuestChange,
   guestPickerOpen,
   onGuestPickerOpenChange,
-}: WalkInGuestSectionProps) => (
+}: WalkInGuestSectionProps) => {
+  const guestPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const pickerWasOpen = useRef(false);
+
+  useEffect(() => {
+    if (!guestPickerOpen && pickerWasOpen.current) {
+      guestPickerTriggerRef.current?.focus();
+    }
+    pickerWasOpen.current = guestPickerOpen;
+  }, [guestPickerOpen]);
+
+  return (
   <div className="rounded-3xl border border-border bg-background/70 p-4 shadow-sm sm:p-5">
     <div className="flex items-start gap-3">
       <div className="rounded-2xl bg-primary/10 p-3 text-primary">
@@ -59,11 +72,11 @@ export const WalkInGuestSection = ({
         {guestMode === "existing" ? (
           <div className="space-y-4">
             <div className="md:hidden">
-              <Button type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onGuestPickerOpenChange(true)}>
+              <Button ref={guestPickerTriggerRef} type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onGuestPickerOpenChange(true)}>
                 <span className="min-w-0">
                   <span className="block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Huésped seleccionado</span>
                   <span className="mt-1 block truncate text-sm font-semibold text-foreground">
-                    {selectedGuestId ? filteredGuests.find((guest) => guest.id === selectedGuestId)?.full_name ?? "Huésped seleccionado" : "Elegir de la base de huéspedes"}
+                    {selectedGuestId ? selectedGuest?.full_name ?? "Huésped seleccionado" : "Elegir de la base de huéspedes"}
                   </span>
                 </span>
                 <Search className="ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
@@ -237,4 +250,5 @@ export const WalkInGuestSection = ({
       </div>
     </div>
   </div>
-);
+  );
+};
