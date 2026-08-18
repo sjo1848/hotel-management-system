@@ -228,4 +228,28 @@ describe("RoomsInventoryPanel", () => {
     expect(bar).not.toBeNull();
     expect(within(bar!).getByText("2 habitaciones seleccionadas")).toBeInTheDocument();
   });
+
+  it("uses a compact operational list on mobile", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("max-width: 767px"),
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+
+    try {
+      renderPanel();
+
+      expect(screen.getByRole("searchbox", { name: "Buscar habitaciones" })).toBeInTheDocument();
+      expect(screen.getByLabelText("Lista operativa de habitaciones")).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Filtrar habitaciones por estado" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Compacta" })).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

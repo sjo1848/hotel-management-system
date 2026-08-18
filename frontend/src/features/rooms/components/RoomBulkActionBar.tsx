@@ -68,14 +68,14 @@ export const RoomBulkActionBar = ({
   const cleaningCount = breakdown.Dirty + breakdown.Cleaning;
 
   return (
-    <section className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="space-y-2">
+    <section className="rounded-2xl border border-primary/20 bg-primary/5 p-2 sm:p-4">
+      <div className="flex flex-col gap-2 sm:gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0 space-y-1 sm:space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/80">
             Acción masiva
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-base font-black text-foreground">
+            <p className="truncate text-sm font-black text-foreground sm:text-base">
               {selectedRooms.length} habitaciones seleccionadas
             </p>
             {outOfFilterCount > 0 ? (
@@ -99,11 +99,11 @@ export const RoomBulkActionBar = ({
             </span>
           </div>
           {allBlocking.length > 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="hidden text-sm text-muted-foreground sm:block">
               Bloquean: {allBlocking.map((status) => STATUS_LABELS[status]).join(" · ")}.
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground">
+            <p className="hidden text-sm text-muted-foreground sm:block">
               El lote es válido para ambas transiciones. Se aplica sobre el conjunto
               completo, no por partes.
             </p>
@@ -112,14 +112,14 @@ export const RoomBulkActionBar = ({
 
         {pending ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm">
+            <div className="hidden items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-sm sm:flex">
               <ListChecks className="h-4 w-4 text-primary" />
               <span className="font-semibold text-foreground">
                 ¿Aplicar «{pending.label}» a {selectedRooms.length} habitaciones?
               </span>
             </div>
             <Button
-              className="h-10 rounded-xl"
+              className="h-9 min-w-0 rounded-xl px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
               disabled={busy !== null}
               onClick={() => onApply(pending.value)}
             >
@@ -130,7 +130,7 @@ export const RoomBulkActionBar = ({
             </Button>
             <Button
               variant="ghost"
-              className="h-10 rounded-xl"
+              className="h-9 min-w-0 rounded-xl px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
               disabled={busy !== null}
               onClick={() => setPendingTarget(null)}
             >
@@ -138,14 +138,14 @@ export const RoomBulkActionBar = ({
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-row sm:flex-wrap xl:justify-end">
             {BULK_TARGETS.map((target) => {
               const valid = validation[target.value].valid;
               return (
                 <Button
                   key={target.value}
                   variant="outline"
-                  className="h-10 rounded-xl"
+                  className="h-9 min-w-0 rounded-xl px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
                   disabled={busy !== null || !valid}
                   onClick={() => setPendingTarget(target.value)}
                 >
@@ -156,7 +156,7 @@ export const RoomBulkActionBar = ({
             {outOfFilterCount > 0 ? (
               <Button
                 variant="outline"
-                className="h-10 rounded-xl"
+                className="h-9 min-w-0 rounded-xl px-2 text-xs sm:h-10 sm:px-4 sm:text-sm"
                 disabled={allVisibleSelected || busy !== null}
                 onClick={onSelectVisible}
               >
@@ -165,7 +165,7 @@ export const RoomBulkActionBar = ({
             ) : null}
             <Button
               variant="ghost"
-              className="h-10 rounded-xl"
+              className="col-span-2 h-9 rounded-xl px-2 text-xs sm:col-span-1 sm:h-10 sm:px-4 sm:text-sm"
               disabled={busy !== null}
               onClick={onClear}
             >
