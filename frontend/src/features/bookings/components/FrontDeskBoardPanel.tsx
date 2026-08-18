@@ -187,9 +187,9 @@ const FrontDeskBoardPanel = ({
   };
 
   return (
-    <section className="motion-surface rounded-3xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="space-y-2">
+    <section className="motion-surface sm:rounded-3xl sm:border sm:border-border sm:bg-card sm:p-5 sm:shadow-sm">
+      <div className="flex flex-col gap-3 sm:gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="hidden space-y-2 sm:block">
           <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
             <Hotel className="h-5 w-5" />
           </div>
@@ -204,13 +204,13 @@ const FrontDeskBoardPanel = ({
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end xl:w-auto">
-          <div className="flex w-full items-center rounded-xl border border-border bg-muted p-1 sm:w-auto">
+        <div className="grid w-full grid-cols-[1fr_auto] items-end gap-2 sm:flex sm:flex-row sm:gap-3 xl:w-auto">
+          <div className="flex min-w-0 items-center rounded-xl border border-border bg-muted p-1 sm:w-auto">
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              className={viewMode === "queue" ? "h-8 flex-1 rounded-lg bg-card px-3 shadow-sm sm:flex-none" : "h-8 flex-1 rounded-lg px-3 text-muted-foreground sm:flex-none"}
+              className={viewMode === "queue" ? "h-9 flex-1 rounded-lg bg-card px-2 shadow-sm sm:h-8 sm:flex-none sm:px-3" : "h-9 flex-1 rounded-lg px-2 text-muted-foreground sm:h-8 sm:flex-none sm:px-3"}
               onClick={() => setViewMode("queue")}
             >
               <LayoutList className="h-4 w-4" />
@@ -220,7 +220,7 @@ const FrontDeskBoardPanel = ({
               type="button"
               variant="ghost"
               size="sm"
-              className={viewMode === "sections" ? "h-8 flex-1 rounded-lg bg-card px-3 shadow-sm sm:flex-none" : "h-8 flex-1 rounded-lg px-3 text-muted-foreground sm:flex-none"}
+              className={viewMode === "sections" ? "h-9 flex-1 rounded-lg bg-card px-2 shadow-sm sm:h-8 sm:flex-none sm:px-3" : "h-9 flex-1 rounded-lg px-2 text-muted-foreground sm:h-8 sm:flex-none sm:px-3"}
               onClick={() => setViewMode("sections")}
             >
               <LayoutPanelTop className="h-4 w-4" />
@@ -228,19 +228,20 @@ const FrontDeskBoardPanel = ({
             </Button>
           </div>
 
-          <label className="grid w-full gap-1.5 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground sm:w-auto">
-            Fecha operativa
+          <label className="grid gap-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground sm:w-auto sm:gap-1.5 sm:text-xs sm:tracking-[0.18em]">
+            <span className="sr-only sm:not-sr-only">Fecha operativa</span>
             <input
               type="date"
+              aria-label="Fecha operativa"
               value={boardDate}
               onChange={(event) => onBoardDateChange(event.target.value)}
-              className="h-10 w-full rounded-xl border border-input bg-background px-3 text-sm font-medium text-foreground shadow-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 sm:w-auto"
+              className="h-11 w-[9.5rem] rounded-xl border border-input bg-background px-2 text-sm font-medium text-foreground shadow-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/30 sm:h-10 sm:w-auto sm:px-3"
             />
           </label>
         </div>
       </div>
 
-      <div className="stagger-list mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="stagger-list mt-5 hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Llegadas listas" value={readyArrivals.length} tone="success" icon={CheckCircle2} />
         <StatCard label="Llegadas bloqueadas" value={blockedArrivals.length} tone="warning" icon={ShieldAlert} />
         <StatCard label="Salidas del dia" value={departures.length} tone="info" icon={DoorClosed} />
@@ -249,7 +250,7 @@ const FrontDeskBoardPanel = ({
       </div>
 
       {viewMode === "queue" ? (
-        <div className="mt-5 rounded-3xl border border-border bg-background/70 p-4 shadow-sm">
+        <div className="mt-3 rounded-2xl border border-border bg-background/70 p-3 shadow-sm sm:mt-5 sm:rounded-3xl sm:p-4">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="min-w-0 flex-1">
               <label
@@ -275,7 +276,7 @@ const FrontDeskBoardPanel = ({
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Filtrar casos
               </p>
-              <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Filtrar cola de recepcion">
+              <div className="drawer-scrollbar mt-2 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible sm:pb-0" role="group" aria-label="Filtrar cola de recepcion">
                 {queueFilters.map((filter) => (
                   <Button
                     key={filter.value}
@@ -293,7 +294,7 @@ const FrontDeskBoardPanel = ({
             </div>
           </div>
 
-          <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 hidden flex-col gap-1 border-t border-border pt-3 text-sm sm:flex sm:flex-row sm:items-center sm:justify-between">
             <p className="font-semibold text-foreground">
               Mostrando {filteredQueue.length} de {cockpitQueue.length} casos del turno
             </p>
@@ -387,9 +388,9 @@ const FrontDeskBoardPanel = ({
           Cargando tablero operativo...
         </div>
       ) : viewMode === "queue" ? (
-        <div className="mt-5 space-y-3">
+        <div className="mt-3 space-y-3 sm:mt-5">
           {filteredQueue.length > 0 ? (
-            <div className="flex flex-col gap-2 rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <div className="hidden flex-col gap-2 rounded-2xl border border-dashed border-border bg-background/50 px-4 py-3 text-sm sm:flex sm:flex-row sm:items-center sm:justify-between">
               <p className="text-muted-foreground">
                 Trabajá los casos en orden o seleccioná una cola para recorrerla sin volver al board.
               </p>
@@ -413,11 +414,11 @@ const FrontDeskBoardPanel = ({
             filteredQueue.map((item, index) => (
               <article
                 key={`${item.lane}:${item.entry.booking_id}`}
-                className="rounded-3xl border border-border bg-background/70 px-4 py-4 shadow-sm transition hover:border-primary/30 hover:bg-card sm:px-5"
+                className="rounded-2xl border border-border bg-background/70 px-3 py-3 shadow-sm transition hover:border-primary/30 hover:bg-card sm:rounded-3xl sm:px-5 sm:py-4"
               >
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex gap-3">
-                    <label className="flex pt-1" title="Agregar caso a la cola de trabajo">
+                    <label className="hidden pt-1 sm:flex" title="Agregar caso a la cola de trabajo">
                       <input
                         type="checkbox"
                         aria-label={`Seleccionar caso de ${item.entry.guest_name}`}
@@ -447,7 +448,7 @@ const FrontDeskBoardPanel = ({
                         </p>
                       </div>
                       <p className="text-sm font-medium text-foreground">{item.title}</p>
-                      <p className="text-sm text-muted-foreground">{item.detail}</p>
+                      <p className="hidden text-sm text-muted-foreground sm:block">{item.detail}</p>
                       {item.entry.blocker ? (
                         <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-3 py-3 text-sm text-amber-900 dark:text-amber-200">
                           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -460,9 +461,9 @@ const FrontDeskBoardPanel = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 sm:min-w-[220px]">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 sm:min-w-[220px] sm:flex-col sm:items-stretch">
+                    <div className="min-w-0 flex-1">
+                      <p className="hidden text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:block">
                         Cuenta de referencia
                       </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
@@ -470,7 +471,7 @@ const FrontDeskBoardPanel = ({
                       </p>
                     </div>
                     <Button
-                      className="h-10 w-full rounded-2xl sm:w-auto"
+                      className="h-10 shrink-0 rounded-2xl"
                       onClick={() => {
                         if (item.action_kind === "prepare-check-in") {
                           prepareCheckInFromBoard(item.entry.booking_id);
@@ -482,7 +483,7 @@ const FrontDeskBoardPanel = ({
                       {getPrimaryActionLabel(item)}
                       <ArrowRight className="h-4 w-4" />
                     </Button>
-                    <p className="text-center text-xs text-muted-foreground">
+                    <p className="hidden text-center text-xs text-muted-foreground sm:block">
                       Abre el caso con contexto y controles previos.
                     </p>
                   </div>

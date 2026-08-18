@@ -23,7 +23,7 @@ import { getBookings, getFrontDeskBoard, updateBooking } from "./services/bookin
 import { Booking, BookingFrontDeskData } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import { downloadCSV, cn } from "@/lib/utils";
-import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
 import { PageHeader } from "@/components/ui/page-header";
 import { useGuidedMode } from "@/features/guided/GuidedModeContext";
@@ -89,16 +89,8 @@ const BookingsPage = () => {
     staleTimeMs: 10_000,
   });
 
-  const refreshBookingsView = async (selectedId?: string) => {
-    invalidateResource(bookingQueryKey);
-    invalidateResource(frontDeskQueryKey);
-    await refetchBookings();
-    await refetchFrontDeskBoard();
-
-    if (!selectedId) return;
-    const refreshedBookings = await getBookings();
-    const refreshedSelected = refreshedBookings.find((item) => item.id === selectedId) ?? null;
-    setSelectedBooking(refreshedSelected);
+  const refreshBookingsView = async () => {
+    await Promise.all([refetchBookings(), refetchFrontDeskBoard()]);
   };
 
   const handleExport = () => {
@@ -270,7 +262,8 @@ const BookingsPage = () => {
     frontDesk?: Partial<BookingFrontDeskData>,
   ) => {
     try {
-      await updateBooking(id, { status, front_desk: frontDesk });
+      const updatedBooking = await updateBooking(id, { status, front_desk: frontDesk });
+      setSelectedBooking((current) => current?.id === id ? updatedBooking : current);
       toast({
         title: "Reserva actualizada",
         description:
@@ -285,7 +278,6 @@ const BookingsPage = () => {
                 : "Estado actualizado.",
         variant: "success",
       });
-      await refreshBookingsView(id);
     } catch (error: unknown) {
       toast({
         title: "No se pudo actualizar",
@@ -389,7 +381,7 @@ const BookingsPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       <div className="flex items-center gap-2 lg:hidden" aria-label="Barra de recepción móvil">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -413,7 +405,6 @@ const BookingsPage = () => {
               </PopoverContent>
             </Popover>
           </div>
-          <p className="truncate text-xs font-medium text-muted-foreground">Operaciones del turno</p>
         </div>
 
         <DropdownMenu>
@@ -529,7 +520,7 @@ const BookingsPage = () => {
               guidedFocusStep={guidedFocusStep}
               onUpdateStatus={handleStatusUpdate}
               onEditBooking={() => setIsEditOpen(true)}
-              onRefreshBooking={() => refreshBookingsView(selectedBooking?.id)}
+              onRefreshBooking={() => refreshBookingsView()}
             />
           ) : (
             <Suspense
@@ -669,8 +660,7 @@ const BookingsPage = () => {
           isOpen={isWalkInOpen}
           onClose={() => setIsWalkInOpen(false)}
           onCreated={async (booking) => {
-            invalidateResource(bookingQueryKey);
-            await refreshBookingsView(booking.id);
+            await refreshBookingsView();
             setFrontDeskQueueBookingIds([]);
             setSelectedBooking(booking);
             if (isDesktop && workspaceView === "shift") {
@@ -696,7 +686,7 @@ const BookingsPage = () => {
                 setFrontDeskQueueBookingIds([]);
               }}
               onSuccess={async () => {
-                await refreshBookingsView(selectedBooking.id);
+                await refreshBookingsView();
               }}
               onViewDetails={() => setIsDetailsOpen(true)}
             />
@@ -709,7 +699,7 @@ const BookingsPage = () => {
                 setIsEditOpen(true);
               }}
               onRefreshBooking={async () => {
-                await refreshBookingsView(selectedBooking.id);
+                await refreshBookingsView();
               }}
               guidedFocusStep={guidedFocusStep}
               queueBookingIds={frontDeskQueueBookingIds}

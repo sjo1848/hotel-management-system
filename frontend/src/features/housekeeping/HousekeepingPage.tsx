@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { useResourceQuery } from "@/lib/useResourceQuery";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { getErrorMessage } from "@/api/errors";
 import { AuthContext } from "@/features/auth/AuthContext";
@@ -50,7 +50,7 @@ const HousekeepingPage = () => {
   const run = async (key: string, action: () => Promise<unknown>, title: string, event?: "start_cleaning" | "finish_cleaning" | "handle_blocker") => {
     if (!canWrite || loadingAction) return;
     setLoadingAction(key);
-    try { await action(); if (event) trackHousekeepingEvent(event); toast({ title, variant: "success" }); invalidateResource(boardKey); await query.refetch(); } catch (error) { toast({ title: "No se pudo actualizar", description: getErrorMessage(error, "Reintenta en unos segundos."), variant: "error" }); } finally { setLoadingAction(null); }
+    try { await action(); if (event) trackHousekeepingEvent(event); toast({ title, variant: "success" }); await query.refetch(); } catch (error) { toast({ title: "No se pudo actualizar", description: getErrorMessage(error, "Reintenta en unos segundos."), variant: "error" }); } finally { setLoadingAction(null); }
   };
   const selectGuideStep = (stepId: string) => { const map: Record<string, HousekeepingFilter> = { "review-board": "shift", "start-cleaning": "dirty", "finish-cleaning": "cleaning", "handle-blocker": "maintenance" }; const nextFilter = map[stepId]; if (nextFilter) setFilter(nextFilter); const candidate = filterHousekeepingQueue(queue, nextFilter ?? "shift", "")[0]; if (candidate) { setSelectedRoomId(candidate.room_id); requestAnimationFrame(() => document.querySelector<HTMLElement>(`[aria-label="Ver tarea habitación ${candidate.room_number}"]`)?.focus()); } };
   const closeRoom = () => { const roomNumber = selected?.room_number; setSelectedRoomId(null); if (roomNumber) requestAnimationFrame(() => document.querySelector<HTMLElement>(`[aria-label="Ver tarea habitación ${roomNumber}"]`)?.focus()); };

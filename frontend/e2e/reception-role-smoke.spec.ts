@@ -113,9 +113,10 @@ test("reception performance: mobile menu opens without extra requests", async ({
   }
 
   const sortedSamples = [...samples].sort((left, right) => left - right);
-  const median = sortedSamples[Math.floor(sortedSamples.length / 2)];
-  console.log(`[mobile-menu-perf] samples_ms=${samples.map((sample) => sample.toFixed(1)).join(",")} median_ms=${median.toFixed(1)} requests=${requestUrls.length}`);
-  expect(median).toBeLessThan(350);
+  const p50 = sortedSamples[Math.floor(sortedSamples.length / 2)];
+  const p95 = sortedSamples[Math.ceil(sortedSamples.length * 0.95) - 1];
+  console.log(`[mobile-menu-perf] samples=${samples.length} samples_ms=${samples.map((sample) => sample.toFixed(1)).join(",")} p50_ms=${p50.toFixed(1)} p95_ms=${p95.toFixed(1)} requests=${requestUrls.length}`);
+  expect(p50).toBeLessThan(350);
   expect(requestUrls).toEqual([]);
 });
 

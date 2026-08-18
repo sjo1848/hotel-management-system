@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Info, Loader2, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, Info, Loader2, Sparkles, X } from "lucide-react";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import {
   Sheet,
@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { getErrorMessage } from "@/api/errors";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { cn } from "@/lib/utils";
 import type { Booking, Guest, Room } from "@/types/domain";
 import { createBooking } from "@/features/bookings/services/bookingService";
 import { createGuest, getGuests } from "@/features/guests/services/guestService";
@@ -180,6 +181,26 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!guestPickerOpen && !roomPickerOpen) return;
+
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+    const closePickerOnDesktop = (event: MediaQueryListEvent) => {
+      if (!event.matches) return;
+      setGuestPickerOpen(false);
+      setRoomPickerOpen(false);
+    };
+
+    if (mediaQuery.matches) {
+      setGuestPickerOpen(false);
+      setRoomPickerOpen(false);
+      return;
+    }
+
+    mediaQuery.addEventListener("change", closePickerOnDesktop);
+    return () => mediaQuery.removeEventListener("change", closePickerOnDesktop);
+  }, [guestPickerOpen, roomPickerOpen]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -269,8 +290,11 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full overflow-hidden border-l border-border bg-card p-0 sm:max-w-[880px]">
-        <div className="flex min-h-0 flex-1 flex-col">
+      <SheetContent hideCloseButton className="w-full overflow-hidden border-l border-border bg-card p-0 sm:max-w-[880px]">
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          aria-hidden={guestPickerOpen || roomPickerOpen ? true : undefined}
+        >
         <SheetHeader className="border-b px-4 py-3 sm:px-6 sm:py-6">
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-3">
@@ -287,12 +311,17 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                 </SheetDescription>
               </div>
             </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="ghost" size="icon" aria-label="Ayuda sobre nueva reserva" title="Ayuda" className="min-h-11 min-w-11 shrink-0 rounded-xl sm:hidden"><Info className="h-4 w-4" /></Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 text-sm">Completá cada paso y avanzá. El estado se conserva al volver desde los selectores.</PopoverContent>
-            </Popover>
+            <div className="flex shrink-0 items-center gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="ghost" size="icon" aria-label="Ayuda sobre nueva reserva" title="Ayuda" className="min-h-11 min-w-11 rounded-xl sm:hidden"><Info className="h-4 w-4" /></Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 text-sm">Completá cada paso y avanzá. El estado se conserva al volver desde los selectores.</PopoverContent>
+              </Popover>
+              <Button type="button" variant="ghost" size="icon" aria-label="Cerrar nueva reserva" title="Cerrar" className="min-h-11 min-w-11 rounded-xl" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <nav className="flex items-center gap-1 text-xs font-semibold text-muted-foreground sm:hidden" aria-label="Progreso de nueva reserva">
             {mobileSteps.map((label, index) => index < mobileStep ? (
@@ -377,20 +406,25 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
           </section>
           </div>
 
-          <SheetFooter className="border-t bg-card/95 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-5">
+          <SheetFooter
+            className={cn(
+              "border-t bg-card/95 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-5",
+              (guestPickerOpen || roomPickerOpen) && "hidden md:flex",
+            )}
+          >
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="hidden text-sm text-muted-foreground sm:block">
                 Al crear, la reserva abre directo en el centro operativo para continuar con check-in o cuenta.
               </p>
               <div className="flex w-full gap-2 sm:w-auto sm:flex-row">
-                <Button
+                {(isDesktop || mobileStep === 0) ? <Button
                   type="button"
                   variant="outline"
                   className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none"
                   onClick={onClose}
                 >
                   Cancelar
-                </Button>
+                </Button> : null}
                 {isDesktop ? <Button
                   type="submit"
                   disabled={submitting}
@@ -443,6 +477,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
           </SheetFooter>
         </form>
         </div>
+        <div id="walk-in-mobile-picker-root" />
       </SheetContent>
     </Sheet>
   );

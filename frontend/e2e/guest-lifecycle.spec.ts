@@ -25,6 +25,11 @@ function formatArgentineCurrency(value: number): string {
 }
 
 async function openBookingTab(page: Page, label: RegExp) {
+  const backToCase = page.getByRole("button", { name: "Volver al caso" });
+  if (await backToCase.isVisible().catch(() => false)) {
+    await backToCase.click();
+  }
+
   const directTab = page.getByRole("tab", { name: label }).filter({ visible: true });
   if (await directTab.count()) {
     await directTab.first().click();
@@ -115,11 +120,6 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   }
   const accountTotal = accommodationTotal + 15;
 
-  const initialInvoiceLookup = page.waitForResponse(
-    (response) =>
-      response.request().method() === "GET" &&
-      /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
-  );
   const createBookingRequest = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -135,9 +135,13 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.getByRole("button", { name: /Más opciones del caso/i }).click();
   await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  expect((await initialInvoiceLookup).status()).toBe(404);
-
+  const firstInvoiceLookup = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      /\/api\/v1\/bookings\/[^/]+\/invoice$/.test(response.url()),
+  );
   await openBookingTab(page, /Cuenta/);
+  expect((await firstInvoiceLookup).status()).toBe(404);
   await expect(page.getByText("Sin cargos extra registrados por el momento.")).toBeVisible();
   await expect(page.getByText("La factura solicitada no existe")).toHaveCount(0);
 

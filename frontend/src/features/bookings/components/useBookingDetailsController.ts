@@ -12,6 +12,8 @@ import { useBookingOperationalController } from "@/features/bookings/components/
 type UseBookingDetailsControllerProps = {
   booking: Booking | null;
   isOpen: boolean;
+  billingEnabled?: boolean;
+  roomOptionsEnabled?: boolean;
   onUpdateStatus?: (
     id: string,
     status: BookingStatus,
@@ -23,15 +25,20 @@ type UseBookingDetailsControllerProps = {
 export const useBookingDetailsController = ({
   booking,
   isOpen,
+  billingEnabled = true,
+  roomOptionsEnabled = true,
   onUpdateStatus,
   onRefreshBooking,
 }: UseBookingDetailsControllerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const canManageRoomException =
+    roleHasCapability(user?.role, "rooms.read") && ["admin", "ops"].includes(user?.role ?? "");
   const refreshBillingDataRef = useRef<(targetBooking?: Booking) => Promise<void>>(async () => {});
   const operational = useBookingOperationalController({
     booking,
     isOpen,
+    roomOptionsEnabled: roomOptionsEnabled && canManageRoomException,
     toast,
     refreshBillingData: (targetBooking?: Booking) => refreshBillingDataRef.current(targetBooking),
     onRefreshBooking,
@@ -39,8 +46,8 @@ export const useBookingDetailsController = ({
   const billing = useBookingBillingController({
     bookingState: operational.bookingState,
     isOpen,
+    enabled: billingEnabled,
     toast,
-    onRefreshBooking,
     onBookingTotalDelta: (amountCents) => {
       operational.updateBookingState((current) => ({
         ...current,
@@ -49,8 +56,6 @@ export const useBookingDetailsController = ({
     },
   });
   refreshBillingDataRef.current = billing.refreshBillingData;
-  const canManageRoomException =
-    roleHasCapability(user?.role, "rooms.read") && ["admin", "ops"].includes(user?.role ?? "");
   const canViewAudit = roleHasCapability(user?.role, "audit.events.read");
   const canOverrideCheckoutBalance = roleHasCapability(
     user?.role,

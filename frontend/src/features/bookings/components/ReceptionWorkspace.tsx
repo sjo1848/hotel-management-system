@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   ReceptionWorkspaceTabs,
   type ReceptionWorkspaceView,
@@ -27,6 +27,17 @@ export const ReceptionWorkspace = ({
   departuresView,
   reservationsView,
 }: ReceptionWorkspaceProps) => {
+  const [visitedViews, setVisitedViews] = useState<Set<ReceptionWorkspaceView>>(
+    () => new Set([view]),
+  );
+
+  useEffect(() => {
+    setVisitedViews((current) => {
+      if (current.has(view)) return current;
+      return new Set([...current, view]);
+    });
+  }, [view]);
+
   const panels: Array<{ id: ReceptionWorkspaceView; content: ReactNode }> = [
     { id: "shift", content: shiftView },
     { id: "arrivals", content: arrivalsView },
@@ -38,18 +49,20 @@ export const ReceptionWorkspace = ({
   return (
     <section className="space-y-4">
       <ReceptionWorkspaceTabs activeView={view} counts={counts} onViewChange={onViewChange} />
-      {panels.map((panel) => (
-        <div
-          key={panel.id}
-          role="tabpanel"
-          id={`reception-workspace-panel-${panel.id}`}
-          aria-labelledby={`reception-workspace-tab-${panel.id}`}
-          hidden={view !== panel.id}
-          className="min-w-0"
-        >
-          {panel.content}
-        </div>
-      ))}
+      {panels.map((panel) =>
+        visitedViews.has(panel.id) || panel.id === view ? (
+          <div
+            key={panel.id}
+            role="tabpanel"
+            id={`reception-workspace-panel-${panel.id}`}
+            aria-labelledby={`reception-workspace-tab-${panel.id}`}
+            hidden={panel.id !== view}
+            className="min-w-0"
+          >
+            {panel.content}
+          </div>
+        ) : null,
+      )}
     </section>
   );
 };

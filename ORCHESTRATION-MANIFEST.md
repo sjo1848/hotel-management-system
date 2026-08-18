@@ -2,8 +2,8 @@
 
 task_id: HMS-MOBILE-UX-PERF-001
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
-base_sha: 109e1b8cb269c782271619e672a9f7fa000db316
-current_status: COMPLETE_READY_FOR_HUMAN_UX_ACCEPTANCE
+base_sha: f61527051ff5f94229c79dc82753b80ed593fe1f
+current_status: CANDIDATE_READY_PENDING_CANONICAL_CI
 
 ## Workers
 
@@ -43,6 +43,16 @@ final_verdict: READY FOR HUMAN UX ACCEPTANCE
 
 requerido: sí
 motivo: Human UX Acceptance after CI, mobile journeys, and before/after evidence are complete.
+
+## Current Human Rework Continuation
+
+- implementation_workers: Luna LOW only (`01a012a3`, `01a012b1`, `01a012b9-4908`, `01a012b9-4c60`, `01a012c3-ea01`, `01a012c3-e633`).
+- ux_critic: `01a0127f-4d84-7042-8eb8-a28a48f1e5b4` — PASS after bounded rework loops.
+- performance_critic: `01a0127f-4e0e-70f0-8f67-20365fb35860` — PASS after bounded rework loops.
+- integration_reviewer: `01a012cb-3e46-7261-a334-2bc8ccd1f1c5` — PASS; no orphan requirements or material regressions.
+- latest_evidence: lint PASS; 54 files / 333 tests PASS; build PASS; desktop and 375/390/430 reception lifecycle PASS; backend/integration/security/core journeys PASS.
+- performance_result: no improvement claimed; isolated same-protocol menu measurement p50 234.3 ms, p95 362.4 ms, 10 samples, 0 requests.
+- human_gate: required after candidate CI; no merge authorized.
 
 ## Operational Notes
 

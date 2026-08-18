@@ -153,9 +153,7 @@ describe("BookingCaseWorkspace", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Operación/i }));
 
     expect(screen.getByTestId("booking-check-in-section")).toBeDefined();
-    expect(
-      screen.getByTestId("booking-summary-metrics").closest('[role="tabpanel"]'),
-    ).toHaveAttribute("hidden");
+    expect(screen.getByTestId("booking-summary-metrics").closest('[role="tabpanel"]')).toHaveAttribute("hidden");
   });
 
   it("shows the pending control badge on the operation tab", () => {

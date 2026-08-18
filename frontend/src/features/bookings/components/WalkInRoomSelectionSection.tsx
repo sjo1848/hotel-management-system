@@ -1,8 +1,10 @@
-import { BedDouble, Loader2, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { BedDouble, Loader2, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { WalkInRoomSelectionSectionProps } from "@/features/bookings/components/WalkInShared";
+import { MobilePickerSurface } from "@/features/bookings/components/MobilePickerSurface";
 
 export const WalkInRoomSelectionSection = ({
   nights,
@@ -15,6 +17,10 @@ export const WalkInRoomSelectionSection = ({
   onRoomPickerOpenChange,
 }: WalkInRoomSelectionSectionProps) => {
   const [roomSearch, setRoomSearch] = useState("");
+  const roomPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const roomSearchRef = useRef<HTMLInputElement>(null);
+  const desktopRoomHeadingRef = useRef<HTMLParagraphElement>(null);
+  const pickerWasOpen = useRef(false);
   const filteredRooms = useMemo(() => {
     const term = roomSearch.trim().toLowerCase();
     if (!term) return rooms;
@@ -24,13 +30,11 @@ export const WalkInRoomSelectionSection = ({
   }, [roomSearch, rooms]);
 
   useEffect(() => {
-    if (!roomPickerOpen) return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onRoomPickerOpenChange(false);
-    };
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
-  }, [onRoomPickerOpenChange, roomPickerOpen]);
+    if (!roomPickerOpen && pickerWasOpen.current) {
+      roomPickerTriggerRef.current?.focus();
+    }
+    pickerWasOpen.current = roomPickerOpen;
+  }, [roomPickerOpen]);
 
   return (
   <div className="rounded-3xl border border-border bg-background/70 p-4 shadow-sm sm:p-5">
@@ -40,7 +44,7 @@ export const WalkInRoomSelectionSection = ({
       </div>
       <div className="flex-1 space-y-4">
         <div>
-          <p className="text-sm font-black text-foreground">Habitacion disponible</p>
+          <p ref={desktopRoomHeadingRef} tabIndex={-1} className="text-sm font-black text-foreground">Habitacion disponible</p>
           <p className="text-sm text-muted-foreground">
             La lista se recalcula en cuanto cambian las fechas de estadia.
           </p>
@@ -66,7 +70,7 @@ export const WalkInRoomSelectionSection = ({
         ) : (
           <>
           <div className="md:hidden">
-            <Button type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onRoomPickerOpenChange(true)}>
+            <Button ref={roomPickerTriggerRef} type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onRoomPickerOpenChange(true)}>
               <span>
                 <span className="block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Habitación disponible</span>
                 <span className="mt-1 block text-sm font-semibold text-foreground">
@@ -132,22 +136,20 @@ export const WalkInRoomSelectionSection = ({
               );
             })}
           </div>
-          {roomPickerOpen ? (
-            <div role="region" aria-labelledby="mobile-room-picker-title" className="mt-3 rounded-2xl border border-primary/20 bg-card p-4 shadow-sm md:hidden">
-              <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
-                <div>
-                  <h3 id="mobile-room-picker-title" className="text-base font-bold text-foreground">Seleccionar habitación</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">Elegí una habitación disponible para estas fechas.</p>
-                </div>
-                <Button type="button" variant="ghost" aria-label="Cerrar selección de habitación" className="h-11 w-11 shrink-0 rounded-xl p-0" onClick={() => onRoomPickerOpenChange(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="max-h-[52vh] overflow-y-auto pt-4">
+          <MobilePickerSurface
+            open={roomPickerOpen}
+            title="Seleccionar habitación"
+            description="Elegí una habitación disponible para estas fechas."
+            titleId="mobile-room-picker-title"
+            initialFocusRef={roomSearchRef}
+            desktopFocusRef={desktopRoomHeadingRef}
+            onClose={() => onRoomPickerOpenChange(false)}
+          >
+              <div className="min-h-0 flex-1 overflow-y-auto pt-4">
                 <label htmlFor="mobile-room-search" className="sr-only">Buscar habitación</label>
                 <div className="relative mb-4">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input id="mobile-room-search" value={roomSearch} onChange={(event) => setRoomSearch(event.target.value)} placeholder="Buscar por número o tipo" className="h-12 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring" />
+                  <Input ref={roomSearchRef} id="mobile-room-search" value={roomSearch} onChange={(event) => setRoomSearch(event.target.value)} placeholder="Buscar por número o tipo" className="h-12 rounded-xl pl-9" />
                 </div>
                 <div className="space-y-2">
                 {filteredRooms.length === 0 ? <div className="rounded-2xl border border-border px-4 py-4 text-sm text-muted-foreground">No hay habitaciones que coincidan.</div> : filteredRooms.map((room) => {
@@ -166,8 +168,7 @@ export const WalkInRoomSelectionSection = ({
                 })}
                 </div>
               </div>
-            </div>
-          ) : null}
+          </MobilePickerSurface>
           </>
         )}
       </div>

@@ -496,14 +496,14 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
       <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="app-header responsive-shell-header sticky top-0 z-40 md:relative">
-          <div className="flex w-full items-center gap-3 md:max-w-xl md:flex-1">
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:max-w-xl md:gap-3">
             <Button size="icon" variant="ghost" aria-label="Abrir menú móvil" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="group relative min-w-0 flex-1">
               <Search className="app-search-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-foreground" />
               <Input
-                placeholder="Buscar huésped, habitación o reserva..."
+                placeholder="Buscar..."
                 className="app-search-input h-10 w-full min-w-0 rounded-xl pl-10 shadow-sm transition-all duration-300"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
@@ -512,7 +512,7 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <div className="flex w-full items-center justify-end gap-2 md:ml-4 md:w-auto md:gap-4">
+          <div className="flex shrink-0 items-center justify-end gap-1 md:ml-4 md:w-auto md:gap-4">
             <ThemeToggle className="hidden sm:inline-flex" compact />
             <Button size="icon" variant="ghost" aria-label="Notificaciones" className="relative rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
               <Bell className="h-5 w-5" />

@@ -1,12 +1,12 @@
 # HMS-MOBILE-UX-PERF-001 — Human UX Acceptance Rework #1
 
-current_status: IMPLEMENTATION_SLICE_A_B_VALIDATED_PENDING_CANONICAL_CI
+current_status: CANDIDATE_READY_PENDING_CANONICAL_CI
 branch: feature/mobile-ux-perf
 scope: Lane A — Mobile Interaction / UX
 write_scope: MOBILE-INTERACTION-CONTRACT.md; reservation, reception and check-in surfaces only
 
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
-base_sha: 8bfc2823bcd2fe88d2a188f77572ae0f55c46ce9
+base_sha: f61527051ff5f94229c79dc82753b80ed593fe1f
 
 ## Human Gate
 
@@ -102,3 +102,40 @@ final_verdict: READY_FOR_MOBILE_ARCHITECTURE_REVIEW
 
 required: yes
 reason: Sebastián must review the proposed mobile architecture and later perform UX acceptance on a phone; no technical coordination is required before that gate.
+
+## Human UX Acceptance Rework continuation — 2026-08-18
+
+### Workers
+
+| worker_id | role / model policy | scope | status | result |
+|---|---|---|---|---|
+| `01a012a3-7961-7ae3-be5f-4b0f4533acdf` | Request verification / Luna LOW | Reception request storm | COMPLETE | Identified duplicate invalidate/refetch and parent/child refresh ownership |
+| `01a012b1-f5cc-7212-aed6-dfe3a7d2ae1a` | Regression tests / Luna LOW | Booking A→B stale data | COMPLETE | Produced failing race tests before production repair |
+| `01a012b9-4908-75b0-a355-58696164956d` | UX repair / Luna LOW | Picker close, resize and focus | COMPLETE | Accessible close and breakpoint behavior; later wiring reworked |
+| `01a012b9-4c60-7573-96dd-a5ec8617b549` | Data/performance repair / Luna LOW | Billing guards and duplicate fetch | COMPLETE | Generation guards, same-booking fallbacks, single refresh owner |
+| `01a012c3-ea01-77c3-9779-4ab4bdc4c59d` | Race repair / Luna LOW | Operational refresh A→B | COMPLETE | Current-booking guard plus deferred regression |
+| `01a012c3-e633-7e72-9d7b-3482cc44d335` | Focus repair / Luna LOW | Real desktop focus target | COMPLETE | Separate mobile/desktop refs and integration test |
+
+### Critics and loops
+
+| lane | critic | rework_count | final state | material result |
+|---|---|---:|---|---|
+| Mobile UX / accessibility | `01a0127f-4d84-7042-8eb8-a28a48f1e5b4` / MEDIUM | 4 | PASS | Removed nested modal, separated close/menu/help, preserved focus across task exit and resize |
+| Performance / stale data | `01a0127f-4e0e-70f0-8f67-20365fb35860` / MEDIUM | 3 | PASS | Removed request cascade and blocked late A responses from contaminating B |
+| Final integration | `01a012cb-3e46-7261-a334-2bc8ccd1f1c5` / Terra MEDIUM | 0 | PASS | No orphan requirements or material regressions |
+
+### Current evidence
+
+- Frontend lint: PASS.
+- Frontend unit/component: 54 files / 333 tests PASS.
+- Frontend production build: PASS, 3666 modules.
+- Reception lifecycle: desktop PASS; 375/390/430 PASS; final 390 rerun PASS.
+- Reception smoke: 7 functional tests PASS; menu performance was flaky under suite load, isolated same-protocol sample PASS with 10 samples, p50 234.3 ms, p95 362.4 ms, requests 0. No performance improvement is claimed.
+- Request cascade evidence: board reads 16 → 4; booking-list reads 24 → 11 in the dev runner; zero 429 after repair.
+- Backend CI: 70 unit + 5 OpenAPI contract PASS.
+- PostgreSQL integration, booking transactional integrity, tenant RLS/FKs, security regression and core journeys: PASS.
+- Dependency triage: npm advisories are in the Vite/PostCSS/Rollup build toolchain; no runtime-reachable pilot exploit was established. Breaking mass upgrade deferred. `cargo-audit` is unavailable locally; canonical CI remains required.
+
+integration_status: PASS_PENDING_CANONICAL_CI
+open_gaps: candidate commit, PR #29 push, canonical Actions and Human Mobile Acceptance
+human_gate_required: yes — Sebastián validates speed, clarity and comfort on a real phone after CI; no merge is authorized.

@@ -1,10 +1,11 @@
 import { useEffect, useRef } from "react";
-import { Loader2, Mail, Phone, Search, UserPlus, Users, X } from "lucide-react";
+import { Loader2, Mail, Phone, Search, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { WalkInGuestSectionProps } from "@/features/bookings/components/WalkInShared";
+import { MobilePickerSurface } from "@/features/bookings/components/MobilePickerSurface";
 
 export const WalkInGuestSection = ({
   guestMode,
@@ -24,6 +25,8 @@ export const WalkInGuestSection = ({
   onGuestPickerOpenChange,
 }: WalkInGuestSectionProps) => {
   const guestPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileGuestSearchRef = useRef<HTMLInputElement>(null);
+  const desktopGuestSearchRef = useRef<HTMLInputElement>(null);
   const pickerWasOpen = useRef(false);
 
   useEffect(() => {
@@ -89,6 +92,7 @@ export const WalkInGuestSection = ({
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  ref={desktopGuestSearchRef}
                   id="guest-search"
                   value={guestSearch}
                   onChange={(event) => onGuestSearchChange(event.target.value)}
@@ -167,30 +171,20 @@ export const WalkInGuestSection = ({
             </div>
             </div>
 
-            {guestPickerOpen ? (
-              <div
-                role="region"
-                aria-labelledby="mobile-guest-picker-title"
-                className="mt-3 rounded-2xl border border-primary/20 bg-card p-4 shadow-sm md:hidden"
-                tabIndex={-1}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") onGuestPickerOpenChange(false);
-                }}
-              >
-                <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
-                  <div>
-                    <h3 id="mobile-guest-picker-title" className="text-base font-bold text-foreground">Seleccionar huésped</h3>
-                    <p className="mt-1 text-xs text-muted-foreground">Busca por nombre, email o teléfono.</p>
-                  </div>
-                  <Button type="button" variant="ghost" aria-label="Cerrar selección de huésped" className="h-11 w-11 shrink-0 rounded-xl p-0" onClick={() => onGuestPickerOpenChange(false)}>
-                    <X className="h-5 w-5" />
-                  </Button>
-                </div>
-                <div className="max-h-[52vh] overflow-y-auto pt-4">
+            <MobilePickerSurface
+              open={guestPickerOpen}
+              title="Seleccionar huésped"
+              description="Busca por nombre, email o teléfono."
+              titleId="mobile-guest-picker-title"
+              initialFocusRef={mobileGuestSearchRef}
+              desktopFocusRef={desktopGuestSearchRef}
+              onClose={() => onGuestPickerOpenChange(false)}
+            >
+                <div className="min-h-0 flex-1 overflow-y-auto pt-4">
                   <Label htmlFor="mobile-guest-search">Buscar huésped</Label>
                   <div className="relative mt-2">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="mobile-guest-search" value={guestSearch} onChange={(event) => onGuestSearchChange(event.target.value)} placeholder="Nombre, email o teléfono" className="h-12 rounded-xl pl-9" autoFocus />
+                    <Input ref={mobileGuestSearchRef} id="mobile-guest-search" value={guestSearch} onChange={(event) => onGuestSearchChange(event.target.value)} placeholder="Nombre, email o teléfono" className="h-12 rounded-xl pl-9" />
                   </div>
                   <div className="mt-4 space-y-2">
                     {guestsLoading ? <div className="flex items-center gap-2 rounded-2xl border border-border px-3 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando huéspedes...</div> : guestsError ? <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-3 py-4 text-sm text-destructive">{String(guestsError)}</div> : filteredGuests.length === 0 ? <div className="rounded-2xl border border-border px-3 py-4 text-sm text-muted-foreground">No hay coincidencias. Prueba alta rápida.</div> : filteredGuests.map((guest) => (
@@ -201,8 +195,7 @@ export const WalkInGuestSection = ({
                     ))}
                   </div>
                 </div>
-              </div>
-            ) : null}
+            </MobilePickerSurface>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
