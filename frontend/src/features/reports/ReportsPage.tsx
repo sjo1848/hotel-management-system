@@ -27,6 +27,7 @@ import { SectionCard, SectionEyebrow } from "@/components/ui/section-card";
 import { cn, downloadCSV } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { useResourceQuery } from "@/lib/useResourceQuery";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import {
   getCashBalance,
   getCashClosures,
@@ -62,6 +63,7 @@ const ReportsPage = () => {
   const [presetDays, setPresetDays] = useState(30);
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const {
     data,
@@ -175,10 +177,23 @@ const ReportsPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <div className="space-y-4 md:space-y-6">
+      {isMobile ? (
+        <div className="space-y-3">
+          <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado de reportes">
+            <div className="min-w-0"><h1 className="truncate text-xl font-black">Reportes</h1><p className="truncate text-xs text-muted-foreground">Indicadores y caja</p></div>
+            <div className="flex gap-2">
+              <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl" aria-label="Recargar reportes" onClick={() => void refetch()}><RefreshCcw className="h-4 w-4" /></Button>
+              <Button size="icon" className="h-11 w-11 rounded-xl" aria-label="Exportar ingresos" onClick={handleExportRevenue}><Download className="h-4 w-4" /></Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2" aria-label="Rangos rápidos">
+            {PRESET_DAYS.map((preset) => <Button key={preset.value} variant={presetDays === preset.value ? "default" : "outline"} className="h-10 rounded-xl px-2" onClick={() => applyPreset(preset.value)}>{preset.label}</Button>)}
+          </div>
+        </div>
+      ) : <PageHeader
         title="Reportes"
-        description="Cockpit financiero y operativo con ingresos, ocupacion y caja sobre el dataset demo real."
+        description={isMobile ? "Indicadores y caja" : "Cockpit financiero y operativo con ingresos, ocupacion y caja sobre el dataset demo real."}
         icon={<BarChart3 className="h-5 w-5" />}
         actions={
           <>
@@ -205,9 +220,17 @@ const ReportsPage = () => {
             </Button>
           </>
         }
-      />
+      />}
 
-      <SectionCard className="motion-refresh grid gap-3 p-4 md:grid-cols-3">
+      <details className="rounded-2xl border border-border bg-card px-4 py-3 md:hidden">
+        <summary className="cursor-pointer text-sm font-bold">Personalizar fechas</summary>
+        <div className="mt-4 grid gap-3">
+          <label className="space-y-2"><SectionEyebrow>Desde</SectionEyebrow><input type="date" value={startDate} onChange={(event) => setStartDate(event.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold" /></label>
+          <label className="space-y-2"><SectionEyebrow>Hasta</SectionEyebrow><input type="date" value={endDate} onChange={(event) => setEndDate(event.target.value)} className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold" /></label>
+        </div>
+      </details>
+
+      <SectionCard className="motion-refresh hidden gap-3 p-4 md:grid md:grid-cols-3">
         <label className="space-y-2">
           <SectionEyebrow>Desde</SectionEyebrow>
           <input
@@ -226,7 +249,7 @@ const ReportsPage = () => {
             className="h-11 w-full rounded-2xl border border-border bg-background px-4 text-sm font-semibold text-foreground outline-none transition focus:border-primary/40"
           />
         </label>
-        <div className="rounded-2xl border border-border bg-muted/40 p-4">
+        <div className="hidden rounded-2xl border border-border bg-muted/40 p-4 md:block">
           <SectionEyebrow>Ventana activa</SectionEyebrow>
           <p className="mt-3 text-lg font-black text-foreground">
             {formatShortDate(startDate)} - {formatShortDate(endDate)}
@@ -248,18 +271,18 @@ const ReportsPage = () => {
 
       {!isLoading && !error ? (
         <>
-          <section className="stagger-list grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {statCards.map((card) => {
               const Icon = card.icon;
               return (
                 <article
                   key={card.label}
-                  className={cn("motion-surface motion-lift rounded-3xl border p-5 shadow-sm", card.tone)}
+                  className={cn("motion-surface motion-lift rounded-2xl border p-4 shadow-sm", card.tone, isMobile && card.label === "Pico diario" ? "hidden" : "")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <SectionEyebrow className="text-current">{card.label}</SectionEyebrow>
-                      <p className="mt-3 text-3xl font-black tracking-tight">{card.value}</p>
+                      <p className="mt-2 text-3xl font-black tracking-tight">{card.value}</p>
                       <p className="mt-2 text-sm opacity-80">{card.hint}</p>
                     </div>
                     <div className="rounded-2xl bg-card p-3 shadow-sm">
@@ -274,9 +297,9 @@ const ReportsPage = () => {
           <section className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
             <SectionCard as="article" className="motion-refresh">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
+                <div className="min-w-0">
                   <SectionEyebrow>Ingresos diarios</SectionEyebrow>
-                  <h3 className="mt-2 text-2xl font-black text-foreground">Flujo de ingresos del periodo</h3>
+                  <h3 className="mt-2 text-xl font-black text-foreground sm:text-2xl">Flujo de ingresos del periodo</h3>
                 </div>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
                   {formatCurrency(totals.totalRevenue)}
@@ -328,9 +351,9 @@ const ReportsPage = () => {
 
             <SectionCard as="article" className="motion-refresh">
               <div className="flex items-center justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <SectionEyebrow>Ocupacion</SectionEyebrow>
-                  <h3 className="mt-2 text-2xl font-black text-foreground">Eficiencia de inventario</h3>
+                  <h3 className="mt-2 text-xl font-black text-foreground sm:text-2xl">Eficiencia de inventario</h3>
                 </div>
                 <span className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
                   {totals.avgOccupancy.toFixed(1)}%

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { User, Calendar, Plus } from "lucide-react";
+import { User, Calendar, Plus, Search, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, Column } from "@/components/ui/data-table";
 import { getGuests } from "./services/guestService";
@@ -11,6 +11,8 @@ import GuestDetailsSheet from "./components/GuestDetailsSheet";
 import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
 import { PageHeader } from "@/components/ui/page-header";
+import { Input } from "@/components/ui/input";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 const GuestsPage = () => {
   const { toast } = useToast();
@@ -18,6 +20,8 @@ const GuestsPage = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
+  const [mobileSearch, setMobileSearch] = useState("");
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   const {
     data: guestsData,
@@ -30,6 +34,20 @@ const GuestsPage = () => {
     staleTimeMs: 10_000,
   });
   const guests = useMemo(() => guestsData ?? [], [guestsData]);
+  const mobileGuests = useMemo(() => {
+    const query = mobileSearch.trim().toLocaleLowerCase();
+    if (!query) return guests;
+    return guests.filter((guest) =>
+      [guest.full_name, guest.email, guest.phone].filter(Boolean).some((value) =>
+        value?.toLocaleLowerCase().includes(query),
+      ),
+    );
+  }, [guests, mobileSearch]);
+
+  const openDetails = (guest: Guest) => {
+    setSelectedGuest(guest);
+    setIsDetailsOpen(true);
+  };
 
   const columns: Column<Guest>[] = [
     {
@@ -68,8 +86,7 @@ const GuestsPage = () => {
             size="sm" 
             className="min-h-9 text-xs font-bold text-primary hover:bg-primary/10 hover:text-primary"
             onClick={() => {
-              setSelectedGuest(item);
-              setIsDetailsOpen(true);
+              openDetails(item);
             }}
           >
             Ver Ficha
@@ -81,8 +98,13 @@ const GuestsPage = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <PageHeader
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 md:space-y-8">
+      {isMobile ? (
+        <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado de huéspedes">
+          <div className="min-w-0"><h1 className="truncate text-xl font-black">Huéspedes</h1><p className="truncate text-xs text-muted-foreground">Directorio del hotel</p></div>
+          <Button className="h-11 shrink-0 rounded-xl px-3" onClick={() => setIsCreateOpen(true)}><Plus className="h-4 w-4" />Nuevo</Button>
+        </div>
+      ) : <PageHeader
         title="Directorio de Huéspedes"
         description="Historial y gestión de clientes del hotel."
         icon={<User className="h-5 w-5" />}
@@ -95,19 +117,38 @@ const GuestsPage = () => {
             Registrar Huésped
           </Button>
         }
-      />
+      />}
 
-      <DataTable
-        columns={columns}
-        data={guests}
-        isLoading={loading}
-        error={guestsError ? getErrorMessage(guestsError, "No se pudo cargar la lista de huéspedes") : null}
-        onRetry={() => {
-          void refetchGuests();
-        }}
-        searchable
-        searchPlaceholder="Buscar por nombre o email..."
-      />
+      {isMobile ? (
+        <section className="space-y-4" aria-label="Directorio móvil de huéspedes">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={mobileSearch} onChange={(event) => setMobileSearch(event.target.value)} placeholder="Buscar huésped" className="h-11 rounded-xl pl-9" aria-label="Buscar huésped" />
+          </div>
+          {loading ? <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Cargando huéspedes…</p> : null}
+          {guestsError ? <p className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive">No se pudo cargar la lista.</p> : null}
+          {!loading && !guestsError && mobileGuests.length === 0 ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay huéspedes que coincidan.</p> : null}
+          <div className="divide-y rounded-2xl border border-border bg-card">
+            {mobileGuests.map((guest) => (
+              <button key={guest.id} type="button" onClick={() => openDetails(guest)} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-bold text-primary">{guest.full_name.charAt(0)}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate font-semibold text-foreground">{guest.full_name}</span><span className="mt-1 block truncate text-xs text-muted-foreground">{guest.email || guest.phone || "Sin contacto registrado"}</span></span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={guests}
+          isLoading={loading}
+          error={guestsError ? getErrorMessage(guestsError, "No se pudo cargar la lista de huéspedes") : null}
+          onRetry={() => { void refetchGuests(); }}
+          searchable
+          searchPlaceholder="Buscar por nombre o email..."
+        />
+      )}
 
       <GuestCreateDrawer 
         isOpen={isCreateOpen}
