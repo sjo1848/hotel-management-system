@@ -30,6 +30,8 @@ const UsersPage = () => {
   const [mobileSearch, setMobileSearch] = useState("");
   const isMobile = useMediaQuery("(max-width: 767px)");
   const sheetReturnRef = useRef<HTMLElement | null>(null);
+  const returnToStableRef = useRef(false);
+  const newUserButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const openDetail = (user: ManagedUser) => {
     sheetReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -40,8 +42,18 @@ const UsersPage = () => {
 
   const restoreFocus = () => {
     const target = sheetReturnRef.current;
+    const deleted = returnToStableRef.current;
     sheetReturnRef.current = null;
-    if (target) requestAnimationFrame(() => target.focus());
+    returnToStableRef.current = false;
+    requestAnimationFrame(() => {
+      if (!deleted && target?.isConnected) {
+        target.focus();
+        return;
+      }
+      const root = document.getElementById("users-page-root");
+      const searchInput = root?.querySelector<HTMLInputElement>("input[aria-label='Buscar usuario']");
+      (searchInput ?? newUserButtonRef.current)?.focus();
+    });
   };
 
   const {
@@ -69,6 +81,15 @@ const UsersPage = () => {
         variant: "error",
       });
     }
+  };
+
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    const id = pendingDelete.id;
+    returnToStableRef.current = true;
+    setPendingDelete(null);
+    setConfirmingDelete(false);
+    void handleDelete(id).then(restoreFocus);
   };
 
   const mobileUsers = useMemo(() => {
@@ -129,11 +150,11 @@ const UsersPage = () => {
   ];
 
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 md:space-y-8">
+    <div id="users-page-root" className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 md:space-y-8">
       {isMobile ? (
         <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado de usuarios">
           <div className="min-w-0"><h1 className="truncate text-xl font-black">Usuarios</h1><p className="truncate text-xs text-muted-foreground">Accesos y roles</p></div>
-          <Button className="h-11 shrink-0 rounded-xl px-3" onClick={() => setIsCreateOpen(true)}><Plus className="h-4 w-4" />Nuevo</Button>
+          <Button ref={newUserButtonRef} className="h-11 shrink-0 rounded-xl px-3" onClick={() => setIsCreateOpen(true)}><Plus className="h-4 w-4" />Nuevo</Button>
         </div>
       ) : <PageHeader
         title="Control de Acceso"
@@ -141,6 +162,7 @@ const UsersPage = () => {
         icon={<Shield className="h-5 w-5" />}
         actions={
           <Button
+            ref={newUserButtonRef}
             className="h-12 gap-2 rounded-xl bg-primary shadow-xl shadow-primary/15 transition-all active:scale-95"
             onClick={() => setIsCreateOpen(true)}
           >
@@ -155,7 +177,7 @@ const UsersPage = () => {
           <div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={mobileSearch} onChange={(event) => setMobileSearch(event.target.value)} placeholder="Buscar usuario" className="h-11 rounded-xl pl-9" aria-label="Buscar usuario" /></div>
           {loading ? <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Cargando usuarios…</p> : null}
           {usersError ? <div className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"><p>No se pudieron cargar los usuarios.</p><Button type="button" variant="outline" className="mt-3 min-h-11" onClick={() => void refetchUsers()}>Reintentar</Button></div> : null}
-          {!loading && !usersError && mobileUsers.length === 0 ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay usuarios que coincidan.</p> : null}
+          {!loading && !usersError && mobileUsers.length === 0 ? <p role="status" className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay usuarios que coincidan.</p> : null}
           <div className="divide-y rounded-2xl border border-border bg-card">
             {!loading && !usersError ? mobileUsers.map((user) => <button key={user.id} type="button" aria-label={`Ver usuario ${user.username}`} onClick={() => openDetail(user)} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><Fingerprint className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{user.username}</span><span className="mt-1 block text-xs uppercase tracking-wide text-muted-foreground">{user.role}</span></span><MoreHorizontal className="h-5 w-5 text-muted-foreground" /></button>) : null}
           </div>
@@ -186,7 +208,7 @@ const UsersPage = () => {
       <Sheet open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open) { setPendingDelete(null); setConfirmingDelete(false); restoreFocus(); } }}>
         <SheetContent side="bottom" className="rounded-t-3xl p-5">
           <SheetHeader className="text-left"><SheetTitle>{confirmingDelete ? "Confirmar eliminación" : pendingDelete?.username}</SheetTitle><SheetDescription>{confirmingDelete ? `Esta acción quitará el acceso de ${pendingDelete?.username}.` : `Rol actual: ${pendingDelete?.role}. Elegí una acción explícita para esta cuenta.`}</SheetDescription></SheetHeader>
-          {confirmingDelete ? <div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" className="h-11" onClick={() => setConfirmingDelete(false)}>Volver</Button><Button variant="destructive" className="h-11" onClick={() => { if (pendingDelete) void handleDelete(pendingDelete.id); setPendingDelete(null); setConfirmingDelete(false); }}>Eliminar cuenta</Button></div> : <div className="mt-5 grid gap-3"><Button variant="destructive" className="h-11" onClick={() => setConfirmingDelete(true)}>Eliminar cuenta</Button><Button variant="outline" className="h-11" onClick={() => setPendingDelete(null)}>Cerrar</Button></div>}
+          {confirmingDelete ? <div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" className="h-11" onClick={() => setConfirmingDelete(false)}>Volver</Button><Button variant="destructive" className="h-11" onClick={confirmDelete}>Eliminar cuenta</Button></div> : <div className="mt-5 grid gap-3"><Button variant="destructive" className="h-11" onClick={() => setConfirmingDelete(true)}>Eliminar cuenta</Button><Button variant="outline" className="h-11" onClick={() => setPendingDelete(null)}>Cerrar</Button></div>}
         </SheetContent>
       </Sheet>
 

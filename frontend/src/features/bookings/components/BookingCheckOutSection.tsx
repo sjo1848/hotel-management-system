@@ -130,7 +130,7 @@ export const BookingCheckOutSection = ({
             value={form.closingReference}
             onChange={(event) => onFormChange({ closingReference: event.target.value })}
             placeholder="Ej: pago tarjeta, saldo empresa, checkout express"
-            className="h-10 rounded-xl"
+            className="min-h-11 rounded-xl"
           />
           <p className="hidden text-xs text-muted-foreground sm:block">
             Obligatoria si se deja saldo pendiente; se persiste en la reserva y auditoria.

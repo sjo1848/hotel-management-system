@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -38,10 +38,20 @@ export const ReceptionWorkspaceTabs = ({
   idBase = "reception-workspace",
 }: ReceptionWorkspaceTabsProps) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const tabRefs = useRef<Partial<Record<ReceptionWorkspaceView, HTMLButtonElement | null>>>({});
+  const pendingFocusRef = useRef<ReceptionWorkspaceView | null>(null);
+
+  useLayoutEffect(() => {
+    if (pendingFocusRef.current) {
+      const target = pendingFocusRef.current;
+      pendingFocusRef.current = null;
+      tabRefs.current[target]?.focus();
+    }
+  });
 
   const moveFocus = (view: ReceptionWorkspaceView) => {
+    pendingFocusRef.current = view;
     onViewChange(view);
-    document.getElementById(`${idBase}-tab-${view}`)?.focus();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: ReceptionWorkspaceView) => {
@@ -67,6 +77,9 @@ export const ReceptionWorkspaceTabs = ({
     return (
       <button
         key={view.id}
+        ref={(node) => {
+          tabRefs.current[view.id] = node;
+        }}
         type="button"
         role="tab"
         id={`${idBase}-tab-${view.id}`}

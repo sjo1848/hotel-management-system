@@ -183,7 +183,6 @@ const ReportsPage = () => {
           <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado de reportes">
             <div className="min-w-0"><h1 className="truncate text-xl font-black">Reportes</h1><p className="truncate text-xs text-muted-foreground">Indicadores y caja</p></div>
             <div className="flex gap-2">
-              <Button variant="outline" size="icon" className="h-11 w-11 rounded-xl" aria-label="Recargar reportes" onClick={() => void refetch()}><RefreshCcw className="h-4 w-4" /></Button>
               <Button size="icon" className="h-11 w-11 rounded-xl" aria-label="Exportar ingresos" onClick={handleExportRevenue}><Download className="h-4 w-4" /></Button>
             </div>
           </div>

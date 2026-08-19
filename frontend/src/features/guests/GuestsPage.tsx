@@ -137,7 +137,7 @@ const GuestsPage = () => {
           </div>
           {loading ? <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Cargando huéspedes…</p> : null}
           {guestsError ? <div className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"><p>No se pudo cargar la lista.</p><Button type="button" variant="outline" className="mt-3 min-h-11" onClick={() => void refetchGuests()}>Reintentar</Button></div> : null}
-          {!loading && !guestsError && mobileGuests.length === 0 ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay huéspedes que coincidan.</p> : null}
+          {!loading && !guestsError && mobileGuests.length === 0 ? <p role="status" className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay huéspedes que coincidan.</p> : null}
           <div className="divide-y rounded-2xl border border-border bg-card">
             {mobileGuests.map((guest) => (
               <button key={guest.id} type="button" onClick={() => openDetails(guest)} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
