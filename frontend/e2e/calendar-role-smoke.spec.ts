@@ -52,7 +52,11 @@ async function stubCalendar(page: Page, options: { rooms?: unknown[]; bookings?:
 
 async function openCalendar(page: Page, credentials = admin) {
   await login(page, credentials);
-  await expect(page.getByText(/reservas activas/)).toBeVisible();
+  if ((page.viewportSize()?.width ?? 1280) <= 767) {
+    await expect(page.locator('[aria-label="Día de agenda"]')).toBeVisible();
+  } else {
+    await expect(page.getByText(/reservas activas/)).toBeVisible();
+  }
 }
 
 test("calendar role smoke: admin opens Calendario", async ({ page }) => {
@@ -73,11 +77,11 @@ test("calendar role smoke: desktop defaults to 14-day Timeline", async ({ page }
 test("calendar role smoke: temporal navigation changes the range", async ({ page }) => {
   await stubCalendar(page);
   await openCalendar(page);
-  const before = await page.locator('[aria-live="polite"]').innerText();
+  const before = await page.locator('span[aria-live="polite"]').innerText();
   await page.getByRole("button", { name: "Siguiente" }).click();
-  await expect(page.locator('[aria-live="polite"]')).not.toHaveText(before);
+  await expect(page.locator('span[aria-live="polite"]')).not.toHaveText(before);
   await page.getByRole("button", { name: "Hoy" }).click();
-  await expect(page.locator('[aria-live="polite"]')).toContainText("02");
+  await expect(page.locator('span[aria-live="polite"]')).toContainText(String(new Date().getDate()).padStart(2, "0"));
 });
 
 test("calendar role smoke: 7 and 30 days change columns and request range", async ({ page }) => {
@@ -126,8 +130,8 @@ test("calendar role smoke: booking selection opens desktop detail", async ({ pag
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
-test("calendar role smoke: booking selection opens tablet sheet", async ({ page }) => {
-  await page.setViewportSize({ width: 768, height: 900 });
+test("calendar role smoke: booking selection opens mobile sheet", async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 900 });
   await stubCalendar(page);
   await openCalendar(page);
   await page.locator('[aria-label="Día de agenda"] button').nth(1).click();

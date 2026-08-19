@@ -142,6 +142,9 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   );
   await openBookingTab(page, /Cuenta/);
   expect((await firstInvoiceLookup).status()).toBe(404);
+  if (isMobile) {
+    await page.getByText("Últimos movimientos", { exact: true }).click();
+  }
   await expect(page.getByText("Sin cargos extra registrados por el momento.")).toBeVisible();
   await expect(page.getByText("La factura solicitada no existe")).toHaveCount(0);
 
@@ -197,7 +200,7 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await page.getByPlaceholder("Buscar habitación, tipo o huésped").fill(roomNumber!);
   await page.getByRole("button", { name: `Ver tarea habitación ${roomNumber}` }).click();
 
-  await expect(page.getByRole("heading", { name: `Habitación ${roomNumber}` })).toBeVisible();
+  await expect(page.getByRole("heading", { name: `Habitación ${roomNumber}`, exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Acción" }).click();
   await expect(page.getByRole("button", { name: "Iniciar limpieza" })).toBeVisible();
   await expect(page.getByText(/Por limpiar/).first()).toBeVisible();

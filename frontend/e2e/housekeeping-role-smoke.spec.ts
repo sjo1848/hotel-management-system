@@ -28,10 +28,13 @@ test("housekeeping role smoke: compact guide and queue stay usable on mobile", a
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page);
 
-  await expect(page.getByRole("region", { name: "Asistente guiado" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Deshabilitar guía" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Siguiente tarea" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Abrir", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Turno/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Actualizar" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Actualizar turno" })).toBeVisible();
+  await page.getByRole("button", { name: "Abrir", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: /Tarea de habitación/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cerrar detalle" })).toBeVisible();
 });
 
 test("housekeeping role smoke: guide selects dirty filter without executing", async ({ page }) => {
