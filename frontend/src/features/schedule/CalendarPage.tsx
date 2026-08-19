@@ -113,16 +113,16 @@ const CalendarPage = () => {
 
   return (
     <div className="space-y-5">
-      {isMobile ? <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado compacto del calendario"><div className="min-w-0"><p className="truncate text-base font-black text-foreground">Calendario</p><p className="truncate text-xs text-muted-foreground">Agenda operativa</p></div><Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 shrink-0" aria-label="Actualizar calendario" onClick={retryAll} disabled={hasLoading}><RefreshCw className={`h-4 w-4 ${hasLoading ? "animate-spin" : ""}`} /></Button></div> : <PageHeader title="Calendario" description="Ocupación, movimientos y bloqueos por fecha" icon={<CalendarDays className="h-5 w-5" />} actions={<Button type="button" variant="outline" className="h-10 rounded-xl" onClick={retryAll} disabled={hasLoading}><RefreshCw className="h-4 w-4" />{hasLoading ? "Actualizando…" : "Actualizar"}</Button>} />}
+      {isMobile ? <div className="flex min-h-11 items-center justify-between gap-3" aria-label="Encabezado compacto del calendario"><div className="min-w-0"><h1 className="truncate text-base font-black text-foreground">Calendario</h1><p className="truncate text-xs text-muted-foreground">Agenda operativa</p></div><Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 shrink-0" aria-label="Actualizar calendario" onClick={retryAll} disabled={hasLoading}><RefreshCw className={`h-4 w-4 ${hasLoading ? "animate-spin" : ""}`} /></Button></div> : <PageHeader title="Calendario" description="Ocupación, movimientos y bloqueos por fecha" icon={<CalendarDays className="h-5 w-5" />} actions={<Button type="button" variant="outline" className="h-10 rounded-xl" onClick={retryAll} disabled={hasLoading}><RefreshCw className="h-4 w-4" />{hasLoading ? "Actualizando…" : "Actualizar"}</Button>} />}
       <SectionCard className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           {isMobile ? <>
-            <Button type="button" variant="outline" size="icon" className="min-h-11 min-w-11" aria-label="Día anterior" onClick={() => moveRange(-1)}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button type="button" variant="outline" size="icon" className="min-h-11 min-w-11" aria-label="Rango anterior" onClick={() => moveRange(-1)}><ChevronLeft className="h-4 w-4" /></Button>
             <Button type="button" variant="outline" className="min-h-11" onClick={() => { setStartDate(today); setSelectedDate(today); }}>Hoy</Button>
-            <span className="min-w-0 flex-1 truncate rounded-xl bg-muted px-3 py-2 text-center text-sm font-bold text-foreground" aria-live="polite">{format(parseISO(startDate), "dd MMM", { locale: es })} · {rangeDays} días</span>
-            <Button type="button" variant="outline" size="icon" className="min-h-11 min-w-11" aria-label="Día siguiente" onClick={() => moveRange(1)}><ChevronRight className="h-4 w-4" /></Button>
+            <span className="min-w-[64px] flex-1 whitespace-nowrap rounded-xl bg-muted px-2 py-2 text-center text-sm font-bold text-foreground" aria-live="polite">{format(parseISO(startDate), "dd MMM", { locale: es })}</span>
+            <Button type="button" variant="outline" size="icon" className="min-h-11 min-w-11" aria-label="Rango siguiente" onClick={() => moveRange(1)}><ChevronRight className="h-4 w-4" /></Button>
             <label className="sr-only" htmlFor="calendar-range-mobile">Rango de agenda</label>
-            <select id="calendar-range-mobile" aria-label="Rango de agenda" value={rangeDays} onChange={(event) => setRangeDays(Number(event.target.value) as RangeDays)} className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm font-semibold">
+            <select id="calendar-range-mobile" aria-label="Rango de agenda" value={rangeDays} onChange={(event) => setRangeDays(Number(event.target.value) as RangeDays)} className="min-h-11 w-[78px] shrink-0 rounded-xl border border-input bg-background px-2 text-sm font-semibold">
               {[7, 14, 30].map((days) => <option key={days} value={days}>{days} días</option>)}
             </select>
           </> : <>
