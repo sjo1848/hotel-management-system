@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -29,7 +29,16 @@ export const TabStrip = <T extends string>({
   visible = 3,
 }: TabStripProps<T>) => {
   const tabRefs = useRef<Partial<Record<T, HTMLButtonElement | null>>>({});
+  const pendingFocusRef = useRef<T | null>(null);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+
+  useLayoutEffect(() => {
+    if (pendingFocusRef.current) {
+      const target = pendingFocusRef.current;
+      pendingFocusRef.current = null;
+      tabRefs.current[target]?.focus();
+    }
+  });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: T) => {
     const index = tabs.findIndex((tab) => tab.id === current);
@@ -49,7 +58,7 @@ export const TabStrip = <T extends string>({
     }
     if (next && next !== current) {
       onTabChange(next);
-      requestAnimationFrame(() => tabRefs.current[next]?.focus());
+      pendingFocusRef.current = next;
     }
   };
 
