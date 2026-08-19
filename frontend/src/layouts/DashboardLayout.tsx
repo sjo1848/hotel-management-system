@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
@@ -18,11 +18,11 @@ import {
   ChevronRight,
   Globe,
   ChevronDown,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
 import { Capability, roleHasCapability } from "@/features/auth/capabilities";
@@ -163,6 +163,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [mobileSecondaryOpen, setMobileSecondaryOpen] = useState(false);
   const [sidebarTooltip, setSidebarTooltip] = useState<SidebarTooltip | null>(null);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
   const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
   const expandMobileNav = useCallback(() => setMobileSecondaryOpen(true), []);
@@ -182,6 +184,37 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
       setMobileSecondaryOpen(false);
     }
   }, [isCollapsed, mobileNavOpen, location.pathname]);
+
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const dialog = mobileDialogRef.current;
+    if (!dialog) return;
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+    focusable[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      mobileMenuTriggerRef.current?.focus();
+    };
+  }, [mobileNavOpen]);
 
   useEffect(() => {
     const dismissTooltip = () => setSidebarTooltip(null);
@@ -352,8 +385,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
   const mobileNavigationContent = (
     <>
-      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
         <nav aria-label="Navegación móvil" className="space-y-1">
+          <p className="sidebar-text-muted px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.18em]">
+            Operación
+          </p>
           {visiblePrincipalItems.map((item) => (
             <SidebarItem
               key={item.path}
@@ -369,19 +405,24 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         </nav>
 
         {(visibleManagementItems.length > 0 || visibleSettingsItems.length > 0) && (
-          <div className="mt-4 border-t border-border/40 pt-3">
+          <div className="mt-3 border-t border-[hsl(var(--shell-sidebar-border))] pt-2">
             <Button
               type="button"
               variant="ghost"
-              className="h-10 w-full justify-between rounded-xl px-3 text-sm font-semibold"
+              className="sidebar-text-muted h-10 w-full justify-between rounded-xl px-3 text-sm font-semibold hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-[hsl(var(--shell-sidebar-fg))]"
               aria-expanded={mobileSecondaryOpen}
               onClick={() => setMobileSecondaryOpen((open) => !open)}
             >
-              <span>Más operaciones</span>
+              <span>Más destinos</span>
               <ChevronDown className={cn("h-4 w-4 transition-transform", mobileSecondaryOpen && "rotate-180")} />
             </Button>
             {mobileSecondaryOpen && (
               <div className="mt-1 space-y-1">
+                {visibleManagementItems.length > 0 && (
+                  <p className="sidebar-text-muted px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.18em]">
+                    Operación secundaria
+                  </p>
+                )}
                 {visibleManagementItems.map((item) => (
                   <SidebarItem
                     key={item.path}
@@ -394,6 +435,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
                     onNavigate={closeMobileNav}
                   />
                 ))}
+                {visibleSettingsItems.length > 0 && (
+                  <p className="sidebar-text-muted px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em]">
+                    Administración
+                  </p>
+                )}
                 {visibleSettingsItems.map((item) => (
                   <SidebarItem
                     key={item.path}
@@ -412,11 +458,11 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         )}
       </div>
 
-      <div className="border-t border-border/40 p-3">
+      <div className="border-t border-[hsl(var(--shell-sidebar-border))] p-3">
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="min-h-11 w-full justify-start rounded-xl text-sm"
+          className="sidebar-text-muted min-h-11 w-full justify-start rounded-xl text-sm hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-[hsl(var(--shell-sidebar-fg))]"
         >
           <LogOut className="mr-3 h-4 w-4" />
           Cerrar sesión
@@ -469,35 +515,26 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {navigationContent(isCollapsed)}
       </aside>
 
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent
-          side="left"
-          className={cn(
-            "app-sidebar sidebar-text-fg flex h-dvh max-h-dvh flex-col overflow-hidden border-r p-0 transition-[width,max-width] duration-300 ease-out md:hidden",
-            "w-[min(22rem,calc(100vw-1rem))] max-w-[22rem]",
-            "data-[state=open]:duration-200 data-[state=closed]:duration-150",
-          )}
-        >
-          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+      {mobileNavOpen ? <>
+        <div className="fixed inset-0 z-50 bg-black/72 md:hidden" aria-hidden="true" onMouseDown={closeMobileNav} />
+        <div ref={mobileDialogRef} role="dialog" aria-modal="true" aria-labelledby="mobile-navigation-title" className="app-sidebar sidebar-text-fg fixed inset-y-0 left-0 z-[60] flex h-dvh w-[min(22rem,calc(100vw-1rem))] max-w-[22rem] flex-col overflow-hidden border-r !bg-[hsl(var(--shell-sidebar-bg))] !text-[hsl(var(--shell-sidebar-fg))] shadow-2xl md:hidden">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--shell-sidebar-border))] px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-secondary to-amber-700">
-                <span className="text-lg font-bold text-secondary-foreground">H</span>
-              </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-black tracking-tight">HMS ELITE</p>
-                <p className="truncate text-xs text-muted-foreground">{defaultMobilePreview.label}</p>
+                <p id="mobile-navigation-title" className="sidebar-text-muted truncate text-[10px] font-bold uppercase tracking-[0.14em]">HMS · Menú</p>
+                <p className="sidebar-text-fg truncate text-sm font-semibold">{defaultMobilePreview.label}</p>
               </div>
             </div>
-            <span className="sr-only">Navegación móvil</span>
+            <Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 text-[hsl(var(--shell-sidebar-fg))] hover:bg-[hsl(var(--shell-sidebar-hover))]" aria-label="Cerrar menú móvil" onClick={closeMobileNav}><X className="h-5 w-5" /></Button>
           </div>
-          {mobileNavOpen ? mobileNavigationContent : null}
-        </SheetContent>
-      </Sheet>
+          {mobileNavigationContent}
+        </div>
+      </> : null}
 
       <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="app-header responsive-shell-header sticky top-0 z-40 md:relative">
           <div className="flex min-w-0 flex-1 items-center gap-2 md:max-w-xl md:gap-3">
-            <Button size="icon" variant="ghost" aria-label="Abrir menú móvil" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
+            <Button ref={mobileMenuTriggerRef} size="icon" variant="ghost" aria-label="Abrir menú móvil" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="group relative min-w-0 flex-1">

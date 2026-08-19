@@ -55,7 +55,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="fixed top-5 right-5 z-50 flex flex-col gap-3 w-[320px]">
+      <div role="status" aria-live="polite" aria-atomic="false" className="fixed left-4 right-4 top-[max(1rem,env(safe-area-inset-top))] z-50 flex max-w-[calc(100vw-2rem)] flex-col gap-3 sm:left-auto sm:right-5 sm:top-5 sm:w-[320px]">
         {toasts.map((t: Toast) => (
           <div
             key={t.id}
@@ -76,7 +76,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
             <button
               type="button"
               onClick={() => removeToast(t.id)}
-              className="mt-2 text-xs text-muted-foreground hover:text-foreground"
+              className="mt-2 inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               Cerrar
             </button>

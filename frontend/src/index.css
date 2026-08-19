@@ -1,5 +1,6 @@
 @import "tailwindcss" source(none);
 @source "./";
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   --color-background: hsl(var(--background));

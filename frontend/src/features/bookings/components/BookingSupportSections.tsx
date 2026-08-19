@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   CreditCard,
   DoorOpen,
@@ -24,6 +25,7 @@ import type {
 } from "@/types/domain";
 import { PanelHeader } from "@/features/bookings/components/BookingSectionShared";
 import BookingArrivalExceptionActions from "@/features/bookings/components/BookingArrivalExceptionActions";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 type BookingSidebarPanelsProps = {
   booking: Booking;
@@ -242,49 +244,61 @@ export const BookingAccountSection = ({
   onPaymentReferenceChange,
   onPaymentNoteChange,
   onRegisterPayment,
-}: BookingAccountSectionProps) => (
-  <div className="rounded-3xl border border-border bg-background/70 p-5">
+}: BookingAccountSectionProps) => {
+  const isDesktop = useMediaQuery("(min-width: 768px)");
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(isDesktop);
+  const [movementsOpen, setMovementsOpen] = useState(isDesktop);
+
+  useEffect(() => {
+    if (isDesktop) {
+      setPaymentHistoryOpen(true);
+      setMovementsOpen(true);
+    }
+  }, [isDesktop]);
+
+  return (
+  <div className="rounded-3xl border border-border bg-background/70 p-3 sm:p-5">
     <PanelHeader
       icon={CreditCard}
       title="Cuenta y cargos"
-      description="Resumen financiero y extras de la estadia."
+      description="Saldo actual y próxima acción de cobro."
     />
 
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3">
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Alojamiento
         </p>
-        <p className="mt-2 text-xl font-black text-foreground">
+        <p className="mt-1 text-lg font-black text-foreground sm:mt-2 sm:text-xl">
           ${(accommodationTotal / 100).toLocaleString("es-AR")}
         </p>
       </div>
-      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-3 shadow-sm sm:p-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Extras
         </p>
-        <p className="mt-2 text-xl font-black text-foreground">
+        <p className="mt-1 text-lg font-black text-foreground sm:mt-2 sm:text-xl">
           ${(extrasTotal / 100).toLocaleString("es-AR")}
         </p>
       </div>
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 shadow-sm">
+      <div className="col-span-2 rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm sm:col-span-1 sm:p-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Total
         </p>
-        <p className="mt-2 text-xl font-black text-foreground">
+        <p className="mt-1 text-lg font-black text-foreground sm:mt-2 sm:text-xl">
           ${(booking.total_price_cents / 100).toLocaleString("es-AR")}
         </p>
       </div>
     </div>
 
-    <div className="mt-5">
+    <div className="mt-4 sm:mt-5">
       <div className="mb-3 flex items-center justify-between">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Cargos rapidos
         </p>
         {loadingCharges ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {quickCharges.map((charge) => (
           <Button
             key={charge.label}
@@ -321,7 +335,7 @@ export const BookingAccountSection = ({
           </Badge>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-3">
           {(["CASH", "CARD", "TRANSFER"] as PaymentMethod[]).map((method) => (
             <Button
               key={method}
@@ -400,7 +414,11 @@ export const BookingAccountSection = ({
           </Button>
         </div>
 
-        <div className="mt-4 space-y-2 rounded-2xl border border-border/70 bg-background/60 p-3">
+        <details open={isDesktop || paymentHistoryOpen} onToggle={(event) => { if (!isDesktop) setPaymentHistoryOpen(event.currentTarget.open); }} className="mt-4 rounded-2xl border border-border/70 bg-background/60 p-3">
+          <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:hidden">
+            Historial de cobros
+          </summary>
+          <div className="mt-3 space-y-2 sm:mt-0 sm:block">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
             Timeline de cobros
           </p>
@@ -432,7 +450,8 @@ export const BookingAccountSection = ({
               </div>
             ))
           )}
-        </div>
+          </div>
+        </details>
       </div>
     ) : null}
 
@@ -457,10 +476,11 @@ export const BookingAccountSection = ({
       </div>
     ) : null}
 
-    <div className="mt-5 space-y-2 rounded-2xl border border-border bg-card p-4 shadow-sm">
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-        Ultimos movimientos
-      </p>
+    <details open={isDesktop || movementsOpen} onToggle={(event) => { if (!isDesktop) setMovementsOpen(event.currentTarget.open); }} className="mt-4 rounded-2xl border border-border bg-card p-3 shadow-sm sm:mt-5 sm:p-4">
+      <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:hidden">
+        Últimos movimientos
+      </summary>
+      <div className="mt-3 space-y-2 sm:mt-0 sm:block">
       {extraCharges.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           Sin cargos extra registrados por el momento.
@@ -481,6 +501,8 @@ export const BookingAccountSection = ({
           </div>
         ))
       )}
-    </div>
+      </div>
+    </details>
   </div>
-);
+  );
+};

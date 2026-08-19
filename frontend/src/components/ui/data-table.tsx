@@ -87,8 +87,6 @@ export function DataTable<T extends { id: string | number }>({
 
       {error ? <ErrorState message={error} onRetry={onRetry} /> : null}
 
-      {error ? <ErrorState message={error} onRetry={onRetry} /> : null}
-
       {isDesktop ? (
         <div className="motion-refresh overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <div className="overflow-x-auto">

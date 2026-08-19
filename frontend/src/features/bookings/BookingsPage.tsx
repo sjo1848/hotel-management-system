@@ -382,17 +382,17 @@ const BookingsPage = () => {
 
   return (
     <div className="space-y-4 lg:space-y-6">
-      <div className="flex items-center gap-2 lg:hidden" aria-label="Barra de recepción móvil">
+      <div className="flex min-h-10 items-center gap-1.5 lg:hidden" aria-label="Barra de recepción móvil">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h1 className="truncate text-xl font-black tracking-tight text-foreground">Recepción</h1>
+            <h1 className="truncate text-lg font-black tracking-tight text-foreground">Recepción</h1>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 shrink-0 rounded-xl"
+                  className="min-h-11 min-w-11 shrink-0 rounded-lg"
                   aria-label="Ayuda sobre recepción"
                   title="Ayuda sobre recepción"
                 >
@@ -413,7 +413,7 @@ const BookingsPage = () => {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-xl"
+              className="min-h-11 min-w-11 shrink-0 rounded-lg"
               aria-label="Más acciones de recepción"
             >
               <MoreVertical className="h-5 w-5" />
@@ -431,7 +431,7 @@ const BookingsPage = () => {
 
         <Button
           size="sm"
-          className="h-10 shrink-0 rounded-xl bg-primary px-3 text-primary-foreground shadow-lg hover:bg-primary/90"
+          className="min-h-11 shrink-0 rounded-lg bg-primary px-2.5 text-primary-foreground shadow-lg hover:bg-primary/90"
           onClick={openWalkIn}
         >
           <Plus className="mr-1.5 h-4 w-4" /> Nueva reserva

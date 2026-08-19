@@ -49,12 +49,16 @@ export const TabStrip = <T extends string>({
     }
     if (next && next !== current) {
       onTabChange(next);
-      tabRefs.current[next]?.focus();
+      requestAnimationFrame(() => tabRefs.current[next]?.focus());
     }
   };
 
-  const overflowTabs = tabs.slice(0, visible);
-  const moreTabs = tabs.slice(visible);
+  const baseVisibleTabs = tabs.slice(0, visible);
+  const activeIsOverflow = !baseVisibleTabs.some((tab) => tab.id === activeTab);
+  const visibleTabs = activeIsOverflow
+    ? [...baseVisibleTabs.slice(0, Math.max(visible - 1, 0)), tabs.find((tab) => tab.id === activeTab)!]
+    : baseVisibleTabs;
+  const moreTabs = tabs.filter((tab) => !visibleTabs.some((visibleTab) => visibleTab.id === tab.id));
 
   const renderTab = (tab: TabItem<T>, asMore = false) => {
     const active = tab.id === activeTab;
@@ -86,28 +90,24 @@ export const TabStrip = <T extends string>({
   };
 
   if (!isDesktop && moreTabs.length > 0) {
-    const moreActiveTab = moreTabs.find((tab) => tab.id === activeTab);
     return (
       <div
-        role="tablist"
-        aria-label={ariaLabel}
         className="flex gap-1 rounded-2xl border border-border bg-muted p-1"
       >
-        {overflowTabs.map((tab) => renderTab(tab))}
+        <div role="tablist" aria-label={ariaLabel} className="contents">
+          {visibleTabs.map((tab) => renderTab(tab))}
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              role="tab"
-              aria-selected={!!moreActiveTab}
+              aria-label="Más secciones"
               className={cn(
                 "min-h-11 flex-1 items-center justify-center gap-1 rounded-xl px-3 text-sm font-bold transition outline-none",
-                moreActiveTab
-                  ? "bg-card text-foreground shadow-sm ring-1 ring-border"
-                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
+                "text-muted-foreground hover:bg-card/60 hover:text-foreground",
               )}
             >
-              {moreActiveTab ? moreActiveTab.label : "Más"}
+              Más
               <ChevronDown className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
@@ -117,9 +117,7 @@ export const TabStrip = <T extends string>({
               return (
                 <DropdownMenuItem
                   key={tab.id}
-                  role="tab"
-                  id={`${idPrefix}-tab-${tab.id}`}
-                  aria-selected={active}
+                  aria-current={active ? "page" : undefined}
                   className={cn(active && "bg-accent font-bold")}
                   onClick={() => onTabChange(tab.id)}
                 >
