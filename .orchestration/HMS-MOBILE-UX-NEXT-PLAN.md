@@ -165,3 +165,38 @@ Evidence:
 - Browser E2E local: `ENVIRONMENT_BLOCKED`; Chromium no está disponible en el cache esperado del contenedor y falla antes de abrir la página (`ENOENT`). Canonical CI queda como gate E2E.
 
 No se modificaron backend, API, dominio ni desktop fuera de los breakpoints preservados.
+
+## Slice 5 + critic loop — cierre @ 2026-08-19 (OpenCode)
+
+HEAD: `b27ef10` (10 commits sobre base `2a2a1a0`; PR #29 OPEN/DRAFT/MERGEABLE, no mergeado).
+
+### Slice 5 (commit `6737b04`) — coherencia/aceptación
+
+- Focus return en close: GuestsPage, UsersPage (detail + delete), BookingsPage, CalendarPage.
+- Guests/Users: error con botón Reintentar.
+- Empty states `role="status"`: Housekeeping, Calendar, Reports, Guests, Users.
+- ReceptionWorkspaceTabs: tab activo de overflow inyectado en el tablist visible (roving sin target muerto); trigger "Más" sin `role="tab"` indebido.
+- Touch targets 44px: DashboardLayout (menú, search, notificaciones, "Más destinos"), Reports presets.
+
+### Critics independientes
+
+- UX ronda 1: REWORK (I1 HIGH roving dead target; I2 MEDIUM empty states; I3 MEDIUM focus a fila removida; I4 MEDIUM action overload Reports; I5 LOW input 40px).
+- Performance ronda 1: PASS (CSS 107.8/115KB cerca del techo; cero requests nuevos).
+- Repairs commit `b27ef10`: I1 tabRefs+pendingFocusRef+useLayoutEffect (mirror TabStrip); I2 `role="status"`; I3 Users confirmDelete + fallback estable; I4 Reports quita refresh mobile; I5 `min-h-11`.
+- UX ronda 2: REWORK residual (I3 race de timing — el row aún estaba conectado en el rAF). Fix: `confirmDelete` restaura tras el refetch y `returnToStableRef` + `target.isConnected` dirigen al fallback; ref `newUserButtonRef` también en desktop.
+- UX ronda 3: PASS (I1–I5 resueltos; focus nunca cae a `<body>` mobile y desktop).
+- Performance revalidación: PASS (repairs sin regresión; guard `isConnected` mejora el hallazgo previo).
+
+### Integration Review (independiente)
+
+- Contrato API v1 intacto: cero drift backend/OpenAPI/docs; `check-openapi-alignment.sh` PASS; `check-openapi-client-drift.sh` PASS; cliente generado sin cambios.
+- Gate de breakpoint consistente (767/768) en todas las superficies móviles.
+- VERDICT: `READY_FOR_HUMAN_MOBILE_ACCEPTANCE`.
+  - M1 docs/state drift → reconciliado en este plan + ORCHESTRATION-MANIFEST (ahora reflejan `b27ef10`).
+  - M2 evidencia before/after mobile (criterio 7) NO materializada; `.playwright-cli/` no existe. Debe capturarla el humano.
+
+### Evidence final
+
+- Local: lint/tsc PASS; vitest 54 files / 342 tests PASS; build PASS; frontend-perf-budget PASS (vendor 373/550, charts 226/250, app 84/180, css 107.8/115); `git diff --check` PASS.
+- CI canónico run 32217610624 en `b27ef10`: Backend CI, Secret Scanning, Frontend CI, E2E Browser Core Journeys, Performance Smoke Gate, CI Stability Guard — todos success.
+- **Detención: `READY_FOR_HUMAN_MOBILE_ACCEPTANCE`.** No merge, no deploy, no PRODUCT_ACCEPTED. Criterio 7 (before/after same protocol) queda pendiente de aceptación humana.

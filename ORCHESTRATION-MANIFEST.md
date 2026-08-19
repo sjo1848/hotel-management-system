@@ -3,9 +3,10 @@
 task_id: HMS-MOBILE-UX-PERF-001
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
 base_sha: f61527051ff5f94229c79dc82753b80ed593fe1f
-current_status: RUNTIME_TRANSFERRED_OPENCODE_SLICES_3_4_IN_FLIGHT
+current_status: OPENCODE_SLICES_3_5_COMPLETE_READY_FOR_HUMAN_MOBILE_ACCEPTANCE
 runtime_transfer: .orchestration/RUNTIME-TRANSFER-CODEX-OPENCODE.md
-transfer_verified_head: 2a2a1a0f7e8c023d916184267d10ed038cc8108b (== PR #29 HEAD)
+transfer_verified_head: 2a2a1a0f7e8c023d916184267d10ed038cc8108b (verified PR #29 head at transfer)
+current_head: b27ef10 (9 commits ahead of transfer_verified_head; PR #29 draft, MERGEABLE, not merged)
 
 ## Workers
 
@@ -61,3 +62,60 @@ motivo: Human UX Acceptance after CI, mobile journeys, and before/after evidence
 - GitHub remains the source of technical evidence.
 - Drive is updated only at material closure, decision, Human Gate, or reusable method learning.
 - Synthetic data only; backend and API scope remain frozen unless direct evidence requires change.
+
+## OpenCode Continuation (Slice 3–5) — evidence of runtime-transfer portability
+
+Implemented autonomously under OpenCode/DeepSeek after the Codex→OpenCode runtime transfer (see `.orchestration/RUNTIME-TRANSFER-CODEX-OPENCODE.md`), with no dependence on the prior ChatGPT lane, per the transfer plan.
+
+### Commits (feature/mobile-ux-perf, base 2a2a1a0)
+
+| commit | content |
+|---|---|
+| d1b4d94 | Slice 3: task-oriented Housekeeping + Dashboard workspaces |
+| 5c7c87b | Slice 4: Guests/Users/Reports with temporal detail |
+| bd82567 | shared UI mobile variants + toast live region |
+| a567c4d | e2e role-smoke specs aligned to task surfaces |
+| 7e52cd2 | perf-budget LC_ALL=C + ignore method scaffolding |
+| d813386 | record Codex→OpenCode runtime transfer as method evidence |
+| 85f6aac | refine Rooms + Calendar mobile task surfaces |
+| f64cadd | tab-strip: deterministic keyboard focus via layout effect (fix IMPLEMENTATION_DEFECT f64cadd) |
+| 6737b04 | Slice 5: focus return, empty states, touch targets, ReceptionWorkspaceTabs overflow |
+| b27ef10 | address independent UX critic findings (I1–I5) |
+
+### Critics (Slice 5, independent rounds)
+
+| round | critic | verdict | loop |
+|---|---|---|---|
+| 1 | UX | REWORK | I1 HIGH (ReceptionWorkspaceTabs roving dead target), I2 MEDIUM (empty states unannounced), I3 MEDIUM (focus to removed row), I4 MEDIUM (Reports action overload), I5 LOW (40px checkout input) |
+| 1 | Performance | PASS | CSS near-ceiling risk only; zero new requests; mounts gated; bundle PASS |
+| 2 | UX revalidation | REWORK (I3 residual timing race) | focus could still body-drop after delete due to refetch timing; fixed via confirmDelete + fallback after settle |
+| 3 | UX final | PASS | I1–I5 resolved; focus never drops to <body> (mobile + desktop) |
+| 2 | Performance revalidation | PASS | repairs introduce no regression; isConnected guard improved |
+
+### Loops (Slice 5)
+
+| lane | causa | rework_count | reparación | re-crítica |
+|---|---|---:|---|---|
+| Mobile UX | I1–I5 from independent critic | 2 | tabRefs + pendingFocusRef + useLayoutEffect (mirrors TabStrip); role=status empty states; Users confirmDelete + stable fallback focus; Reports mobile refresh removed; min-h-11 checkout input | PASS |
+| Performance | none (PASS round 1) | 0 | — | PASS |
+
+### Integration (Slice 5, independent reviewer)
+
+- API v1 contract intact: zero backend/OpenAPI/docs drift; `check-openapi-alignment.sh` PASS; `check-openapi-client-drift.sh` PASS; generated client unchanged.
+- Breakpoint gate consistent (767/768) across all mobile task surfaces; shared-UI changes desktop-safe.
+- final_verdict: **READY_FOR_HUMAN_MOBILE_ACCEPTANCE**, with 2 items owned by the human during acceptance:
+  - M1 docs/state drift reconciled here (this file now reflects `b27ef10`).
+  - M2 mobile before/after protocol evidence (criterion 7) must be captured by the human (`.playwright-cli/` referenced in NEXT-PLAN does not exist).
+
+### Evidence
+
+- Local: lint PASS; tsc PASS; vitest 54 files / 342 tests PASS; production build PASS; `frontend-perf-budget.sh` PASS (vendor 373/550, charts 226/250, app 84/180, css 107.8/115); `git diff --check` PASS.
+- Canonical CI (`.github/workflows/full-stack-ci.yml`, run 32217610624 on `b27ef10`): Backend CI, Secret Scanning, Frontend CI, E2E Browser Core Journeys, Performance Smoke Gate, CI Stability Guard — all success.
+- PR #29: OPEN / DRAFT / MERGEABLE, head `b27ef10`. **Not merged, no deploy, no PRODUCT_ACCEPTED.**
+- Acceptance contract criterion 7 (before/after same protocol) evidence is NOT fully materialized for this increment; human must run the 375/390/430 + desktop protocol before acceptance.
+
+### Human Gate
+
+requerido: sí
+estado: **READY_FOR_HUMAN_MOBILE_ACCEPTANCE**
+motivo: Full mobile increment complete, critics PASS, integration READY. Human must confirm mobile before/after evidence (criterion 7) and run final UX acceptance before merge.
