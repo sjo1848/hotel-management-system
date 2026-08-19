@@ -128,6 +128,19 @@ Estado preparado: `READY_FOR_MOBILE_UX_IMPLEMENTATION_PLAN`.
 
 La próxima decisión humana sólo debe validar el orden de slices y la prioridad de Rooms + Calendar. No hace falta una nueva auditoría general ni autorización para inspecciones técnicas normales.
 
+## Runtime transfer @ 2026-08-18 (OpenCode)
+
+- Transfer entry: `.orchestration/RUNTIME-TRANSFER-CODEX-OPENCODE.md`. HEAD == remote == PR #29 == `2a2a1a0`. Human Gate mobile architecture APPROVED.
+- Working tree (uncommitted) ya contenía Slice 3 (Housekeeping+Dashboard) y Slice 4 (Guests/Users/Reports) + shared UI + e2e touch-ups, heredados del runtime anterior. No se descartó trabajo.
+- REWORK cerrado por críticos (read-only) con causa `ENVIRONMENT_DEFECT` y repairs:
+  - HousekeepingRoomWorkspace: breakpoint `xl:`→`md:` (alineado al gate 768), tab ya no se resetea con `item?.room_id` (dep `[initialTab]`), tabpanel maintenance sólo se renderiza si la tab existe (aria-labelledby sin colgar).
+  - UsersPage: fila mobile abre surface de detalle NO destructiva (`pendingView`); eliminar queda como acción secundaria de confirmación en dos pasos. Sin `window.confirm`.
+  - toast: `role="status" aria-live="polite"` en el contenedor (a11y anuncio). Se scoped `calendar-role-smoke` a `span[aria-live]` (el toast es `div`) para no romper strict locator.
+  - `.gitignore`: excluye `opencode-hms-project-method.zip` y `opencode-hms-project-method/` (scaffolding del método, no producto).
+  - `frontend-perf-budget.sh`: `export LC_ALL=C` corrige falso "Budget exceeded" por decimal con coma en `es_AR.UTF-8` (ENVIRONMENT_DEFECT; CI canónico con locale C ya pasaba).
+- Evidence (post-rework): lint/tsc PASS; vitest 54 files / 342 tests PASS; build PASS; `./scripts/gate.sh` exit 0; `git diff --check` PASS. E2E local `ENVIRONMENT_BLOCKED` (backend rate-limit 429; Chromium del contenedor ausente) — gate canónico es CI.
+- Pendiente: commit del working tree a `feature/mobile-ux-perf`, luego canonical CI para el nuevo HEAD; Slice 5 (coherencia/aceptación) y Human Mobile Acceptance.
+
 ## Slice Rooms + Calendar — resultado actual
 
 Estado local: `READY_FOR_CRITIC_INTEGRATION`

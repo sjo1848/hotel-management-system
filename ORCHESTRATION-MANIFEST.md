@@ -3,7 +3,9 @@
 task_id: HMS-MOBILE-UX-PERF-001
 orchestration_mode: CALLABLE_MULTI_AGENT_LANES
 base_sha: f61527051ff5f94229c79dc82753b80ed593fe1f
-current_status: CANDIDATE_READY_PENDING_CANONICAL_CI
+current_status: RUNTIME_TRANSFERRED_OPENCODE_SLICES_3_4_IN_FLIGHT
+runtime_transfer: .orchestration/RUNTIME-TRANSFER-CODEX-OPENCODE.md
+transfer_verified_head: 2a2a1a0f7e8c023d916184267d10ed038cc8108b (== PR #29 HEAD)
 
 ## Workers
 
