@@ -35,6 +35,8 @@ archivos/
 conductor/
 output/playwright/
 frontend/output/playwright/
+opencode-hms-project-method.zip
+opencode-hms-project-method/
 
 # --- OS ---
 .DS_Store
