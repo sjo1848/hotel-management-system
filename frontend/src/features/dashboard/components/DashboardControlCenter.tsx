@@ -54,31 +54,32 @@ const DashboardControlCenter = ({
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex items-center justify-between gap-3 md:items-end">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-foreground">Centro de control</h1>
-          <p className="mt-1 text-sm font-semibold text-muted-foreground">
+          <h1 className="text-xl font-black tracking-tight text-foreground md:text-2xl">Centro de control</h1>
+          <p className="mt-1 hidden text-sm font-semibold text-muted-foreground md:block">
             Pulso operativo y rendimiento del hotel
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <span className="hidden items-center gap-1.5 text-xs font-bold text-muted-foreground md:inline-flex">
             <CalendarDays className="h-4 w-4" />
             {format(new Date(), "d 'de' MMMM")}
           </span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
+          <span className="hidden items-center gap-1.5 text-xs font-bold text-muted-foreground md:inline-flex">
             <Timer className="h-4 w-4" />
             {lastUpdated ? `Actualizado ${format(lastUpdated, "HH:mm")}` : "Sin actualizar"}
           </span>
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-xl px-4"
+            className="h-11 min-w-11 rounded-xl px-3 md:px-4"
+            aria-label={isRefreshing ? "Actualizando centro de control" : "Actualizar centro de control"}
             onClick={onRefresh}
             disabled={isRefreshing}
           >
-            <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
-            {isRefreshing ? "Actualizando…" : "Actualizar"}
+            <RefreshCw className={cn("h-4 w-4 md:mr-2", isRefreshing && "animate-spin")} />
+            <span className="hidden md:inline">{isRefreshing ? "Actualizando…" : "Actualizar"}</span>
           </Button>
         </div>
       </header>

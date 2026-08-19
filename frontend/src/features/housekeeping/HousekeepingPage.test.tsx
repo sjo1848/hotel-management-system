@@ -49,4 +49,35 @@ describe("HousekeepingPage", () => {
     expect(screen.getByText("Estado actual")).toBeInTheDocument();
     expect(startCleaning).not.toHaveBeenCalled();
   });
+
+  it("puts the next operational task first on the mobile surface", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByRole("region", { name: "Siguiente tarea" })).toBeInTheDocument());
+
+    expect(screen.getByRole("heading", { name: "Habitación 101" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Abrir/ }));
+    expect(screen.getByText("Estado actual")).toBeInTheDocument();
+  });
+
+  it("keeps the last board usable when a refresh fails", async () => {
+    const user = userEvent.setup();
+    getHousekeepingBoard.mockResolvedValueOnce(board).mockRejectedValueOnce(new Error("network"));
+    renderPage();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ver tarea habitación 101" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Actualizar turno" }));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("se conserva la última información"));
+    expect(screen.getByRole("button", { name: "Ver tarea habitación 101" })).toBeInTheDocument();
+  });
+
+  it("shows a successful transition immediately without a redundant board request", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Ver tarea habitación 101" })).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Ver tarea habitación 101" }));
+    await user.click(screen.getByRole("tab", { name: "Acción" }));
+    await user.click(screen.getByRole("button", { name: "Iniciar limpieza" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Finalizar limpieza" })).toBeInTheDocument());
+    expect(getHousekeepingBoard).toHaveBeenCalledTimes(1);
+  });
 });

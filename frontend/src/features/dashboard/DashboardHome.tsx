@@ -322,26 +322,28 @@ const DashboardHome = () => {
           ) : null}
         </div>
       ) : (
-        <DashboardControlCenter
-          activeTab={activeTab}
-          isRefreshing={isRefreshing}
-          lastUpdated={lastUpdated}
-          onTabChange={handleTabChange}
-          onRefresh={handleRefresh}
-          operationPanel={operationPanel}
-          performancePanel={
-            <DashboardPerformancePanel
-              enabled={performanceEnabled}
-              kpis={kpis}
-              range={range}
-              onRangeChange={handleRangeChange}
-              revenueQuery={revenueQuery}
-              occupancyQuery={occupancyQuery}
-              hasCapability={hasCapability}
-              onOpenReports={() => navigate("/reports")}
-            />
-          }
-        />
+        <div>
+          <DashboardControlCenter
+            activeTab={activeTab}
+            isRefreshing={isRefreshing}
+            lastUpdated={lastUpdated}
+            onTabChange={handleTabChange}
+            onRefresh={handleRefresh}
+            operationPanel={operationPanel}
+            performancePanel={
+              <DashboardPerformancePanel
+                enabled={performanceEnabled}
+                kpis={kpis}
+                range={range}
+                onRangeChange={handleRangeChange}
+                revenueQuery={revenueQuery}
+                occupancyQuery={occupancyQuery}
+                hasCapability={hasCapability}
+                onOpenReports={() => navigate("/reports")}
+              />
+            }
+          />
+        </div>
       )}
       <CashShiftCloseSheet
         open={isCashCloseOpen}
