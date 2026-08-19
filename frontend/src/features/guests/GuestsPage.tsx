@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { User, Calendar, Plus, Search, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, Column } from "@/components/ui/data-table";
@@ -22,6 +22,7 @@ const GuestsPage = () => {
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null);
   const [mobileSearch, setMobileSearch] = useState("");
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const detailsReturnRef = useRef<HTMLElement | null>(null);
 
   const {
     data: guestsData,
@@ -45,8 +46,17 @@ const GuestsPage = () => {
   }, [guests, mobileSearch]);
 
   const openDetails = (guest: Guest) => {
+    detailsReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setSelectedGuest(guest);
     setIsDetailsOpen(true);
+  };
+
+  const closeDetails = () => {
+    setIsDetailsOpen(false);
+    setSelectedGuest(null);
+    const target = detailsReturnRef.current;
+    detailsReturnRef.current = null;
+    if (target) requestAnimationFrame(() => target.focus());
   };
 
   const columns: Column<Guest>[] = [
@@ -126,7 +136,7 @@ const GuestsPage = () => {
             <Input value={mobileSearch} onChange={(event) => setMobileSearch(event.target.value)} placeholder="Buscar huésped" className="h-11 rounded-xl pl-9" aria-label="Buscar huésped" />
           </div>
           {loading ? <p className="rounded-xl border border-border p-4 text-sm text-muted-foreground">Cargando huéspedes…</p> : null}
-          {guestsError ? <p className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive">No se pudo cargar la lista.</p> : null}
+          {guestsError ? <div className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"><p>No se pudo cargar la lista.</p><Button type="button" variant="outline" className="mt-3 min-h-11" onClick={() => void refetchGuests()}>Reintentar</Button></div> : null}
           {!loading && !guestsError && mobileGuests.length === 0 ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay huéspedes que coincidan.</p> : null}
           <div className="divide-y rounded-2xl border border-border bg-card">
             {mobileGuests.map((guest) => (
@@ -163,10 +173,7 @@ const GuestsPage = () => {
       <GuestDetailsSheet
         guest={selectedGuest}
         isOpen={isDetailsOpen}
-        onClose={() => {
-          setIsDetailsOpen(false);
-          setSelectedGuest(null);
-        }}
+        onClose={closeDetails}
       />
     </div>
   );

@@ -188,7 +188,7 @@ const ReportsPage = () => {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2" aria-label="Rangos rápidos">
-            {PRESET_DAYS.map((preset) => <Button key={preset.value} variant={presetDays === preset.value ? "default" : "outline"} className="h-10 rounded-xl px-2" onClick={() => applyPreset(preset.value)}>{preset.label}</Button>)}
+            {PRESET_DAYS.map((preset) => <Button key={preset.value} variant={presetDays === preset.value ? "default" : "outline"} className="min-h-11 rounded-xl px-2" onClick={() => applyPreset(preset.value)}>{preset.label}</Button>)}
           </div>
         </div>
       ) : <PageHeader
@@ -269,7 +269,15 @@ const ReportsPage = () => {
 
       {isLoading ? <LoadingState label="Cargando reportes..." /> : null}
 
-      {!isLoading && !error ? (
+      {!isLoading && !error && revenueData.length === 0 && occupancyData.length === 0 ? (
+        <SectionCard>
+          <p role="status" className="py-10 text-center text-sm text-muted-foreground">
+            No hay datos en el rango seleccionado. Probá ampliar el rango o cambiar el período.
+          </p>
+        </SectionCard>
+      ) : null}
+
+      {!isLoading && !error && (revenueData.length > 0 || occupancyData.length > 0) ? (
         <>
           <section className="stagger-list grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {statCards.map((card) => {

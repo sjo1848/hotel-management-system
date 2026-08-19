@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Plus, Shield, MoreHorizontal, Fingerprint, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +29,20 @@ const UsersPage = () => {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [mobileSearch, setMobileSearch] = useState("");
   const isMobile = useMediaQuery("(max-width: 767px)");
+  const sheetReturnRef = useRef<HTMLElement | null>(null);
+
+  const openDetail = (user: ManagedUser) => {
+    sheetReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPendingDelete(null);
+    setConfirmingDelete(false);
+    setPendingView(user);
+  };
+
+  const restoreFocus = () => {
+    const target = sheetReturnRef.current;
+    sheetReturnRef.current = null;
+    if (target) requestAnimationFrame(() => target.focus());
+  };
 
   const {
     data: usersData,
@@ -143,7 +157,7 @@ const UsersPage = () => {
           {usersError ? <div className="rounded-xl border border-destructive/30 p-4 text-sm text-destructive"><p>No se pudieron cargar los usuarios.</p><Button type="button" variant="outline" className="mt-3 min-h-11" onClick={() => void refetchUsers()}>Reintentar</Button></div> : null}
           {!loading && !usersError && mobileUsers.length === 0 ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">No hay usuarios que coincidan.</p> : null}
           <div className="divide-y rounded-2xl border border-border bg-card">
-            {!loading && !usersError ? mobileUsers.map((user) => <button key={user.id} type="button" aria-label={`Ver usuario ${user.username}`} onClick={() => { setPendingDelete(null); setConfirmingDelete(false); setPendingView(user); }} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><Fingerprint className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{user.username}</span><span className="mt-1 block text-xs uppercase tracking-wide text-muted-foreground">{user.role}</span></span><MoreHorizontal className="h-5 w-5 text-muted-foreground" /></button>) : null}
+            {!loading && !usersError ? mobileUsers.map((user) => <button key={user.id} type="button" aria-label={`Ver usuario ${user.username}`} onClick={() => openDetail(user)} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left first:rounded-t-2xl last:rounded-b-2xl hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground"><Fingerprint className="h-5 w-5" /></span><span className="min-w-0 flex-1"><span className="block truncate font-semibold">{user.username}</span><span className="mt-1 block text-xs uppercase tracking-wide text-muted-foreground">{user.role}</span></span><MoreHorizontal className="h-5 w-5 text-muted-foreground" /></button>) : null}
           </div>
         </section>
       ) : <DataTable
@@ -158,7 +172,7 @@ const UsersPage = () => {
         searchPlaceholder="Buscar por nombre de usuario..."
       />}
 
-      <Sheet open={Boolean(pendingView)} onOpenChange={(open) => { if (!open) setPendingView(null); }}>
+      <Sheet open={Boolean(pendingView)} onOpenChange={(open) => { if (!open && !pendingDelete) { setPendingView(null); restoreFocus(); } }}>
         <SheetContent side="bottom" className="rounded-t-3xl p-5">
           <SheetHeader className="text-left"><SheetTitle>{pendingView?.username}</SheetTitle><SheetDescription>Cuenta de acceso y rol del sistema ({pendingView?.role}).</SheetDescription></SheetHeader>
           <div className="mt-5 space-y-3">
@@ -169,7 +183,7 @@ const UsersPage = () => {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open) { setPendingDelete(null); setConfirmingDelete(false); } }}>
+      <Sheet open={Boolean(pendingDelete)} onOpenChange={(open) => { if (!open) { setPendingDelete(null); setConfirmingDelete(false); restoreFocus(); } }}>
         <SheetContent side="bottom" className="rounded-t-3xl p-5">
           <SheetHeader className="text-left"><SheetTitle>{confirmingDelete ? "Confirmar eliminación" : pendingDelete?.username}</SheetTitle><SheetDescription>{confirmingDelete ? `Esta acción quitará el acceso de ${pendingDelete?.username}.` : `Rol actual: ${pendingDelete?.role}. Elegí una acción explícita para esta cuenta.`}</SheetDescription></SheetHeader>
           {confirmingDelete ? <div className="mt-5 grid grid-cols-2 gap-3"><Button variant="outline" className="h-11" onClick={() => setConfirmingDelete(false)}>Volver</Button><Button variant="destructive" className="h-11" onClick={() => { if (pendingDelete) void handleDelete(pendingDelete.id); setPendingDelete(null); setConfirmingDelete(false); }}>Eliminar cuenta</Button></div> : <div className="mt-5 grid gap-3"><Button variant="destructive" className="h-11" onClick={() => setConfirmingDelete(true)}>Eliminar cuenta</Button><Button variant="outline" className="h-11" onClick={() => setPendingDelete(null)}>Cerrar</Button></div>}

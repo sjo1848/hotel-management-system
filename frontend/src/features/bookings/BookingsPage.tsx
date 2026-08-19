@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useRef, useState } from "react";
 import {
   Plus,
   CheckCircle,
@@ -63,6 +63,7 @@ const BookingsPage = () => {
   const [frontDeskQueueBookingIds, setFrontDeskQueueBookingIds] = useState<string[]>([]);
   const [guidedFocusStep, setGuidedFocusStep] = useState<ReceptionGuideStepId | null>(null);
   const [workspaceView, setWorkspaceView] = useState<ReceptionWorkspaceView>("shift");
+  const detailsReturnRef = useRef<HTMLElement | null>(null);
   const isDesktop = useMediaQuery("(min-width: 1280px)");
 
   const {
@@ -162,6 +163,7 @@ const BookingsPage = () => {
   const openBookingById = (bookingId: string, queueBookingIds?: string[]) => {
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return;
+    detailsReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const normalizedQueue = Array.from(
       new Set((queueBookingIds ?? []).filter((id) => id && id !== "")),
     );
@@ -711,6 +713,9 @@ const BookingsPage = () => {
                 setSelectedBooking(null);
                 setFrontDeskQueueBookingIds([]);
                 setGuidedFocusStep(null);
+                const target = detailsReturnRef.current;
+                detailsReturnRef.current = null;
+                if (target) requestAnimationFrame(() => target.focus());
               }}
             />
           </>
