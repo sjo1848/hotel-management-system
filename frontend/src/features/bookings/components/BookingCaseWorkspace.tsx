@@ -47,6 +47,7 @@ export interface BookingCaseWorkspaceProps {
   guidedFocusStep?: ReceptionGuideStepId | null;
   titleId?: string;
   showHeaderClose?: boolean;
+  onCheckInComplete?: () => void;
 }
 
 const guideTargetByStep: Partial<Record<ReceptionGuideStepId, string>> = {
@@ -87,6 +88,7 @@ const BookingCaseWorkspace = ({
   guidedFocusStep = null,
   titleId,
   showHeaderClose = false,
+  onCheckInComplete,
 }: BookingCaseWorkspaceProps) => {
   const [activeTab, setActiveTab] = useState<BookingCaseTab>("summary");
   const billingEnabled =
@@ -198,9 +200,11 @@ const BookingCaseWorkspace = ({
     status: BookingStatus,
     frontDesk?: Partial<BookingFrontDeskData>,
   ) => {
-    await handleStatusAction(status, frontDesk);
+    const ok = await handleStatusAction(status, frontDesk);
+    if (!ok) return;
     if (status === "CheckedIn") {
       trackReceptionEvent("checkin_complete");
+      onCheckInComplete?.();
     }
     if (status === "CheckedOut") {
       trackReceptionEvent("checkout_complete");

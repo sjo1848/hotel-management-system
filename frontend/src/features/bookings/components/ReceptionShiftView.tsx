@@ -120,6 +120,7 @@ export const ReceptionShiftView = ({
               queueBookingIds={queueBookingIds}
               onOpenQueuedBooking={onOpenQueuedBooking}
               guidedFocusStep={guidedFocusStep}
+              onCheckInComplete={onCloseCase}
             />
           </div>
         ) : (

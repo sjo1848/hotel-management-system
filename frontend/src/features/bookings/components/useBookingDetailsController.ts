@@ -162,9 +162,9 @@ export const useBookingDetailsController = ({
   const handleStatusAction = async (
     nextStatus: BookingStatus,
     explicitFrontDeskPayload?: Partial<BookingFrontDeskData>,
-  ) => {
+  ): Promise<boolean> => {
     const bookingState = operational.bookingState;
-    if (!bookingState || !onUpdateStatus) return;
+    if (!bookingState || !onUpdateStatus) return false;
 
     if (nextStatus === "CheckedIn" && operational.room?.status !== "Available") {
       toast({
@@ -172,7 +172,7 @@ export const useBookingDetailsController = ({
         description: "La habitacion debe estar disponible antes de registrar la llegada.",
         variant: "error",
       });
-      return;
+      return false;
     }
     if (nextStatus === "CheckedIn" && operational.checkInBlockers.length > 0) {
       toast({
@@ -180,7 +180,7 @@ export const useBookingDetailsController = ({
         description: "Completa el checklist operativo antes de registrar la llegada.",
         variant: "error",
       });
-      return;
+      return false;
     }
     if (nextStatus === "CheckedOut" && checkoutBlockers.length > 0) {
       toast({
@@ -188,7 +188,7 @@ export const useBookingDetailsController = ({
         description: "Cierra la cuenta y completa el checklist operativo antes de finalizar la estadia.",
         variant: "error",
       });
-      return;
+      return false;
     }
 
     operational.setStatusLoading(nextStatus);
@@ -225,6 +225,7 @@ export const useBookingDetailsController = ({
       operational.updateBookingState(() => updatedBooking);
       operational.setAuditRefreshTick((current) => current + 1);
       await operational.refreshOperationalData(updatedBooking);
+      return true;
     } finally {
       operational.setStatusLoading(null);
     }

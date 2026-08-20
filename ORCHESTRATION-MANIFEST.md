@@ -6,7 +6,7 @@ base_sha: f61527051ff5f94229c79dc82753b80ed593fe1f
 current_status: OPENCODE_SLICES_3_5_COMPLETE_READY_FOR_HUMAN_MOBILE_ACCEPTANCE
 runtime_transfer: .orchestration/RUNTIME-TRANSFER-CODEX-OPENCODE.md
 transfer_verified_head: 2a2a1a0f7e8c023d916184267d10ed038cc8108b (verified PR #29 head at transfer)
-current_head: b27ef10 (9 commits ahead of transfer_verified_head; PR #29 draft, MERGEABLE, not merged)
+current_head: 035a743 (PR #29 draft, MERGEABLE, not merged)
 
 ## Workers
 
@@ -119,3 +119,13 @@ Implemented autonomously under OpenCode/DeepSeek after the Codex→OpenCode runt
 requerido: sí
 estado: **READY_FOR_HUMAN_MOBILE_ACCEPTANCE**
 motivo: Full mobile increment complete, critics PASS, integration READY. Human must confirm mobile before/after evidence (criterion 7) and run final UX acceptance before merge.
+
+## Human Acceptance Rework (R1–R6) @ 2026-08-20 (OpenCode)
+
+- Human tested the mobile build via Cloudflare tunnel over `localhost:5173`. Verdict: **PASS** with bounded rework R1–R6 (no scope expansion, no redesign re-open).
+- Runtime diagnoses (product-relevant): demo login is `admin`/`demo2026pass` (DB seeded with `DEMO_PASSWORD`); the 400 on booking creation was NOT a backend bug (backend creates bookings; proven 201 end-to-end) — the real frontend defect was the toast printing `[object Object]` (`BookingDrawer.tsx:150`), fixed to `getErrorMessage`.
+- Implemented (documented + code): R1 walk-in reservation stays on confirmation and returns to Reception; R2 check-in/check-out stay at confirmation and checkout never auto-starts (`handleStatusAction`→`Promise<boolean>`, new `onCheckInComplete` honored only on successful `CheckedIn`); R3 room reassignment preserves validations not dependent on the room (verified, no code change); R4 Rooms bulk actions only toggle room state and "Resolver desde Housekeeping" defers to the canonical workflow (verified, no code change); R5 global search placeholder/aria-label now explicit "Buscar huésped, reserva o habitación"; R6 decorative notifications bell removed (dead static-dot control).
+- New tests in `BookingCaseWorkspace.test.tsx` for `onCheckInComplete` happy path and failure (`handleStatusAction` resolves false → no callback, no tracking).
+- Evidence: lint tsc PASS; full frontend suite **54 files / 344 tests PASS**; build PASS; backend/API v1 untouched.
+- current_head: `035a743` (was `b27ef10`). PR #29 OPEN/DRAFT/MERGEABLE, **not merged, no deploy, no PRODUCT_ACCEPTED.**
+- Human Gate final: **READY_FOR_FINAL_HUMAN_MOBILE_ACCEPTANCE** (manual before/after criterion 7 remains for the human).

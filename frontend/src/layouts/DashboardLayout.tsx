@@ -10,7 +10,6 @@ import {
   Brush,
   Settings,
   LogOut,
-  Bell,
   Search,
   Menu,
   TrendingUp,
@@ -540,7 +539,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="group relative min-w-0 flex-1">
               <Search className="app-search-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-foreground" />
               <Input
-                placeholder="Buscar..."
+                placeholder="Buscar huésped, reserva o habitación"
+                aria-label="Buscar huésped, reserva o habitación"
                 className="app-search-input min-h-11 w-full min-w-0 rounded-xl pl-10 shadow-sm transition-all duration-300"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
@@ -551,10 +551,6 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
 
           <div className="flex shrink-0 items-center justify-end gap-1 md:ml-4 md:w-auto md:gap-4">
             <ThemeToggle className="hidden sm:inline-flex" compact />
-            <Button size="icon" variant="ghost" aria-label="Notificaciones" className="min-h-11 min-w-11 relative rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full border border-card bg-red-500" />
-            </Button>
           </div>
         </header>
 

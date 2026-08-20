@@ -200,3 +200,43 @@ HEAD: `b27ef10` (10 commits sobre base `2a2a1a0`; PR #29 OPEN/DRAFT/MERGEABLE, n
 - Local: lint/tsc PASS; vitest 54 files / 342 tests PASS; build PASS; frontend-perf-budget PASS (vendor 373/550, charts 226/250, app 84/180, css 107.8/115); `git diff --check` PASS.
 - CI canónico run 32217610624 en `b27ef10`: Backend CI, Secret Scanning, Frontend CI, E2E Browser Core Journeys, Performance Smoke Gate, CI Stability Guard — todos success.
 - **Detención: `READY_FOR_HUMAN_MOBILE_ACCEPTANCE`.** No merge, no deploy, no PRODUCT_ACCEPTED. Criterio 7 (before/after same protocol) queda pendiente de aceptación humana.
+
+## Human Mobile Acceptance → Rework R1–R6 @ 2026-08-20 (OpenCode)
+
+Estado: `READY_FOR_FINAL_HUMAN_MOBILE_ACCEPTANCE`. HEAD `035a743`, PR #29 OPEN/DRAFT/MERGEABLE (no mergeado). Versión móvil testeada por humano vía túnel Cloudflare sobre `localhost:5173`.
+
+Veredicto humano general: **PASS**; rework acotado (BOUNDED REWORK) en productos R1–R6. No se reabre el rediseño mobile ni se expande alcance.
+
+### Diagnóstico y decisiones de runtime (relevantes al producto)
+
+- Login OK: credenciales demo `admin` / `demo2026pass` (DB sembrada con `DEMO_PASSWORD`; `.env` `ADMIN_PASSWORD=admin123` es default, ignorado porque `bootstrap_admin_user` saltea si el usuario existe).
+- 400 al crear reserva: no es bug de backend. El backend crea reservas (probado 201 end-to-end con fechas libres + habitación `90000000-0000-0000-0000-000000000105`). 400 real posible: `ROOM_NOT_AVAILABLE` (habitación ocupada en rango) o CSRF mal enviado. Defecto frontend: el toast mostraba `[object Object]` (BookingDrawer `String(error)`). **Reparado** → `getErrorMessage` (`BookingDrawer.tsx:150`). Lint + tests PASS.
+
+### Implementado (código)
+
+- **R1 — Reserva walk-in se queda en confirmación**: `WalkInBookingSheet.onCreated` (BookingsPage.tsx:664) tras refresh cierra el caso y vuelve a Reception (ya no auto-abre el caso operativo; quitado `setSelectedBooking`).
+- **R2 — Check-in/checkout se quedan en confirmación; checkout nunca se auto-inicia**:
+  - `useBookingDetailsController.handleStatusAction` ahora retorna `Promise<boolean>` (true = transición aplicada).
+  - `BookingCaseWorkspace` acepta `onCheckInComplete?`; se invoca sólo tras un `CheckedIn` **exitoso** (`handleGuidedStatusAction`); con `ok=false` no dispara ni tracing.
+  - Conexión a Reception: `ReceptionShiftView` → `onCloseCase`; `BookingsPage` sheet → cierra + `onClose`-semántica (restaura foco, limpia cola y guided step).
+- **R3 — Cambio de habitación preserva validaciones no dependientes de la habitación**: ya correcto sin tocar código. El efecto de rehidratación del checklist depende de `[id, operational_data, status, isOpen]` (NO de `room_id`) y los `checkInBlockers` dependen de `room` (revalidan tras reasignar). Un cambio de habitación refresca la disponibilidad/estado (`refreshOperationalData`) sin resetear identidad/contacto/fechas del formulario. Sólo se documenta.
+- **R4 — Rooms no duplica Reception/Housekeeping**: ya correcto sin tocar código. Las acciones bulk son sólo transiciones de estado de habitación (AVAILABLE/DIRTY); "Resolver desde Housekeeping" está disabled con hint hacia el workflow canónico; reservar ya navega al BookingDrawer canónico. Sólo se documenta.
+- **R5 — Scope de búsqueda global explícito**: placeholder y `aria-label` del search global pasan de "Buscar..." a "Buscar huésped, reserva o habitación" (`DashboardLayout.tsx:543`).
+- **R6 — Campana de notificaciones decorativa removida**: era un botón + dot estático sin handler ni dropdown (control muerto/falso). Eliminado botón e import `Bell` (`DashboardLayout.tsx`).
+
+### Tests
+
+- Nuevos en `BookingCaseWorkspace.test.tsx`: `onCheckInComplete` tras check-in exitoso; NO se invoca (ni tracking) si `handleStatusAction` retorna `false`. Mock de `handleStatusAction` = `.mockResolvedValue(true)` para el path feliz.
+
+### Evidence (rounded)
+
+- Frontend lint/tsc: PASS.
+- Frontend suite: 54 files / **344 tests** PASS.
+- Frontend build: PASS.
+- Backend no modificado; contrato API v1 intacto.
+- `git diff --check`: pendiente de correr antes de commit.
+
+### Next
+
+1. Actualizar manifest + commit a `feature/mobile-ux-perf`, canonical CI para nuevo HEAD, PR #29.
+2. **Detener en `READY_FOR_FINAL_HUMAN_MOBILE_ACCEPTANCE`.** No merge, no deploy, no PRODUCT_ACCEPTED.

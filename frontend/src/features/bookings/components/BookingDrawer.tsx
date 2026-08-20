@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { createBooking } from "../services/bookingService";
 import { getGuests, createGuest } from "@/features/guests/services/guestService";
+import { getErrorMessage } from "@/api/errors";
 import { useToast } from "@/components/ui/toast";
 import { Room, Guest } from "@/types/domain";
 
@@ -147,7 +148,11 @@ const BookingDrawer = ({ room, dates, isOpen, onClose, onSuccess }: BookingDrawe
       onSuccess();
       onClose();
     } catch (error) {
-      toast({ title: "No se pudo reservar", description: String(error), variant: "error" });
+      toast({
+        title: "No se pudo reservar",
+        description: getErrorMessage(error, "Ocurrió un error al crear la reserva"),
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }

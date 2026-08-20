@@ -661,17 +661,10 @@ const BookingsPage = () => {
         <WalkInBookingSheet
           isOpen={isWalkInOpen}
           onClose={() => setIsWalkInOpen(false)}
-          onCreated={async (booking) => {
+          onCreated={async () => {
             await refreshBookingsView();
             setFrontDeskQueueBookingIds([]);
-            setSelectedBooking(booking);
-            if (isDesktop && workspaceView === "shift") {
-              setGuidedFocusStep(null);
-              setIsDetailsOpen(false);
-            } else {
-              setIsDetailsOpen(true);
-            }
-            trackReceptionEvent("review_case");
+            closeSelectedCase();
           }}
         />
       </Suspense>
@@ -709,6 +702,15 @@ const BookingsPage = () => {
                 openBookingById(bookingId, frontDeskQueueBookingIds);
               }}
               onClose={() => {
+                setIsDetailsOpen(false);
+                setSelectedBooking(null);
+                setFrontDeskQueueBookingIds([]);
+                setGuidedFocusStep(null);
+                const target = detailsReturnRef.current;
+                detailsReturnRef.current = null;
+                if (target) requestAnimationFrame(() => target.focus());
+              }}
+              onCheckInComplete={() => {
                 setIsDetailsOpen(false);
                 setSelectedBooking(null);
                 setFrontDeskQueueBookingIds([]);
