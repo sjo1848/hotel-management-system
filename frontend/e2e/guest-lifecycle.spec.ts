@@ -30,27 +30,57 @@ async function openBookingTab(page: Page, label: RegExp) {
     await backToCase.click();
   }
 
-  const directTab = page.getByRole("tab", { name: label }).filter({ visible: true });
-  if (await directTab.count()) {
-    await directTab.first().click();
-    return;
-  }
-
-  await page.getByRole("tab", { name: "Más" }).click();
-  await page.getByRole("menu").getByRole("tab", { name: label }).click();
+  // The reopened case is rendered by BookingDetailsSheet -> BookingCaseWorkspace,
+  // whose tablist always renders Resumen/Operación/Cuenta/Historial directly
+  // (there is no "Más" tab to fall back to). Wait for the case workspace and
+  // click the direct tab with auto-waiting instead of probing with count(),
+  // which races with rendering and used to fall through to a nonexistent
+  // "Más" tab and hang.
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+  await page.getByRole("tab", { name: label }).filter({ visible: true }).first().click();
 }
 
-async function reopenBookingCase(page: Page, guestName: string) {
+async function reopenBookingCase(page: Page, guestName: string, bookingId: string) {
+  // Wait for Reception to be rendered before deciding how to reach the
+  // Reservas view: desktop shows the tab directly, mobile hides it in the
+  // "Más vistas" overflow menu.
+  const receptionTablist = page.getByRole("tablist", { name: "Vistas de recepción" });
+  await expect(receptionTablist).toBeVisible();
+
   const reservationsTab = page.getByRole("tab", { name: /^Reservas/i }).filter({ visible: true }).first();
   if (await reservationsTab.count()) {
     await reservationsTab.click();
+  } else {
+    await page.getByRole("button", { name: /Más vistas/ }).click();
+    await page.getByRole("menu").getByRole("tab", { name: /^Reservas/i }).click();
   }
   const bookingsSearch = page.getByPlaceholder("Buscar por huésped o ID...");
   await expect(bookingsSearch).toBeVisible();
   await bookingsSearch.fill(guestName);
+  const bookingsPayload = await page.evaluate(async () => {
+    const response = await fetch("/api/v1/bookings");
+    if (!response.ok) {
+      throw new Error(`Bookings lookup failed with ${response.status}`);
+    }
+    return response.json();
+  });
+  const reopenedBooking = Array.isArray(bookingsPayload)
+    ? bookingsPayload.find((booking) => booking?.id === bookingId)
+    : undefined;
+  expect(reopenedBooking?.id).toBe(bookingId);
   const manageButton = page.getByRole("button", { name: "Gestionar" }).first();
-  await expect(manageButton).toBeVisible();
-  await manageButton.click();
+  if (await manageButton.isVisible().catch(() => false)) {
+    await manageButton.click();
+  } else {
+    // The mobile reservations view exposes each filtered booking as the
+    // actionable button; it has no separate "Gestionar" action.
+    const guestPattern = new RegExp(guestName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const bookingButton = page.getByRole("button", { name: guestPattern }).first();
+    await expect(bookingButton).toBeVisible();
+    await bookingButton.click();
+    await expect(manageButton).toBeVisible();
+    await manageButton.click();
+  }
   await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
 }
 
@@ -140,15 +170,25 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
       /\/api\/v1\/bookings$/.test(response.url()),
   );
   const createButton = page.getByRole("button", { name: "Crear y gestionar" });
-  if (await createButton.count()) {
-    await expect(createButton).toBeVisible();
-    await createButton.click({ noWaitAfter: true });
-    expect((await createBookingRequest).status()).toBe(201);
-  }
+  await expect(createButton).toBeVisible();
+  await createButton.click({ noWaitAfter: true });
+  const createResponse = await createBookingRequest;
+  expect(createResponse.status()).toBe(201);
+  const createdBooking = await createResponse.json();
+  const bookingId = createdBooking?.id;
+  expect(bookingId).toEqual(expect.any(String));
 
-  // Walk-in stays on confirmation and returns to Reception (R1): reopen the case
-  // explicitly from the bookings list before continuing the lifecycle.
-  await reopenBookingCase(page, guestName);
+  // R1 (authoritative product contract): walk-in creation returns to Reception
+  // and does NOT auto check-in the reservation.
+  await expect(page.getByRole("tablist", { name: "Vistas de recepción" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toHaveCount(0);
+
+  // Reopen the confirmed reservation explicitly from the Reservas list before
+  // continuing the lifecycle. The case header must still show "Confirmada"
+  // (no auto check-in happened on creation).
+  await reopenBookingCase(page, guestName, bookingId);
+  await expect(page.getByRole("dialog").getByText("Confirmada", { exact: true }).first()).toBeVisible();
 
   await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
   await page.getByRole("button", { name: /Más opciones del caso/i }).click();
@@ -182,12 +222,17 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
     await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
   }
 
-  // Check-in stays on confirmation and returns to Reception (R2): reopen the
-  // in-house case before verifying the active-stay state and billing/checkout,
-  // which remain separate operations.
-  await page.goto("/bookings");
-  await reopenBookingCase(page, guestName);
-  await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
+  // R2 (authoritative product contract): check-in returns to Reception and does
+  // NOT auto check out the stay. The case workspace must be closed and we must
+  // be back on the reception workspace.
+  await expect(page.getByRole("tablist", { name: "Vistas de recepción" })).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toHaveCount(0);
+
+  // Reopen the same booking (now in-house) from the Reservas list. The case
+  // header must show "En casa" (CheckedIn, no auto checkout).
+  await reopenBookingCase(page, guestName, bookingId);
+  await expect(page.getByRole("dialog").getByText("En casa", { exact: true }).first()).toBeVisible();
 
   await openBookingTab(page, /Cuenta/);
   const accountSection = page

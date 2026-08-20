@@ -1,12 +1,55 @@
-# Runtime Transfer Entry — Codex → OpenCode + DeepSeek
+# Runtime Transfer Entry — OpenCode + DeepSeek → Codex
 
-previous_runtime: Codex
-current_runtime: OpenCode + DeepSeek
-transfer_point: 2026-08-18 (session start)
-transfer_prompt_source: opencode-hms-project-method/BOOTSTRAP-TRANSFER-PROMPT.txt
-phase: POST_HUMAN_GATE / IMPLEMENTATION_AUTHORIZED (mobile architecture)
+previous_runtime: OpenCode + DeepSeek
+current_runtime: Codex
+transfer_point: 2026-08-20 (runtime handoff)
+transfer_prompt_source: user runtime-transfer directive
+phase: BOUNDED REWORK / E2E REPAIR
 
 ## Verified state (executable truth, not doc claims)
+
+- Operational checkout: `/home/sjo1848/dev/hms-elite` (the requested
+  `/home/sjo1848/dev/hotel-management-system` path is absent in this runtime).
+- local HEAD: `d51aeac41e26f1400be4ce8c821bc385394975b8`.
+- remote `origin/feature/mobile-ux-perf`: same SHA; no local-only commits.
+- working tree: modified `frontend/e2e/guest-lifecycle.spec.ts`; untracked
+  `.opencode/`, `opencode.json`, `.orchestration/RUNTIME-ADAPTER-DEFECT-RECORD.md`,
+  and `frontend/e2e/probe.tmp.spec.ts`. These are preserved.
+- PR #29: OPEN, DRAFT, not merged. Latest CI at this SHA has E2E Browser Core
+  Journeys FAILURE; Secret Scanning, Backend CI, Frontend CI, and Performance
+  Smoke Gate SUCCESS; Stability Guard SKIPPED.
+- current unfinished work: validate/rework the OpenCode partial canonical E2E
+  repair around invoice lookup and reopening the same booking/stay.
+- Human Acceptance state: mobile architecture/direction PASS; Product
+  Acceptance BOUNDED REWORK; R1-R6 remain the active contract.
+
+## Runtime capability
+
+- Codex can launch real subagents in this runtime. Product/test implementation
+  is delegated to the implementer lane; critics are separate read-only
+  subagent executions. No self-review is counted as independent criticism.
+
+## Bounded rework execution
+
+- Engineering repair: PASS for R1/R2 navigation; initial local Housekeeping
+  failure was `ENVIRONMENT_DEFECT` caused by rate limiting/credentials, not
+  invoice or `openBookingTab`.
+- Domain critic: initial REWORK (`TEST_DEFECT` — weak booking identity and
+  optional create CTA); rework applied; re-critique PASS.
+- UX critic: initial REWORK (stale reservation copy and R5 ambiguity); copy
+  corrected; global search evidence in `DashboardLayout.tsx` confirms R5; re-
+  critique PASS.
+- Integration critic: REWORK because local repairs were not yet published;
+  canonical CI remains the remaining gate.
+- Repair loop count: 1. Repair changed only
+  `frontend/e2e/guest-lifecycle.spec.ts` and
+  `frontend/src/features/bookings/components/WalkInBookingSheet.tsx`.
+- Local evidence after repair: frontend lint PASS, 54 test files / 344 tests
+  PASS, frontend build PASS, `git diff --check` PASS, focused guest lifecycle
+  PASS with `E2E_USERNAME=admin E2E_PASSWORD=demo2026pass`.
+- Not included in product commit: `.opencode/`, `opencode.json`,
+  `frontend/e2e/probe.tmp.spec.ts`, and the adapter defect record; all remain
+  preserved as local OpenCode transfer artifacts.
 
 - local HEAD == remote HEAD == PR #29 HEAD == 2a2a1a0f7e8c023d916184267d10ed038cc8108b (commit: feat(mobile): streamline rooms and calendar tasks)
 - branch feature/mobile-ux-perf == origin/feature/mobile-ux-perf (0/0 ahead-behind)

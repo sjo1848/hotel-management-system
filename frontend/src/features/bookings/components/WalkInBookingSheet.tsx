@@ -307,7 +307,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                   Walk-in / nueva reserva
                 </SheetTitle>
                 <SheetDescription className="mt-2 hidden max-w-[60ch] text-sm sm:block">
-                  Recepcion registra fechas, huesped y habitacion en un solo flujo. Al cerrar, la reserva abre directo en el centro operativo.
+                  Recepcion registra fechas, huesped y habitacion en un solo flujo. Al crear, volvés a Recepcion para continuar desde la reserva confirmada.
                 </SheetDescription>
               </div>
             </div>
@@ -388,7 +388,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                   <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Huésped</dt><dd className="text-right font-semibold">{selectedGuestName}</dd></div>
                   <div className="flex items-start justify-between gap-4"><dt className="text-muted-foreground">Habitación</dt><dd className="text-right font-semibold">{selectedRoom ? `Habitación ${selectedRoom.room_number}` : "Sin seleccionar"}<span className="block text-xs font-normal text-muted-foreground">{selectedRoom?.room_type ?? ""}</span></dd></div>
                 </dl>
-                <p className="mt-4 text-xs text-muted-foreground">La reserva abrirá el centro operativo para continuar.</p>
+                <p className="mt-4 text-xs text-muted-foreground">Al crear, volverás a Recepcion. Desde allí podés reabrir la reserva cuando necesites continuar.</p>
               </div>
             </div>
 
@@ -414,7 +414,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
           >
             <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="hidden text-sm text-muted-foreground sm:block">
-                Al crear, la reserva abre directo en el centro operativo para continuar con check-in o cuenta.
+                Al crear, volverás a Recepcion con la reserva confirmada.
               </p>
               <div className="flex w-full gap-2 sm:w-auto sm:flex-row">
                 {(isDesktop || mobileStep === 0) ? <Button
