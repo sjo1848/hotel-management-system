@@ -40,6 +40,16 @@ async function openBookingTab(page: Page, label: RegExp) {
   await page.getByRole("menu").getByRole("tab", { name: label }).click();
 }
 
+async function reopenBookingCase(page: Page, guestName: string) {
+  const bookingsSearch = page.getByPlaceholder("Buscar por huésped o ID...");
+  await expect(bookingsSearch).toBeVisible();
+  await bookingsSearch.fill(guestName);
+  const manageButton = page.getByRole("button", { name: "Gestionar" }).first();
+  await expect(manageButton).toBeVisible();
+  await manageButton.click();
+  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
+}
+
 test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room release", async ({
   page,
 }) => {
@@ -131,6 +141,11 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
     await createButton.click({ noWaitAfter: true });
     expect((await createBookingRequest).status()).toBe(201);
   }
+
+  // Walk-in stays on confirmation and returns to Reception (R1): reopen the case
+  // explicitly from the bookings list before continuing the lifecycle.
+  await reopenBookingCase(page, guestName);
+
   await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
   await page.getByRole("button", { name: /Más opciones del caso/i }).click();
   await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
@@ -163,6 +178,11 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
     await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
   }
   await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
+
+  // Check-in stays on confirmation and returns to Reception (R2): reopen the
+  // in-house case before billing/checkout, which remain separate operations.
+  await page.goto("/bookings");
+  await reopenBookingCase(page, guestName);
 
   await openBookingTab(page, /Cuenta/);
   const accountSection = page
