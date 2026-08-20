@@ -41,6 +41,10 @@ async function openBookingTab(page: Page, label: RegExp) {
 }
 
 async function reopenBookingCase(page: Page, guestName: string) {
+  const reservationsTab = page.getByRole("tab", { name: /^Reservas/i }).filter({ visible: true }).first();
+  if (await reservationsTab.count()) {
+    await reservationsTab.click();
+  }
   const bookingsSearch = page.getByPlaceholder("Buscar por huésped o ID...");
   await expect(bookingsSearch).toBeVisible();
   await bookingsSearch.fill(guestName);
@@ -177,12 +181,13 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
     await page.getByLabel("Referencia interna").fill(`Arrival ${uniqueToken}`);
     await page.getByRole("button", { name: "Confirmar ingreso y ocupar habitacion" }).click();
   }
-  await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
 
   // Check-in stays on confirmation and returns to Reception (R2): reopen the
-  // in-house case before billing/checkout, which remain separate operations.
+  // in-house case before verifying the active-stay state and billing/checkout,
+  // which remain separate operations.
   await page.goto("/bookings");
   await reopenBookingCase(page, guestName);
+  await expect(page.getByText("En casa", { exact: true }).first()).toBeVisible();
 
   await openBookingTab(page, /Cuenta/);
   const accountSection = page
