@@ -443,7 +443,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                   )}
                 </Button> : <>
                   {mobileStep > 0 ? <Button type="button" variant="outline" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => setMobileStep((step) => step - 1)}><ChevronLeft className="h-4 w-4" /> Atrás</Button> : null}
-                  {mobileStep < 3 ? <Button type="button" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => {
+                  {mobileStep < 3 ? <Button key="mobile-next-step" type="button" className="min-h-11 flex-1 rounded-xl sm:w-auto sm:flex-none" onClick={() => {
                     const ready = mobileStep === 0
                       ? Boolean(stay.check_in && stay.check_out && nights > 0)
                       : mobileStep === 1
@@ -455,6 +455,7 @@ const WalkInBookingSheet = ({ isOpen, onClose, onCreated }: WalkInBookingSheetPr
                     }
                     setMobileStep((step) => step + 1);
                   }}>Siguiente <ChevronRight className="h-4 w-4" /></Button> : <Button
+                    key="mobile-create-booking"
                     type="submit"
                     disabled={submitting}
                     className="min-h-11 flex-1 rounded-xl bg-primary text-primary-foreground shadow-lg sm:w-auto sm:flex-none"
