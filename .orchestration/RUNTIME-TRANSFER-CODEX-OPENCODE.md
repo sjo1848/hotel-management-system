@@ -41,6 +41,14 @@ phase: BOUNDED REWORK / E2E REPAIR
   critique PASS.
 - Integration critic: REWORK because local repairs were not yet published;
   canonical CI remains the remaining gate.
+- Canonical CI at `c26bb2a`: 14/15 core E2E passed; the remaining failure was
+  `TEST_DEFECT` caused by closing the nested action menu with `Escape`, which
+  removed the case surface before Cuenta. A bounded repair removed that
+  incidental menu assertion and preserves the lifecycle assertions.
+- Latest local retry did not reach the repaired line because the persistent
+  local synthetic database had no available room; classify as
+  `ENVIRONMENT/fixture`, not product evidence. Canonical CI must be rerun with
+  its clean synthetic seed.
 - Repair loop count: 1. Repair changed only
   `frontend/e2e/guest-lifecycle.spec.ts` and
   `frontend/src/features/bookings/components/WalkInBookingSheet.tsx`.

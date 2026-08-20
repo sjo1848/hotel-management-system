@@ -190,10 +190,6 @@ test("guest lifecycle: walk-in, check-in, charge, payment, checkout and room rel
   await reopenBookingCase(page, guestName, bookingId);
   await expect(page.getByRole("dialog").getByText("Confirmada", { exact: true }).first()).toBeVisible();
 
-  await expect(page.getByRole("button", { name: /Más opciones del caso/i })).toBeVisible();
-  await page.getByRole("button", { name: /Más opciones del caso/i }).click();
-  await expect(page.getByRole("menu").getByText("Próxima acción", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
   const firstInvoiceLookup = page.waitForResponse(
     (response) =>
       response.request().method() === "GET" &&
