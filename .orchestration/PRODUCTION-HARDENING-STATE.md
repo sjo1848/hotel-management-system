@@ -4,7 +4,7 @@
 - base_sha: bb569d4bb35d6780c29bb55667893c5f94dc3edf
 - branch: feature/production-hardening
 - current_status: READY_FOR_VPS_SELECTION_AND_PRODUCTION_IMPLEMENTATION_GATE
-- candidate_commit: 0332523
+- candidate_commit: b598536e98ad34eba5cc4d1c51e81f747c8f421e
 - remote_ci: NOT_RUN (candidate not pushed; static/local gates recorded below)
 - provider_decisions: deferred
 - deployment: prohibited/not performed
