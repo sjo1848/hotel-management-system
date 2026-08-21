@@ -36,6 +36,17 @@ type UseBookingOperationalControllerProps = {
   onRefreshBooking?: () => Promise<void> | void;
 };
 
+const mergeReassignmentOperationalData = (
+  previous: NonNullable<Booking["operational_data"]>,
+  incoming: NonNullable<Booking["operational_data"]> = {},
+) => ({
+  ...previous,
+  ...incoming,
+  check_in_document_verified: previous.check_in_document_verified,
+  check_in_stay_confirmed: previous.check_in_stay_confirmed,
+  check_in_contact_confirmed: previous.check_in_contact_confirmed,
+});
+
 export const useBookingOperationalController = ({
   booking,
   isOpen,
@@ -59,9 +70,11 @@ export const useBookingOperationalController = ({
   const roomOptionsRequestIdRef = useRef(0);
   const operationalRefreshIdRef = useRef(0);
   const activeBookingIdRef = useRef<string | null>(booking?.id ?? null);
+  const dirtyCheckInFieldsRef = useRef(new Map<string, Set<keyof BookingCheckInFormState>>());
 
   if (activeBookingIdRef.current !== (booking?.id ?? null)) {
     activeBookingIdRef.current = booking?.id ?? null;
+    dirtyCheckInFieldsRef.current.clear();
     operationalRefreshIdRef.current += 1;
   }
   const [checkInForm, setCheckInForm] = useState<BookingCheckInFormState>({
@@ -80,6 +93,11 @@ export const useBookingOperationalController = ({
   });
 
   useEffect(() => {
+    const bookingId = booking?.id ?? null;
+    if (activeBookingIdRef.current !== bookingId) {
+      activeBookingIdRef.current = bookingId;
+      dirtyCheckInFieldsRef.current.clear();
+    }
     setBookingState(booking);
   }, [booking]);
 
@@ -155,7 +173,7 @@ export const useBookingOperationalController = ({
       return;
     }
 
-    setCheckInForm({
+    const serverForm: BookingCheckInFormState = {
       documentVerified:
         bookingState.operational_data?.check_in_document_verified ??
         bookingState.status !== "Confirmed",
@@ -167,6 +185,12 @@ export const useBookingOperationalController = ({
         bookingState.status !== "Confirmed",
       guestsCount: String(bookingState.operational_data?.check_in_guests_count ?? 1),
       arrivalReference: bookingState.operational_data?.check_in_reference ?? "",
+    };
+    const dirtyFields = dirtyCheckInFieldsRef.current.get(bookingState.id);
+    setCheckInForm((current) => {
+      if (!dirtyFields?.size) return serverForm;
+      const owned = Object.fromEntries([...dirtyFields].map((field) => [field, current[field]]));
+      return { ...serverForm, ...owned };
     });
     setCheckOutForm({
       chargesReviewed:
@@ -319,19 +343,40 @@ export const useBookingOperationalController = ({
         room_id: selectedRoomId,
         operational_note: reassignmentReason.trim() || undefined,
       });
-      setBookingState(updated);
-      setRoom(roomOptions.find((candidate) => candidate.id === updated.room_id) ?? null);
+      // Room reassignment is independent from the local check-in checklist. Keep
+      // the current operational snapshot when the PATCH response is partial or
+      // stale, otherwise the synchronization effect below resets completed
+      // validations from the response payload.
+      const reassignedBooking: Booking = {
+        ...updated,
+        operational_data: mergeReassignmentOperationalData(
+          {
+            ...(bookingState.operational_data ?? {}),
+            check_in_document_verified: checkInForm.documentVerified,
+            check_in_stay_confirmed: checkInForm.stayConfirmed,
+            check_in_contact_confirmed: checkInForm.contactConfirmed,
+          },
+          updated.operational_data ?? {},
+        ),
+      };
+      const dirtyFields = dirtyCheckInFieldsRef.current.get(reassignedBooking.id) ?? new Set();
+      dirtyFields.add("documentVerified");
+      dirtyFields.add("stayConfirmed");
+      dirtyFields.add("contactConfirmed");
+      dirtyCheckInFieldsRef.current.set(reassignedBooking.id, dirtyFields);
+      setBookingState(reassignedBooking);
+      setRoom(roomOptions.find((candidate) => candidate.id === reassignedBooking.room_id) ?? null);
       setReassignmentReason("");
       toast({
         title: "Habitacion reasignada",
         description:
-          updated.status === "CheckedIn"
+            reassignedBooking.status === "CheckedIn"
             ? "La nueva habitacion quedo ocupada y la anterior paso a limpieza."
             : "La reserva quedo reasignada a una nueva habitacion.",
         variant: "success",
       });
       setAuditRefreshTick((current) => current + 1);
-      await refreshOperationalData(updated);
+      await refreshOperationalData(reassignedBooking);
     } catch (error: unknown) {
       toast({
         title: "No se pudo mover la reserva",
@@ -344,6 +389,14 @@ export const useBookingOperationalController = ({
   };
 
   const updateCheckInForm = (patch: Partial<BookingCheckInFormState>) => {
+    const bookingId = bookingState?.id;
+    if (bookingId) {
+      const dirtyFields = dirtyCheckInFieldsRef.current.get(bookingId) ?? new Set();
+      (Object.keys(patch) as Array<keyof BookingCheckInFormState>).forEach((field) => {
+        if (patch[field] !== undefined) dirtyFields.add(field);
+      });
+      dirtyCheckInFieldsRef.current.set(bookingId, dirtyFields);
+    }
     setCheckInForm((current) => ({ ...current, ...patch }));
   };
 

@@ -1,7 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Booking } from "@/types/domain";
+import { updateBooking } from "@/features/bookings/services/bookingService";
 import { useBookingBillingController } from "./useBookingBillingController";
 import { useBookingOperationalController } from "./useBookingOperationalController";
 
@@ -54,6 +55,154 @@ const deferred = <T,>() => {
 };
 
 describe("booking controller stale-data guards", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("preserves completed check-in validations when a room reassignment response is partial", async () => {
+    const current = {
+      ...booking("reassignment"),
+      operational_data: {},
+    };
+    const replacement = {
+      id: "room-replacement",
+      room_number: "202",
+      status: "Available",
+      room_type: "Suite",
+      price_cents: 15_000,
+    } as const;
+    roomService.getRoomById.mockImplementation(async (roomId: string) =>
+      roomId === replacement.id
+        ? replacement
+        : { id: current.room_id, room_number: "101", status: "Available" },
+    );
+    roomService.getAllRooms.mockResolvedValue([replacement]);
+    const partialResponse = {
+      ...current,
+      room_id: replacement.id,
+    } as Booking;
+    delete (partialResponse as Partial<Booking>).operational_data;
+    vi.mocked(updateBooking).mockResolvedValueOnce(partialResponse);
+
+    const { result, rerender } = renderHook(({ value }) =>
+      useBookingOperationalController({
+        booking: value,
+        isOpen: true,
+        roomOptionsEnabled: true,
+        toast: vi.fn(),
+        refreshBillingData: vi.fn().mockResolvedValue(undefined),
+      }),
+      { initialProps: { value: current } },
+    );
+
+    await waitFor(() => expect(result.current.selectedRoomId).toBe(replacement.id));
+    act(() => result.current.updateCheckInForm({
+      documentVerified: true,
+      stayConfirmed: true,
+      contactConfirmed: true,
+    }));
+    await act(async () => result.current.handleRoomReassignment());
+
+    expect(result.current.bookingState?.room_id).toBe(replacement.id);
+    expect(result.current.room?.id).toBe(replacement.id);
+    expect(result.current.checkInForm).toMatchObject({
+      documentVerified: true,
+      stayConfirmed: true,
+      contactConfirmed: true,
+    });
+
+    act(() => result.current.updateCheckInForm({ documentVerified: false }));
+    rerender({
+      value: {
+        ...current,
+        room_id: replacement.id,
+        operational_data: {
+          check_in_document_verified: false,
+          check_in_stay_confirmed: true,
+          check_in_contact_confirmed: true,
+        },
+      },
+    });
+    await waitFor(() => expect(result.current.checkInForm).toMatchObject({
+      documentVerified: false,
+      stayConfirmed: true,
+      contactConfirmed: true,
+    }));
+
+    act(() => result.current.updateCheckInForm({ documentVerified: false }));
+    rerender({
+      value: {
+        ...current,
+        room_id: replacement.id,
+        operational_data: {
+          check_in_document_verified: false,
+          check_in_stay_confirmed: true,
+          check_in_contact_confirmed: true,
+        },
+      },
+    });
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(false));
+  });
+
+  it("preserves an explicit validation edit across every same-booking hydration", async () => {
+    const current = {
+      ...booking("same-booking"),
+      operational_data: {
+        check_in_document_verified: true,
+        check_in_stay_confirmed: true,
+        check_in_contact_confirmed: true,
+      },
+    };
+    const { result, rerender } = renderHook(({ value }) =>
+      useBookingOperationalController({
+        booking: value,
+        isOpen: true,
+        toast: vi.fn(),
+        refreshBillingData: vi.fn().mockResolvedValue(undefined),
+      }),
+      { initialProps: { value: current } },
+    );
+
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(true));
+    act(() => result.current.updateCheckInForm({ documentVerified: false }));
+    rerender({ value: { ...current, operational_data: { ...current.operational_data, check_in_document_verified: true } } });
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(false));
+    rerender({ value: { ...current, operational_data: { ...current.operational_data, check_in_document_verified: true } } });
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(false));
+
+    act(() => result.current.updateCheckInForm({ documentVerified: true }));
+    rerender({ value: { ...current, operational_data: { ...current.operational_data, check_in_document_verified: false } } });
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(true));
+    rerender({ value: { ...current, operational_data: { ...current.operational_data, check_in_document_verified: false } } });
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(true));
+  });
+
+  it("does not carry dirty validation ownership to a different booking", async () => {
+    const a = {
+      ...booking("booking-a"),
+      operational_data: { check_in_document_verified: true },
+    };
+    const b = {
+      ...booking("booking-b"),
+      operational_data: { check_in_document_verified: true },
+    };
+    const { result, rerender } = renderHook(({ value }) =>
+      useBookingOperationalController({
+        booking: value,
+        isOpen: true,
+        toast: vi.fn(),
+        refreshBillingData: vi.fn().mockResolvedValue(undefined),
+      }),
+      { initialProps: { value: a } },
+    );
+
+    await waitFor(() => expect(result.current.checkInForm.documentVerified).toBe(true));
+    act(() => result.current.updateCheckInForm({ documentVerified: false }));
+    rerender({ value: b });
+    await waitFor(() => expect(result.current.bookingState?.id).toBe("booking-b"));
+    expect(result.current.checkInForm.documentVerified).toBe(true);
+  });
+
   it("does not expose booking A billing while booking B is loading or disabled", async () => {
     const a = booking("A");
     const b = booking("B");
