@@ -175,6 +175,6 @@ Local services:
 
 - Core reception lifecycle implemented and validated through automated and human acceptance flows.
 - Verified desktop product screenshots are committed in the repository.
-- Stable portfolio snapshot `v0.1.0` is tagged.
+- Stable repository snapshot `v0.1.0` is tagged.
 - A public hosted demo is not linked yet.
 - Production adoption still requires environment-specific infrastructure, privacy, operational and support validation.
