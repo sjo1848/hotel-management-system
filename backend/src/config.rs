@@ -32,10 +32,12 @@ impl AppConfig {
     pub fn from_env() -> Self {
         let app_env = env::var("APP_ENV").unwrap_or_else(|_| "dev".to_string());
         let is_prod = is_production_env(&app_env);
-        let database_url = env::var("DATABASE_URL")
-            .unwrap_or_else(|_| "postgres://admin:password123@db:5432/hms_core".to_string());
-        let jwt_secret =
-            env::var("JWT_SECRET").unwrap_or_else(|_| "dev-secret-change-me".to_string());
+        let database_url = required_or_default(
+            "DATABASE_URL",
+            is_prod,
+            "postgres://admin:password123@db:5432/hms_core",
+        );
+        let jwt_secret = required_or_default("JWT_SECRET", is_prod, "dev-secret-change-me");
         let jwt_kid = env::var("JWT_KID").unwrap_or_else(|_| "v1".to_string());
         let jwt_previous_secret = env::var("JWT_PREVIOUS_SECRET")
             .ok()
@@ -47,7 +49,7 @@ impl AppConfig {
         let cors_origin =
             env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:5173".to_string());
         let admin_user = env::var("ADMIN_USER").unwrap_or_else(|_| "admin".to_string());
-        let admin_password = env::var("ADMIN_PASSWORD").unwrap_or_else(|_| "admin123".to_string());
+        let admin_password = required_or_default("ADMIN_PASSWORD", is_prod, "admin123");
         let admin_role = env::var("ADMIN_ROLE").unwrap_or_else(|_| "admin".to_string());
         let access_ttl_minutes = env::var("ACCESS_TTL_MINUTES")
             .ok()
@@ -106,6 +108,7 @@ impl AppConfig {
             jwt_secret: &jwt_secret,
             jwt_kid: &jwt_kid,
             admin_password: &admin_password,
+            auth_required,
             cookie_secure,
             cookie_samesite: &cookie_samesite,
             cookie_domain: cookie_domain.as_deref(),
@@ -144,6 +147,14 @@ impl AppConfig {
     }
 }
 
+fn required_or_default(name: &str, is_prod: bool, default: &str) -> String {
+    match env::var(name) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ if is_prod => panic!("{} must be set in production.", name),
+        _ => default.to_string(),
+    }
+}
+
 fn is_production_env(env_value: &str) -> bool {
     let normalized = env_value.trim().to_lowercase();
     normalized == "prod" || normalized == "production"
@@ -174,6 +185,7 @@ struct SecurityGuardInputs<'a> {
     jwt_secret: &'a str,
     jwt_kid: &'a str,
     admin_password: &'a str,
+    auth_required: bool,
     cookie_secure: bool,
     cookie_samesite: &'a str,
     cookie_domain: Option<&'a str>,
@@ -196,6 +208,9 @@ fn validate_security_guards(inputs: SecurityGuardInputs<'_>) {
 
     if inputs.metrics_public {
         panic!("METRICS_PUBLIC must be false in production.");
+    }
+    if !inputs.auth_required {
+        panic!("AUTH_REQUIRED must be true in production.");
     }
 
     if inputs.jwt_secret == "dev-secret-change-me" {
@@ -264,6 +279,7 @@ mod tests {
             jwt_secret: "dev-secret-change-me",
             jwt_kid: "v1",
             admin_password: "admin123",
+            auth_required: false,
             cookie_secure: false,
             cookie_samesite: "Lax",
             cookie_domain: None,
@@ -282,6 +298,7 @@ mod tests {
             jwt_secret: "dev-secret-change-me",
             jwt_kid: "v1",
             admin_password: "admin123",
+            auth_required: false,
             cookie_secure: false,
             cookie_samesite: "Lax",
             cookie_domain: None,
@@ -300,6 +317,7 @@ mod tests {
             jwt_secret: "12345678901234567890123456789012",
             jwt_kid: "v1",
             admin_password: "strong-admin-password",
+            auth_required: true,
             cookie_secure: false,
             cookie_samesite: "Lax",
             cookie_domain: Some("hms.example.com"),
@@ -318,6 +336,7 @@ mod tests {
             jwt_secret: "12345678901234567890123456789012",
             jwt_kid: "v1",
             admin_password: "strong-admin-password",
+            auth_required: true,
             cookie_secure: true,
             cookie_samesite: "Lax",
             cookie_domain: None,
@@ -336,6 +355,7 @@ mod tests {
             jwt_secret: "12345678901234567890123456789012",
             jwt_kid: "v1",
             admin_password: "strong-admin-password",
+            auth_required: true,
             cookie_secure: true,
             cookie_samesite: "Lax",
             cookie_domain: Some("hms.example.com"),
@@ -343,6 +363,25 @@ mod tests {
             access_ttl_minutes: 15,
             refresh_ttl_days: 7,
             metrics_public: true,
+        });
+    }
+
+    #[test]
+    #[should_panic(expected = "AUTH_REQUIRED must be true in production.")]
+    fn validate_security_guards_rejects_disabled_auth_in_prod() {
+        validate_security_guards(SecurityGuardInputs {
+            is_prod: true,
+            jwt_secret: "12345678901234567890123456789012",
+            jwt_kid: "v1",
+            admin_password: "strong-admin-password",
+            auth_required: false,
+            cookie_secure: true,
+            cookie_samesite: "Lax",
+            cookie_domain: Some("hms.example.com"),
+            cors_origin: "https://hms.example.com",
+            access_ttl_minutes: 15,
+            refresh_ttl_days: 7,
+            metrics_public: false,
         });
     }
 }

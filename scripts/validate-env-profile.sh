@@ -144,6 +144,9 @@ case "$PROFILE" in
   prod)
     [[ "$normalized_app_env" == "prod" || "$normalized_app_env" == "production" ]] || \
       fail "APP_ENV for prod profile must be prod/production"
+    normalized_database_url="${DATABASE_URL,,}"
+    [[ "$normalized_database_url" != *"@db:"* ]] || fail "DATABASE_URL cannot use dev Docker hostname @db: in prod"
+    [[ "$normalized_database_url" != *"localhost"* ]] || fail "DATABASE_URL cannot use localhost in prod"
     validate_secure_profile
     ;;
 esac

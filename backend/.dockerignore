@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.env.*
+target
+*.log
+*.tmp
+*.temp
+*.swp
+coverage
+*.key
+*.pem
+secrets
+backups
