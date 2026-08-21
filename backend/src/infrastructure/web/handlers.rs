@@ -368,7 +368,7 @@ fn resolve_device_id(payload_device_id: Option<&str>, headers: &HeaderMap) -> St
 pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> String {
     let mut cookie_parts = vec![
         format!("refresh_token={}", token),
-        format!("Path=/"),
+        String::from("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
         format!("Max-Age={}", config.refresh_ttl_days * 24 * 60 * 60),
         String::from("HttpOnly"),
@@ -386,10 +386,10 @@ pub fn build_refresh_cookie(token: &str, config: &crate::config::AppConfig) -> S
 
 pub fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
     let mut cookie_parts = vec![
-        format!("refresh_token=;"),
-        format!("Path=/"),
+        String::from("refresh_token=;"),
+        String::from("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age=0"),
+        String::from("Max-Age=0"),
         String::from("HttpOnly"),
     ];
     if config.cookie_secure {
@@ -404,7 +404,7 @@ pub fn clear_refresh_cookie(config: &crate::config::AppConfig) -> String {
 pub fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> String {
     let mut cookie_parts = vec![
         format!("access_token={}", token),
-        format!("Path=/"),
+        String::from("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
         format!("Max-Age={}", config.access_ttl_minutes * 60),
         String::from("HttpOnly"),
@@ -422,10 +422,10 @@ pub fn build_access_cookie(token: &str, config: &crate::config::AppConfig) -> St
 
 pub fn clear_access_cookie(config: &crate::config::AppConfig) -> String {
     let mut cookie_parts = vec![
-        format!("access_token=;"),
-        format!("Path=/"),
+        String::from("access_token=;"),
+        String::from("Path=/"),
         format!("SameSite={}", config.cookie_samesite),
-        format!("Max-Age=0"),
+        String::from("Max-Age=0"),
         String::from("HttpOnly"),
     ];
     if config.cookie_secure {

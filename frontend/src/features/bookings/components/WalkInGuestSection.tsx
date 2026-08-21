@@ -1,14 +1,17 @@
+import { useEffect, useRef } from "react";
 import { Loader2, Mail, Phone, Search, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { WalkInGuestSectionProps } from "@/features/bookings/components/WalkInShared";
+import { MobilePickerSurface } from "@/features/bookings/components/MobilePickerSurface";
 
 export const WalkInGuestSection = ({
   guestMode,
   guestSearch,
   selectedGuestId,
+  selectedGuest,
   filteredGuests,
   guestsLoading,
   guestsError,
@@ -18,8 +21,23 @@ export const WalkInGuestSection = ({
   onRefreshGuests,
   onSelectGuest,
   onNewGuestChange,
-}: WalkInGuestSectionProps) => (
-  <div className="rounded-3xl border border-border bg-background/70 p-5 shadow-sm">
+  guestPickerOpen,
+  onGuestPickerOpenChange,
+}: WalkInGuestSectionProps) => {
+  const guestPickerTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileGuestSearchRef = useRef<HTMLInputElement>(null);
+  const desktopGuestSearchRef = useRef<HTMLInputElement>(null);
+  const pickerWasOpen = useRef(false);
+
+  useEffect(() => {
+    if (!guestPickerOpen && pickerWasOpen.current) {
+      guestPickerTriggerRef.current?.focus();
+    }
+    pickerWasOpen.current = guestPickerOpen;
+  }, [guestPickerOpen]);
+
+  return (
+  <div className="rounded-3xl border border-border bg-background/70 p-4 shadow-sm sm:p-5">
     <div className="flex items-start gap-3">
       <div className="rounded-2xl bg-primary/10 p-3 text-primary">
         {guestMode === "existing" ? <Users className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
@@ -56,11 +74,25 @@ export const WalkInGuestSection = ({
 
         {guestMode === "existing" ? (
           <div className="space-y-4">
+            <div className="md:hidden">
+              <Button ref={guestPickerTriggerRef} type="button" variant="outline" className="h-auto w-full justify-between rounded-2xl px-4 py-3 text-left" onClick={() => onGuestPickerOpenChange(true)}>
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">Huésped seleccionado</span>
+                  <span className="mt-1 block truncate text-sm font-semibold text-foreground">
+                    {selectedGuestId ? selectedGuest?.full_name ?? "Huésped seleccionado" : "Elegir de la base de huéspedes"}
+                  </span>
+                </span>
+                <Search className="ml-3 h-4 w-4 shrink-0 text-muted-foreground" />
+              </Button>
+            </div>
+
+            <div className="hidden space-y-4 md:block">
             <div className="grid gap-2">
               <Label htmlFor="guest-search">Buscar huesped</Label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  ref={desktopGuestSearchRef}
                   id="guest-search"
                   value={guestSearch}
                   onChange={(event) => onGuestSearchChange(event.target.value)}
@@ -137,6 +169,33 @@ export const WalkInGuestSection = ({
                 </div>
               )}
             </div>
+            </div>
+
+            <MobilePickerSurface
+              open={guestPickerOpen}
+              title="Seleccionar huésped"
+              description="Busca por nombre, email o teléfono."
+              titleId="mobile-guest-picker-title"
+              initialFocusRef={mobileGuestSearchRef}
+              desktopFocusRef={desktopGuestSearchRef}
+              onClose={() => onGuestPickerOpenChange(false)}
+            >
+                <div className="min-h-0 flex-1 overflow-y-auto pt-4">
+                  <Label htmlFor="mobile-guest-search">Buscar huésped</Label>
+                  <div className="relative mt-2">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input ref={mobileGuestSearchRef} id="mobile-guest-search" value={guestSearch} onChange={(event) => onGuestSearchChange(event.target.value)} placeholder="Nombre, email o teléfono" className="h-12 rounded-xl pl-9" />
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {guestsLoading ? <div className="flex items-center gap-2 rounded-2xl border border-border px-3 py-4 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Cargando huéspedes...</div> : guestsError ? <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-3 py-4 text-sm text-destructive">{String(guestsError)}</div> : filteredGuests.length === 0 ? <div className="rounded-2xl border border-border px-3 py-4 text-sm text-muted-foreground">No hay coincidencias. Prueba alta rápida.</div> : filteredGuests.map((guest) => (
+                      <button key={guest.id} type="button" className={cn("w-full rounded-2xl border px-4 py-3 text-left", selectedGuestId === guest.id ? "border-primary/20 bg-primary/10" : "border-border bg-background")} onClick={() => { onSelectGuest(guest.id); onGuestPickerOpenChange(false); }}>
+                        <p className="text-sm font-bold text-foreground">{guest.full_name}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{guest.email}{guest.phone ? ` · ${guest.phone}` : ""}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+            </MobilePickerSurface>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
@@ -184,4 +243,5 @@ export const WalkInGuestSection = ({
       </div>
     </div>
   </div>
-);
+  );
+};

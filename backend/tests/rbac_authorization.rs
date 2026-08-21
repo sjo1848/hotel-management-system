@@ -172,7 +172,7 @@ async fn rbac_capability_matrix_enforced(pool: sqlx::PgPool) {
             booking_room_id, booking_guest_name
         )),
         true,
-        StatusCode::OK,
+        StatusCode::CREATED,
     )
     .await;
 

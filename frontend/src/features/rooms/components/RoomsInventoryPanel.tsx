@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-import { Plus, Search, X } from "lucide-react";
+import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,9 @@ import {
   getRoomStatusBadge,
   getRoomStatusMeta,
 } from "./roomPresentation";
-import RoomActionsMenu from "./RoomActionsMenu";import { RoomBulkActionBar } from "./RoomBulkActionBar";
+import RoomActionsMenu from "./RoomActionsMenu";
+import { RoomBulkActionBar } from "./RoomBulkActionBar";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 const IndeterminateCheckbox = ({
   checked,
@@ -71,6 +73,163 @@ export type RoomsInventoryPanelProps = {
   onClearSelection: () => void;
 };
 
+type MobileRoomsInventoryProps = Pick<
+  RoomsInventoryPanelProps,
+  | "rooms"
+  | "isLoading"
+  | "error"
+  | "searchQuery"
+  | "onSearchChange"
+  | "statusFilter"
+  | "onStatusFilterChange"
+  | "selectedRoomIds"
+  | "onToggleSelection"
+  | "canManageStatus"
+  | "canManageInventory"
+  | "canCreateBooking"
+  | "onReserve"
+  | "onViewDetails"
+  | "onChangeStatus"
+  | "onRefresh"
+  | "onCreateRoom"
+  | "bulkBusy"
+  | "onApplyBulk"
+  | "onClearSelection"
+> & {
+  filteredRooms: Room[];
+  counts: ReturnType<typeof buildRoomStatusCounts>;
+  selectedRooms: Room[];
+  outOfFilterCount: number;
+  allVisibleSelected: boolean;
+  toggleVisibleRooms: () => void;
+};
+
+const MobileRoomsInventory = ({
+  rooms,
+  isLoading,
+  error,
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  selectedRoomIds,
+  onToggleSelection,
+  canManageStatus,
+  canManageInventory,
+  canCreateBooking,
+  onReserve,
+  onViewDetails,
+  onChangeStatus,
+  onRefresh,
+  onCreateRoom,
+  bulkBusy,
+  onApplyBulk,
+  onClearSelection,
+  filteredRooms,
+  counts,
+  selectedRooms,
+  outOfFilterCount,
+  allVisibleSelected,
+  toggleVisibleRooms,
+}: MobileRoomsInventoryProps) => {
+  const alertMessage = counts.maintenance > 0
+    ? `${counts.maintenance} habitación${counts.maintenance > 1 ? "es" : ""} en mantenimiento.`
+    : counts.available === 0 && counts.total > 0
+      ? "No hay habitaciones disponibles en este momento."
+      : null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 rounded-xl border border-border bg-background px-3">
+        <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => onSearchChange(event.target.value)}
+          onKeyDown={(event) => event.key === "Escape" && onSearchChange("")}
+          placeholder="Buscar habitación..."
+          aria-label="Buscar habitaciones"
+          className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        {searchQuery ? (
+          <button type="button" aria-label="Limpiar búsqueda" onClick={() => onSearchChange("")} className="h-8 w-8 rounded-lg text-muted-foreground">
+            <X className="mx-auto h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <SlidersHorizontal className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        <label htmlFor="rooms-mobile-status" className="sr-only">Filtrar habitaciones por estado</label>
+        <select
+          id="rooms-mobile-status"
+          value={statusFilter}
+          onChange={(event) => onStatusFilterChange(event.target.value as InventoryStatusFilter)}
+          className="h-10 min-w-0 flex-1 rounded-xl border border-border bg-card px-3 text-sm font-semibold text-foreground"
+        >
+          {STATUS_FILTER_OPTIONS.map((option) => {
+            const count = option.value === "all" ? counts.total : option.value === "available" ? counts.available : option.value === "occupied" ? counts.occupied : option.value === "cleaning" ? counts.cleaning : counts.maintenance;
+            return <option key={option.value} value={option.value}>{option.label} ({count})</option>;
+          })}
+        </select>
+        <span className="shrink-0 text-xs font-medium text-muted-foreground">{filteredRooms.length}</span>
+      </div>
+
+      {canManageStatus && selectedRooms.length > 0 ? (
+        <RoomBulkActionBar
+          selectedRooms={selectedRooms}
+          outOfFilterCount={outOfFilterCount}
+          allVisibleSelected={allVisibleSelected}
+          visibleCount={filteredRooms.length}
+          busy={bulkBusy}
+          onApply={onApplyBulk}
+          onSelectVisible={toggleVisibleRooms}
+          onClear={onClearSelection}
+        />
+      ) : null}
+
+      {alertMessage ? <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-800 dark:text-amber-200">{alertMessage}</p> : null}
+      {error ? (
+        <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+          <p className="font-semibold">No se pudo cargar el inventario</p>
+          <p className="mt-1 text-xs">{error}</p>
+          <Button variant="outline" className="mt-3 h-9" onClick={onRefresh}>Reintentar</Button>
+        </div>
+      ) : null}
+      {isLoading ? <div className="space-y-2" aria-label="Cargando habitaciones"><div className="h-16 animate-pulse rounded-xl bg-muted" /><div className="h-16 animate-pulse rounded-xl bg-muted" /></div> : null}
+      {!isLoading && !error && filteredRooms.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-border p-6 text-center">
+          <p className="text-sm font-semibold text-foreground">No hay habitaciones para mostrar</p>
+          <p className="mt-1 text-xs text-muted-foreground">Probá otra búsqueda o filtro.</p>
+          {canManageInventory && rooms.length === 0 ? <Button className="mt-3 h-9" onClick={onCreateRoom}><Plus className="h-4 w-4" />Crear habitación</Button> : null}
+        </div>
+      ) : null}
+      {!isLoading && !error ? (
+        <div className="space-y-2" aria-label="Lista operativa de habitaciones">
+          {filteredRooms.map((room) => {
+            const meta = getRoomStatusMeta(room.status);
+            return (
+              <article key={room.id} className="rounded-xl border border-border bg-card p-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  {canManageStatus ? <input type="checkbox" aria-label={`Seleccionar habitación ${room.room_number}`} checked={selectedRoomIds.includes(room.id)} onChange={() => onToggleSelection(room.id)} className="h-4 w-4 shrink-0 rounded border-border text-primary" /> : null}
+                  <button type="button" onClick={() => onViewDetails(room)} aria-label={`Ver detalle de habitación ${room.room_number}`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <span className={cn("flex h-9 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black text-white", meta.accentClassName)}>{room.room_number}</span>
+                    <span className="min-w-0"><span className="block truncate text-sm font-bold text-foreground">{room.room_type}</span><span className="mt-1 block">{getRoomStatusBadge(room.status)}</span></span>
+                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {room.status === "Available" && canCreateBooking ? <Button size="sm" className="h-9 rounded-lg px-3" onClick={() => onReserve(room)}>Reservar</Button> : null}
+                    {canManageInventory || canManageStatus ? <RoomActionsMenu status={room.status} canEdit={canManageInventory} canChangeStatus={canManageStatus} onViewDetails={() => onViewDetails(room)} onEdit={canManageInventory ? () => onViewDetails(room) : undefined} onChangeStatus={(status) => onChangeStatus(room, status)} /> : null}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const RoomsInventoryPanel = ({
   rooms,
   isLoading,
@@ -95,6 +254,7 @@ export const RoomsInventoryPanel = ({
   onApplyBulk,
   onClearSelection,
 }: RoomsInventoryPanelProps) => {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const counts = useMemo(() => buildRoomStatusCounts(rooms), [rooms]);
   const filteredRooms = useMemo(
     () => filterRooms(rooms, searchQuery, statusFilter),
@@ -130,6 +290,37 @@ export const RoomsInventoryPanel = ({
       }
     });
   };
+
+  if (isMobile) {
+    return <MobileRoomsInventory
+      rooms={rooms}
+      isLoading={isLoading}
+      error={error}
+      searchQuery={searchQuery}
+      onSearchChange={onSearchChange}
+      statusFilter={statusFilter}
+      onStatusFilterChange={onStatusFilterChange}
+      selectedRoomIds={selectedRoomIds}
+      onToggleSelection={onToggleSelection}
+      canManageStatus={canManageStatus}
+      canManageInventory={canManageInventory}
+      canCreateBooking={canCreateBooking}
+      onReserve={onReserve}
+      onViewDetails={onViewDetails}
+      onChangeStatus={onChangeStatus}
+      onRefresh={onRefresh}
+      onCreateRoom={onCreateRoom}
+      bulkBusy={bulkBusy}
+      onApplyBulk={onApplyBulk}
+      onClearSelection={onClearSelection}
+      filteredRooms={filteredRooms}
+      counts={counts}
+      selectedRooms={selectedRooms}
+      outOfFilterCount={outOfFilterCount}
+      allVisibleSelected={allVisibleSelected}
+      toggleVisibleRooms={toggleVisibleRooms}
+    />;
+  }
 
   const selectionColumn: Column<Room> | null = canManageStatus
     ? {

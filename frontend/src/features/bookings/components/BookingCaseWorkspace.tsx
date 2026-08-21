@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, MoreHorizontal, X } from "lucide-react";
 import { SheetFooter, SheetHeader } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import type {
   Booking,
   BookingFrontDeskData,
@@ -23,6 +24,7 @@ import {
 } from "@/features/bookings/components/BookingDetailsSections";
 import { useBookingDetailsController } from "@/features/bookings/components/useBookingDetailsController";
 import BookingArrivalExceptionActions from "@/features/bookings/components/BookingArrivalExceptionActions";
+import { currency, stayRange } from "@/features/bookings/utils/format";
 import {
   BookingCaseTabs,
   type BookingCaseTab,
@@ -44,6 +46,8 @@ export interface BookingCaseWorkspaceProps {
   onOpenQueuedBooking?: (bookingId: string) => void;
   guidedFocusStep?: ReceptionGuideStepId | null;
   titleId?: string;
+  showHeaderClose?: boolean;
+  onCheckInComplete?: () => void;
 }
 
 const guideTargetByStep: Partial<Record<ReceptionGuideStepId, string>> = {
@@ -60,12 +64,14 @@ const tabByGuideStep: Partial<Record<ReceptionGuideStepId, BookingCaseTab>> = {
   checkout: "operation",
 };
 
-const focusGuideTarget = (step: ReceptionGuideStepId) => {
+const focusGuideTarget = (step: ReceptionGuideStepId, shouldScroll = true) => {
   const targetId = guideTargetByStep[step];
   if (!targetId) return null;
   return window.setTimeout(() => {
     const target = document.getElementById(targetId);
-    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (shouldScroll) {
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     target?.focus({ preventScroll: true });
   }, 0);
 };
@@ -81,7 +87,12 @@ const BookingCaseWorkspace = ({
   onOpenQueuedBooking,
   guidedFocusStep = null,
   titleId,
+  showHeaderClose = false,
+  onCheckInComplete,
 }: BookingCaseWorkspaceProps) => {
+  const [activeTab, setActiveTab] = useState<BookingCaseTab>("summary");
+  const billingEnabled =
+    activeTab === "account" || booking?.status === "CheckedIn";
   const {
     bookingState,
     room,
@@ -136,11 +147,13 @@ const BookingCaseWorkspace = ({
   } = useBookingDetailsController({
     booking,
     isOpen,
+    billingEnabled,
+    roomOptionsEnabled: activeTab === "operation",
     onUpdateStatus,
     onRefreshBooking,
   });
   const { enabled: guidedModeEnabled, getReceptionGuideState, trackReceptionEvent } = useGuidedMode();
-  const [activeTab, setActiveTab] = useState<BookingCaseTab>("summary");
+  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   useEffect(() => {
     setActiveTab("summary");
@@ -150,11 +163,11 @@ const BookingCaseWorkspace = ({
     if (!isOpen || !guidedFocusStep) return;
     const tab = tabByGuideStep[guidedFocusStep];
     if (tab) setActiveTab(tab);
-    const frame = focusGuideTarget(guidedFocusStep);
+    const frame = focusGuideTarget(guidedFocusStep, isDesktop);
     return () => {
       if (frame !== null) window.clearTimeout(frame);
     };
-  }, [bookingState?.id, guidedFocusStep, isOpen]);
+  }, [bookingState?.id, guidedFocusStep, isDesktop, isOpen]);
 
   if (!bookingState) return null;
   const guideState = getReceptionGuideState(bookingState.status);
@@ -177,14 +190,21 @@ const BookingCaseWorkspace = ({
       : bookingState.status === "CheckedIn"
         ? checkoutBlockers.length
         : 0;
+  const mobileTaskMode =
+    !isDesktop &&
+    activeTab === "operation" &&
+    (bookingState.status === "Confirmed" || bookingState.status === "CheckedIn");
+  const mobileSummaryMode = !isDesktop && activeTab === "summary";
 
   const handleGuidedStatusAction = async (
     status: BookingStatus,
     frontDesk?: Partial<BookingFrontDeskData>,
   ) => {
-    await handleStatusAction(status, frontDesk);
+    const ok = await handleStatusAction(status, frontDesk);
+    if (!ok) return;
     if (status === "CheckedIn") {
       trackReceptionEvent("checkin_complete");
+      onCheckInComplete?.();
     }
     if (status === "CheckedOut") {
       trackReceptionEvent("checkout_complete");
@@ -199,7 +219,7 @@ const BookingCaseWorkspace = ({
   const navigateToTab = (tab: BookingCaseTab, guideStep?: ReceptionGuideStepId) => {
     setActiveTab(tab);
     if (guideStep) {
-      focusGuideTarget(guideStep);
+      focusGuideTarget(guideStep, isDesktop);
     }
   };
 
@@ -252,24 +272,24 @@ const BookingCaseWorkspace = ({
 
   return (
     <>
-      <SheetHeader className="border-b px-4 py-5 sm:px-6 sm:py-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="space-y-3">
-            <Badge className={cn("inline-flex items-center gap-1.5 border px-3 py-1", statusMeta.badge)}>
+      <SheetHeader className="border-b px-4 py-3 sm:px-6 sm:py-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 space-y-1">
+            <Badge className={cn("inline-flex items-center gap-1.5 border px-2 py-0.5 text-[10px]", statusMeta.badge)}>
               <StatusIcon className="h-3.5 w-3.5" />
               {statusMeta.label}
             </Badge>
             <div>
-              <h2 id={titleId} className="pr-8 text-2xl font-black tracking-tight">
+              <h2 id={titleId} className="truncate pr-8 text-lg font-black tracking-tight sm:text-2xl">
                 {bookingState.guest_name}
               </h2>
-              <p className="mt-2 max-w-[58ch] text-sm text-muted-foreground">
+              <p className="mt-1 max-w-[58ch] text-xs text-muted-foreground sm:mt-2 sm:text-sm">
                 Hab. {room?.room_number ?? bookingState.room_id.slice(0, 6)} · Reserva {bookingState.id.slice(0, 8).toUpperCase()}
               </p>
             </div>
           </div>
 
-          <div className="flex items-start">
+          <div className="flex shrink-0 items-start gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
@@ -313,12 +333,24 @@ const BookingCaseWorkspace = ({
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            {showHeaderClose ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-11 w-11 rounded-xl"
+                aria-label="Cerrar caso"
+                onClick={onClose}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            ) : null}
           </div>
         </div>
       </SheetHeader>
 
       <div key={bookingState.id} className="motion-queue-step min-h-0 flex-1 overflow-y-auto space-y-6 px-4 py-5 sm:px-6 sm:py-6">
-        {guidedModeEnabled ? (
+        {guidedModeEnabled && isDesktop ? (
           <GuideHint
             eyebrow="Misión guiada"
             title={guideState.summary.title}
@@ -349,7 +381,7 @@ const BookingCaseWorkspace = ({
           onTabChange={setActiveTab}
           operationCount={pendingControlCount}
           accountAttention={outstandingAmountCents > 0}
-          summary={
+          summary={isDesktop ? (
             <div className="space-y-6">
               <div
                 id="reception-guide-review"
@@ -377,7 +409,35 @@ const BookingCaseWorkspace = ({
                 ) : null}
               </div>
             </div>
-          }
+          ) : (
+            <section className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-muted/60 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Estadía</p>
+                  <p className="mt-1 text-sm font-bold text-foreground">{stayRange(bookingState.check_in, bookingState.check_out)}</p>
+                </div>
+                <div className="rounded-xl bg-muted/60 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Total actual</p>
+                  <p className="mt-1 text-sm font-bold text-foreground">{currency(bookingState.total_price_cents)}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Próxima acción</p>
+                <p className="mt-1 font-bold text-foreground">{nextAction.title}</p>
+                {nextAction.description ? <p className="mt-1 text-sm text-muted-foreground">{nextAction.description}</p> : null}
+              </div>
+              {primaryAction ? (
+                <Button
+                  type="button"
+                  className="min-h-11 w-full rounded-xl"
+                  disabled={primaryAction.disabled}
+                  onClick={primaryAction.onClick}
+                >
+                  {primaryAction.label}
+                </Button>
+              ) : null}
+            </section>
+          )}
           operation={
             <div className="space-y-6">
               {warningBanner ? (
@@ -424,6 +484,7 @@ const BookingCaseWorkspace = ({
                     checkInBlockers={checkInBlockers}
                     canCompleteFormalCheckIn={canCompleteFormalCheckIn}
                     statusLoading={statusLoading}
+                    roomLabel={room?.room_number ? `Habitación ${room.room_number}` : undefined}
                     onFormChange={updateCheckInForm}
                     onStatusAction={(status) => {
                       void handleGuidedStatusAction(status);
@@ -457,40 +518,52 @@ const BookingCaseWorkspace = ({
               ) : null}
 
               {canManageRoomException && bookingState.status !== "CheckedOut" && bookingState.status !== "Cancelled" && bookingState.status !== "NoShow" ? (
-                <BookingReassignmentSection
-                  booking={bookingState}
-                  roomOptionsLoading={roomOptionsLoading}
-                  roomOptions={roomOptions}
-                  selectedRoomId={selectedRoomId}
-                  reassignmentReason={reassignmentReason}
-                  reassignmentBlockers={reassignmentBlockers}
-                  reassignmentLoading={reassignmentLoading}
-                  onSelectRoom={setSelectedRoomId}
-                  onReasonChange={setReassignmentReason}
-                  onSubmit={() => {
-                    void handleRoomReassignment();
-                  }}
-                />
-              ) : null}
-
-              {bookingState.status === "Confirmed" ? (
-                <div className="rounded-2xl border border-border bg-card p-5">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    Acciones de excepción
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Cancelación, no-show y llegada tardía se registran acá y quedan auditadas.
-                  </p>
-                  <div className="mt-3">
-                    <BookingArrivalExceptionActions
+                <details open={isDesktop} className="rounded-2xl border border-border bg-card p-4 md:contents">
+                  <summary className="cursor-pointer text-sm font-bold text-foreground md:hidden">
+                    Cambiar habitación
+                  </summary>
+                  <div className="mt-3 md:mt-0">
+                    <BookingReassignmentSection
                       booking={bookingState}
-                      statusLoading={statusLoading}
-                      onAction={(status, frontDesk) => {
-                        void handleGuidedStatusAction(status, frontDesk);
+                      roomOptionsLoading={roomOptionsLoading}
+                      roomOptions={roomOptions}
+                      selectedRoomId={selectedRoomId}
+                      reassignmentReason={reassignmentReason}
+                      reassignmentBlockers={reassignmentBlockers}
+                      reassignmentLoading={reassignmentLoading}
+                      onSelectRoom={setSelectedRoomId}
+                      onReasonChange={setReassignmentReason}
+                      onSubmit={() => {
+                        void handleRoomReassignment();
                       }}
                     />
                   </div>
-                </div>
+                </details>
+              ) : null}
+
+              {bookingState.status === "Confirmed" ? (
+                <details open={isDesktop} className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+                  <summary className="cursor-pointer text-sm font-bold text-foreground md:hidden">
+                    Acciones de excepción
+                  </summary>
+                  <div className="mt-3 md:mt-0">
+                    <p className="hidden text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground md:block">
+                      Acciones de excepción
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Cancelación, no-show y llegada tardía se registran acá y quedan auditadas.
+                    </p>
+                    <div className="mt-3">
+                      <BookingArrivalExceptionActions
+                        booking={bookingState}
+                        statusLoading={statusLoading}
+                        onAction={(status, frontDesk) => {
+                          void handleGuidedStatusAction(status, frontDesk);
+                        }}
+                      />
+                    </div>
+                  </div>
+                </details>
               ) : null}
             </div>
           }
@@ -546,14 +619,20 @@ const BookingCaseWorkspace = ({
               </div>
             )
           }
+          mobileTaskMode={mobileTaskMode}
         />
       </div>
 
-      <SheetFooter className="border-t bg-card/95 px-4 py-4 backdrop-blur sm:px-6 sm:py-5">
+      <SheetFooter
+        className={cn(
+          "border-t bg-card/95 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-5",
+          (mobileTaskMode || mobileSummaryMode) && "hidden md:flex",
+        )}
+      >
         <div className="flex w-full flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
           <Button
             variant="outline"
-            className="w-full rounded-xl lg:w-auto"
+            className="hidden w-full rounded-xl lg:inline-flex lg:w-auto"
             onClick={() => {
               void refreshOperationalData();
             }}
@@ -603,7 +682,7 @@ const BookingCaseWorkspace = ({
               </>
             ) : null}
             {onEditBooking ? (
-              <Button variant="outline" className="w-full rounded-xl sm:w-auto" onClick={onEditBooking}>
+              <Button variant="outline" className="hidden w-full rounded-xl sm:inline-flex sm:w-auto" onClick={onEditBooking}>
                 Editar reserva
               </Button>
             ) : null}

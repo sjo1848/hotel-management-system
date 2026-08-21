@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { BedDouble, Loader2, Plus } from "lucide-react";
+import { BedDouble, Loader2, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import {
   RoomsWorkspaceTabs,
   type RoomsWorkspaceTab,
 } from "./RoomsWorkspaceTabs";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 
 type RoomsWorkspaceProps = {
   activeTab: RoomsWorkspaceTab;
@@ -32,6 +33,7 @@ export const RoomsWorkspace = ({
   planner,
   holds,
 }: RoomsWorkspaceProps) => {
+  const isMobile = useMediaQuery("(max-width: 767px)");
   const panels: Array<{ id: RoomsWorkspaceTab; content: ReactNode }> = [
     { id: "inventory", content: inventory },
     { id: "availability", content: availability },
@@ -41,6 +43,33 @@ export const RoomsWorkspace = ({
 
   return (
     <div className="space-y-6">
+      {isMobile ? (
+        <div className="flex min-h-11 items-center justify-between gap-2" aria-label="Encabezado de habitaciones">
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-black tracking-tight text-foreground">Habitaciones</h1>
+            <p className="truncate text-xs text-muted-foreground">Inventario operativo</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="min-h-11 min-w-11 rounded-xl"
+              aria-label={isRefreshing ? "Actualizando habitaciones" : "Actualizar habitaciones"}
+              disabled={isRefreshing}
+              onClick={onRefresh}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </Button>
+            {canManageInventory ? (
+              <Button type="button" className="min-h-11 rounded-xl px-3" onClick={onCreateRoom}>
+                <Plus className="h-4 w-4" />
+                Nueva
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : (
       <PageHeader
         title="Habitaciones"
         description="Inventario, disponibilidad y bloqueos"
@@ -65,6 +94,7 @@ export const RoomsWorkspace = ({
           </>
         }
       />
+      )}
 
       <RoomsWorkspaceTabs activeTab={activeTab} onTabChange={onTabChange} />
 

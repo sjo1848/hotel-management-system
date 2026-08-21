@@ -31,17 +31,21 @@ export const BookingCheckOutSection = ({
   onFormChange,
   onStatusAction,
 }: BookingCheckOutSectionProps) => (
-  <div className="rounded-3xl border border-border bg-muted/50 p-5">
+  <div className="rounded-3xl border border-border bg-muted/50 p-3 sm:p-5">
     <PanelHeader
       icon={LogOut}
       title="Checkout formal"
-      description="Recepcion debe cerrar cuenta, liberar la habitacion y definir la politica de saldo antes de finalizar la estadia."
+      description="Cierra la cuenta, libera la habitación y envía el caso a limpieza."
       tone="muted"
     />
 
-    <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+    <p className="-mt-2 mb-3 text-xs text-muted-foreground sm:hidden">
+      Completa los controles pendientes y confirma la salida.
+    </p>
+
+    <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr] lg:gap-4">
       <div className="space-y-4">
-        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm">
+        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-sm sm:px-4">
           <input
             type="checkbox"
             className="mt-1 h-4 w-4 rounded border-border text-primary"
@@ -50,13 +54,13 @@ export const BookingCheckOutSection = ({
           />
           <span>
             <span className="block font-semibold text-foreground">Cuenta revisada</span>
-            <span className="mt-1 block text-xs text-muted-foreground">
+            <span className="mt-1 hidden text-xs text-muted-foreground sm:block">
               Recepcion confirmo alojamiento, extras y total final de la estadia.
             </span>
           </span>
         </label>
 
-        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm">
+        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-sm sm:px-4">
           <input
             type="checkbox"
             className="mt-1 h-4 w-4 rounded border-border text-primary"
@@ -65,13 +69,13 @@ export const BookingCheckOutSection = ({
           />
           <span>
             <span className="block font-semibold text-foreground">Habitacion liberada</span>
-            <span className="mt-1 block text-xs text-muted-foreground">
+            <span className="mt-1 hidden text-xs text-muted-foreground sm:block">
               El huesped ya desocupo la habitacion y recepcion puede cerrar la estancia.
             </span>
           </span>
         </label>
 
-        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm">
+        <label className="flex items-start gap-3 rounded-2xl border border-border bg-card px-3 py-3 text-sm sm:px-4">
           <input
             type="checkbox"
             className="mt-1 h-4 w-4 rounded border-border text-primary"
@@ -80,16 +84,16 @@ export const BookingCheckOutSection = ({
           />
           <span>
             <span className="block font-semibold text-foreground">Handoff a housekeeping</span>
-            <span className="mt-1 block text-xs text-muted-foreground">
+            <span className="mt-1 hidden text-xs text-muted-foreground sm:block">
               La salida ya fue comunicada para que la habitacion pase a limpieza.
             </span>
           </span>
         </label>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <Label className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          <Label className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Politica de saldo
           </Label>
           <div className="mt-3 grid gap-2">
@@ -112,7 +116,7 @@ export const BookingCheckOutSection = ({
               </Button>
             ) : null}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 hidden text-xs text-muted-foreground sm:block">
             {canOverrideCheckoutBalance
               ? "El override deja actor, saldo y referencia en auditoria."
               : "Los saldos pendientes requieren autorizacion administrativa."}
@@ -126,16 +130,16 @@ export const BookingCheckOutSection = ({
             value={form.closingReference}
             onChange={(event) => onFormChange({ closingReference: event.target.value })}
             placeholder="Ej: pago tarjeta, saldo empresa, checkout express"
-            className="h-10 rounded-xl"
+            className="min-h-11 rounded-xl"
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="hidden text-xs text-muted-foreground sm:block">
             Obligatoria si se deja saldo pendiente; se persiste en la reserva y auditoria.
           </p>
         </div>
       </div>
     </div>
 
-    <div className="mt-5 rounded-2xl border border-border bg-card p-4 shadow-sm">
+    <div className="mt-4 rounded-2xl border border-border bg-card p-3 shadow-sm sm:mt-5 sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Estado del checkout
@@ -159,7 +163,7 @@ export const BookingCheckOutSection = ({
         </p>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-3">
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground">Saldo pendiente validado</p>
           <p className="text-sm font-semibold text-foreground">
@@ -167,7 +171,7 @@ export const BookingCheckOutSection = ({
           </p>
         </div>
         <Button
-          className="h-11 rounded-2xl bg-secondary text-secondary-foreground hover:bg-secondary/85"
+          className="h-11 w-full rounded-2xl bg-secondary text-secondary-foreground hover:bg-secondary/85 sm:w-auto"
           onClick={() => onStatusAction("CheckedOut")}
           disabled={statusLoading !== null || !canCompleteFormalCheckOut}
         >

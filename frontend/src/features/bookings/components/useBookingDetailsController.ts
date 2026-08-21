@@ -12,6 +12,8 @@ import { useBookingOperationalController } from "@/features/bookings/components/
 type UseBookingDetailsControllerProps = {
   booking: Booking | null;
   isOpen: boolean;
+  billingEnabled?: boolean;
+  roomOptionsEnabled?: boolean;
   onUpdateStatus?: (
     id: string,
     status: BookingStatus,
@@ -23,15 +25,20 @@ type UseBookingDetailsControllerProps = {
 export const useBookingDetailsController = ({
   booking,
   isOpen,
+  billingEnabled = true,
+  roomOptionsEnabled = true,
   onUpdateStatus,
   onRefreshBooking,
 }: UseBookingDetailsControllerProps) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const canManageRoomException =
+    roleHasCapability(user?.role, "rooms.read") && ["admin", "ops"].includes(user?.role ?? "");
   const refreshBillingDataRef = useRef<(targetBooking?: Booking) => Promise<void>>(async () => {});
   const operational = useBookingOperationalController({
     booking,
     isOpen,
+    roomOptionsEnabled: roomOptionsEnabled && canManageRoomException,
     toast,
     refreshBillingData: (targetBooking?: Booking) => refreshBillingDataRef.current(targetBooking),
     onRefreshBooking,
@@ -39,8 +46,8 @@ export const useBookingDetailsController = ({
   const billing = useBookingBillingController({
     bookingState: operational.bookingState,
     isOpen,
+    enabled: billingEnabled,
     toast,
-    onRefreshBooking,
     onBookingTotalDelta: (amountCents) => {
       operational.updateBookingState((current) => ({
         ...current,
@@ -49,8 +56,6 @@ export const useBookingDetailsController = ({
     },
   });
   refreshBillingDataRef.current = billing.refreshBillingData;
-  const canManageRoomException =
-    roleHasCapability(user?.role, "rooms.read") && ["admin", "ops"].includes(user?.role ?? "");
   const canViewAudit = roleHasCapability(user?.role, "audit.events.read");
   const canOverrideCheckoutBalance = roleHasCapability(
     user?.role,
@@ -157,9 +162,9 @@ export const useBookingDetailsController = ({
   const handleStatusAction = async (
     nextStatus: BookingStatus,
     explicitFrontDeskPayload?: Partial<BookingFrontDeskData>,
-  ) => {
+  ): Promise<boolean> => {
     const bookingState = operational.bookingState;
-    if (!bookingState || !onUpdateStatus) return;
+    if (!bookingState || !onUpdateStatus) return false;
 
     if (nextStatus === "CheckedIn" && operational.room?.status !== "Available") {
       toast({
@@ -167,7 +172,7 @@ export const useBookingDetailsController = ({
         description: "La habitacion debe estar disponible antes de registrar la llegada.",
         variant: "error",
       });
-      return;
+      return false;
     }
     if (nextStatus === "CheckedIn" && operational.checkInBlockers.length > 0) {
       toast({
@@ -175,7 +180,7 @@ export const useBookingDetailsController = ({
         description: "Completa el checklist operativo antes de registrar la llegada.",
         variant: "error",
       });
-      return;
+      return false;
     }
     if (nextStatus === "CheckedOut" && checkoutBlockers.length > 0) {
       toast({
@@ -183,7 +188,7 @@ export const useBookingDetailsController = ({
         description: "Cierra la cuenta y completa el checklist operativo antes de finalizar la estadia.",
         variant: "error",
       });
-      return;
+      return false;
     }
 
     operational.setStatusLoading(nextStatus);
@@ -220,6 +225,7 @@ export const useBookingDetailsController = ({
       operational.updateBookingState(() => updatedBooking);
       operational.setAuditRefreshTick((current) => current + 1);
       await operational.refreshOperationalData(updatedBooking);
+      return true;
     } finally {
       operational.setStatusLoading(null);
     }

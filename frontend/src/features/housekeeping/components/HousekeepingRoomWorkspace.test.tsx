@@ -27,4 +27,16 @@ describe("HousekeepingRoomWorkspace", () => {
     rerender(<HousekeepingRoomWorkspace item={item("Available")} canWrite loadingAction={null} onStart={vi.fn()} onFinish={vi.fn()} onOpenMaintenance={vi.fn()} onResolveMaintenance={vi.fn()} onClose={vi.fn()} />);
     expect(screen.getByText(/No hay transición operativa/)).toBeInTheDocument();
   });
+
+  it("associates the active panel and supports roving keyboard navigation", async () => {
+    const user = userEvent.setup();
+    render(<HousekeepingRoomWorkspace item={item("Dirty")} canWrite loadingAction={null} onStart={vi.fn()} onFinish={vi.fn()} onOpenMaintenance={vi.fn()} onResolveMaintenance={vi.fn()} onClose={vi.fn()} />);
+    const summary = screen.getByRole("tab", { name: "Resumen" });
+    const action = screen.getByRole("tab", { name: "Acción" });
+    summary.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(action).toHaveFocus();
+    expect(action).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", action.id);
+  });
 });

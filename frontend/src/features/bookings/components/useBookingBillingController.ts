@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getErrorMessage } from "@/api/errors";
 import type {
   Booking,
@@ -23,8 +23,8 @@ type ToastApi = {
 type UseBookingBillingControllerProps = {
   bookingState: Booking | null;
   isOpen: boolean;
+  enabled?: boolean;
   toast: (payload: ToastApi) => void;
-  onRefreshBooking?: () => Promise<void> | void;
   onBookingTotalDelta: (amountCents: number) => void;
 };
 
@@ -37,8 +37,8 @@ export const quickCharges = [
 export const useBookingBillingController = ({
   bookingState,
   isOpen,
+  enabled = true,
   toast,
-  onRefreshBooking,
   onBookingTotalDelta,
 }: UseBookingBillingControllerProps) => {
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
@@ -50,22 +50,44 @@ export const useBookingBillingController = ({
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
+  const [billingBookingId, setBillingBookingId] = useState<string | null>(null);
+  const billingRequestIdRef = useRef(0);
+
+  const billingMatchesBooking = billingBookingId === (bookingState?.id ?? null);
+  const currentExtraCharges = billingMatchesBooking ? extraCharges : [];
+  const currentInvoice = billingMatchesBooking ? invoice : null;
+  const currentPayments = billingMatchesBooking ? payments : [];
 
   useEffect(() => {
+    const requestId = ++billingRequestIdRef.current;
     if (!bookingState || !isOpen) {
+      setBillingBookingId(null);
       setExtraCharges([]);
       setInvoice(null);
       setPayments([]);
       return;
     }
+    if (!enabled) return;
 
+    setBillingBookingId(bookingState.id);
+    setExtraCharges([]);
+    setInvoice(null);
+    setPayments([]);
     setLoadingCharges(true);
     Promise.allSettled([
-      extraChargeService.getExtraCharges(bookingState.id).then(setExtraCharges),
-      getInvoiceByBooking(bookingState.id).then(setInvoice).catch(() => setInvoice(null)),
-      getBookingPayments(bookingState.id).then(setPayments).catch(() => setPayments([])),
-    ]).finally(() => setLoadingCharges(false));
-  }, [bookingState?.id, bookingState?.status, isOpen]);
+      extraChargeService.getExtraCharges(bookingState.id).then((data) => {
+        if (billingRequestIdRef.current === requestId) setExtraCharges(data);
+      }),
+      getInvoiceByBooking(bookingState.id).then((data) => {
+        if (billingRequestIdRef.current === requestId) setInvoice(data);
+      }).catch(() => undefined),
+      getBookingPayments(bookingState.id).then((data) => {
+        if (billingRequestIdRef.current === requestId) setPayments(data);
+      }).catch(() => undefined),
+    ]).finally(() => {
+      if (billingRequestIdRef.current === requestId) setLoadingCharges(false);
+    });
+  }, [bookingState?.id, enabled, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -93,8 +115,8 @@ export const useBookingBillingController = ({
   ]);
 
   const extrasTotal = useMemo(
-    () => extraCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),
-    [extraCharges],
+    () => currentExtraCharges.reduce((sum, charge) => sum + charge.amount_cents, 0),
+    [currentExtraCharges],
   );
   const accommodationTotal = useMemo(
     () => Math.max(0, (bookingState?.total_price_cents ?? 0) - extrasTotal),
@@ -102,28 +124,37 @@ export const useBookingBillingController = ({
   );
   const outstandingAmountCents = useMemo(
     () =>
-      invoice
-        ? Math.max(0, invoice.amount_cents - invoice.paid_amount_cents)
+      currentInvoice
+        ? Math.max(0, currentInvoice.amount_cents - currentInvoice.paid_amount_cents)
         : bookingState?.total_price_cents ?? 0,
-    [bookingState?.total_price_cents, invoice],
+    [bookingState?.total_price_cents, currentInvoice],
   );
 
   const refreshBillingData = async (targetBooking?: Booking) => {
     const currentBooking = targetBooking ?? bookingState;
     if (!currentBooking) return;
+    const requestId = ++billingRequestIdRef.current;
+    const sameBookingState = billingBookingId === currentBooking.id && bookingState?.id === currentBooking.id;
+    const fallbackCharges = sameBookingState ? currentExtraCharges : [];
+    const fallbackInvoice = sameBookingState ? currentInvoice : null;
+    const fallbackPayments = sameBookingState ? currentPayments : [];
+    setBillingBookingId(currentBooking.id);
     setLoadingCharges(true);
     try {
-      const [chargesData, invoiceData] = await Promise.all([
+      const [chargesResult, invoiceResult, paymentsResult] = await Promise.allSettled([
         extraChargeService.getExtraCharges(currentBooking.id),
-        getInvoiceByBooking(currentBooking.id).catch(() => null),
+        getInvoiceByBooking(currentBooking.id),
+        getBookingPayments(currentBooking.id),
       ]);
-      const paymentsData = await getBookingPayments(currentBooking.id).catch(() => []);
+      if (billingRequestIdRef.current !== requestId || bookingState?.id !== currentBooking.id) return;
+      const chargesData = chargesResult.status === "fulfilled" ? chargesResult.value : fallbackCharges;
+      const invoiceData = invoiceResult.status === "fulfilled" ? invoiceResult.value : fallbackInvoice;
+      const paymentsData = paymentsResult.status === "fulfilled" ? paymentsResult.value : fallbackPayments;
       setExtraCharges(chargesData);
       setInvoice(invoiceData);
       setPayments(paymentsData);
-      await onRefreshBooking?.();
     } finally {
-      setLoadingCharges(false);
+      if (billingRequestIdRef.current === requestId) setLoadingCharges(false);
     }
   };
 
@@ -157,6 +188,8 @@ export const useBookingBillingController = ({
       return;
     }
 
+    const paymentBookingId = bookingState.id;
+    const requestId = ++billingRequestIdRef.current;
     setSettlementLoading(true);
     try {
       const settledInvoice = await registerBookingPayment(
@@ -166,6 +199,8 @@ export const useBookingBillingController = ({
         paymentReference.trim() || undefined,
         paymentNote.trim() || undefined,
       );
+      if (billingRequestIdRef.current !== requestId || bookingState?.id !== paymentBookingId) return;
+      setBillingBookingId(paymentBookingId);
       setInvoice(settledInvoice);
       toast({
         title: "Pago registrado",
@@ -175,7 +210,9 @@ export const useBookingBillingController = ({
             : "El cobro parcial quedo registrado y el saldo pendiente fue actualizado.",
         variant: "success",
       });
-      await refreshBillingData();
+      const paymentsData = await getBookingPayments(paymentBookingId).catch(() => currentPayments);
+      if (billingRequestIdRef.current !== requestId || bookingState?.id !== paymentBookingId) return;
+      setPayments(paymentsData);
     } catch (error: unknown) {
       toast({
         title: "No se pudo registrar el pago",
@@ -183,7 +220,7 @@ export const useBookingBillingController = ({
         variant: "error",
       });
     } finally {
-      setSettlementLoading(false);
+      if (billingRequestIdRef.current === requestId) setSettlementLoading(false);
     }
   };
 
@@ -215,9 +252,9 @@ export const useBookingBillingController = ({
   };
 
   return {
-    extraCharges,
-    invoice,
-    payments,
+    extraCharges: currentExtraCharges,
+    invoice: currentInvoice,
+    payments: currentPayments,
     loadingCharges,
     settlementLoading,
     paymentMethod,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import {
@@ -10,20 +10,18 @@ import {
   Brush,
   Settings,
   LogOut,
-  Bell,
   Search,
   Menu,
   TrendingUp,
   ChevronLeft,
   ChevronRight,
   Globe,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronDown,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/features/auth/useAuth";
 import { cn } from "@/lib/utils";
 import { Capability, roleHasCapability } from "@/features/auth/capabilities";
@@ -36,7 +34,7 @@ type SidebarTooltip = {
   left: number;
 };
 
-const SidebarItem = ({
+const SidebarItem = React.memo(function SidebarItem({
   icon: Icon,
   label,
   description,
@@ -62,7 +60,7 @@ const SidebarItem = ({
   onCompactExpand?: () => void;
   requireExpandBeforeNavigate?: boolean;
   onTooltipChange?: (tooltip: SidebarTooltip | null) => void;
-}) => {
+}) {
   const showTooltip = (target: HTMLAnchorElement) => {
     if (!collapsed || !onTooltipChange) return;
     const rect = target.getBoundingClientRect();
@@ -146,7 +144,7 @@ const SidebarItem = ({
       </div>
     </Link>
   );
-};
+});
 
 type NavItem = {
   icon: LucideIcon;
@@ -162,12 +160,13 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
   const [searchValue, setSearchValue] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
+  const [mobileSecondaryOpen, setMobileSecondaryOpen] = useState(false);
   const [sidebarTooltip, setSidebarTooltip] = useState<SidebarTooltip | null>(null);
-  const [mobileNavPreview, setMobileNavPreview] = useState<{
-    label: string;
-    description?: string;
-  } | null>(null);
+  const mobileDialogRef = useRef<HTMLDivElement>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const closeMobileNav = useCallback(() => setMobileNavOpen(false), []);
+  const expandMobileNav = useCallback(() => setMobileSecondaryOpen(true), []);
 
   const [isCollapsed, setIsCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -181,13 +180,39 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     setSidebarTooltip(null);
     if (!mobileNavOpen) {
-      setMobileNavExpanded(false);
+      setMobileSecondaryOpen(false);
     }
   }, [isCollapsed, mobileNavOpen, location.pathname]);
 
   useEffect(() => {
     if (!mobileNavOpen) return;
-    setMobileNavExpanded(true);
+    const dialog = mobileDialogRef.current;
+    if (!dialog) return;
+    const focusableSelector = 'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+    focusable[0]?.focus();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      mobileMenuTriggerRef.current?.focus();
+    };
   }, [mobileNavOpen]);
 
   useEffect(() => {
@@ -224,44 +249,46 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const principalItems: NavItem[] = [
+  const principalItems = useMemo<NavItem[]>(() => [
     { icon: ClipboardList, label: "Recepción", description: "Llegadas, salidas, cobros y reservas", path: "/bookings", capability: "bookings.read" },
     { icon: LayoutDashboard, label: "Dashboard", description: "KPIs y salud operativa general", path: "/", capability: "analytics.kpis.read" },
     { icon: CalendarDays, label: "Calendario", description: "Ocupación y disponibilidad por fecha", path: "/calendar", capability: "bookings.read" },
-  ];
+  ], []);
 
-  const managementItems: NavItem[] = [
+  const managementItems = useMemo<NavItem[]>(() => [
     { icon: BedDouble, label: "Habitaciones", description: "Inventario, estados y disponibilidad", path: "/rooms", capability: "rooms.read" },
     { icon: Users, label: "Huéspedes", description: "Directorio y fichas de clientes", path: "/guests", capability: "guests.read" },
     { icon: Brush, label: "Housekeeping", description: "Limpieza, handoff y mantenimiento", path: "/housekeeping", capability: "housekeeping.read" },
-  ];
+  ], []);
 
-  const settingsItems: NavItem[] = [
+  const settingsItems = useMemo<NavItem[]>(() => [
     { icon: Globe, label: "Red Global", description: "Visión multi-hotel y planes", path: "/network", capability: "saas.hotels.read" },
     { icon: Settings, label: "Usuarios", description: "Accesos, roles y operadores", path: "/users", capability: "users.read" },
     { icon: TrendingUp, label: "Tendencias", description: "Ingresos, ocupación y reportes", path: "/reports", capability: "reports.revenue.read" },
-  ];
+  ], []);
 
   const canSee = (capability: Capability) => roleHasCapability(user?.role, capability);
-  const visiblePrincipalItems = principalItems.filter((item) => canSee(item.capability));
-  const visibleManagementItems = managementItems.filter((item) => canSee(item.capability));
-  const visibleSettingsItems = settingsItems.filter((item) => canSee(item.capability));
-  const visibleNavItems = [
+  const visiblePrincipalItems = useMemo(() => principalItems.filter((item) => canSee(item.capability)), [principalItems, user?.role]);
+  const visibleManagementItems = useMemo(() => managementItems.filter((item) => canSee(item.capability)), [managementItems, user?.role]);
+  const visibleSettingsItems = useMemo(() => settingsItems.filter((item) => canSee(item.capability)), [settingsItems, user?.role]);
+  const visibleNavItems = useMemo(() => [
     ...visiblePrincipalItems,
     ...visibleManagementItems,
     ...visibleSettingsItems,
-  ];
-  const activeNavItem = visibleNavItems.find((item) =>
+  ], [visiblePrincipalItems, visibleManagementItems, visibleSettingsItems]);
+  const activeNavItem = useMemo(() => visibleNavItems.find((item) =>
     item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path),
-  );
+  ), [location.pathname, visibleNavItems]);
+  const defaultMobilePreview = activeNavItem
+    ? { label: activeNavItem.label, description: activeNavItem.description }
+    : { label: "Menu", description: "Navegacion principal" };
 
-  useEffect(() => {
-    setMobileNavPreview(
-      activeNavItem
-        ? { label: activeNavItem.label, description: activeNavItem.description }
-        : { label: "Menu", description: "Navegacion principal" },
-    );
-  }, [activeNavItem?.description, activeNavItem?.label, location.pathname, mobileNavOpen]);
+  const handleSidebarTooltipChange = useCallback(
+    (tooltip: SidebarTooltip | null) => {
+      setSidebarTooltip(tooltip);
+    },
+    [],
+  );
 
   const renderNavSection = (
     title: string,
@@ -299,23 +326,9 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
               showDescription={showDescription}
               showCompactLabel={showCompactLabel}
               onNavigate={onNavigate}
-              onCompactExpand={() => setMobileNavExpanded(true)}
+              onCompactExpand={expandMobileNav}
               requireExpandBeforeNavigate={requireExpandBeforeNavigate}
-              onTooltipChange={(tooltip) => {
-                setSidebarTooltip(tooltip);
-                if (collapsed && mobileNavOpen) {
-                  setMobileNavPreview(
-                    tooltip
-                      ? { label: item.label, description: item.description }
-                      : activeNavItem
-                        ? {
-                            label: activeNavItem.label,
-                            description: activeNavItem.description,
-                          }
-                        : { label: "Menu", description: "Navegacion principal" },
-                  );
-                }
-              }}
+              onTooltipChange={handleSidebarTooltipChange}
             />
           ))}
         </div>
@@ -369,6 +382,94 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
     </>
   );
 
+  const mobileNavigationContent = (
+    <>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+        <nav aria-label="Navegación móvil" className="space-y-1">
+          <p className="sidebar-text-muted px-3 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.18em]">
+            Operación
+          </p>
+          {visiblePrincipalItems.map((item) => (
+            <SidebarItem
+              key={item.path}
+              icon={item.icon}
+              label={item.label}
+              path={item.path}
+              description={item.description}
+              active={item.path === "/" ? location.pathname === "/" : location.pathname.startsWith(item.path)}
+              collapsed={false}
+              onNavigate={closeMobileNav}
+            />
+          ))}
+        </nav>
+
+        {(visibleManagementItems.length > 0 || visibleSettingsItems.length > 0) && (
+          <div className="mt-3 border-t border-[hsl(var(--shell-sidebar-border))] pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              className="sidebar-text-muted min-h-11 w-full justify-between rounded-xl px-3 text-sm font-semibold hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-[hsl(var(--shell-sidebar-fg))]"
+              aria-expanded={mobileSecondaryOpen}
+              onClick={() => setMobileSecondaryOpen((open) => !open)}
+            >
+              <span>Más destinos</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", mobileSecondaryOpen && "rotate-180")} />
+            </Button>
+            {mobileSecondaryOpen && (
+              <div className="mt-1 space-y-1">
+                {visibleManagementItems.length > 0 && (
+                  <p className="sidebar-text-muted px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.18em]">
+                    Operación secundaria
+                  </p>
+                )}
+                {visibleManagementItems.map((item) => (
+                  <SidebarItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    path={item.path}
+                    description={item.description}
+                    active={location.pathname.startsWith(item.path)}
+                    collapsed={false}
+                    onNavigate={closeMobileNav}
+                  />
+                ))}
+                {visibleSettingsItems.length > 0 && (
+                  <p className="sidebar-text-muted px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-[0.18em]">
+                    Administración
+                  </p>
+                )}
+                {visibleSettingsItems.map((item) => (
+                  <SidebarItem
+                    key={item.path}
+                    icon={item.icon}
+                    label={item.label}
+                    path={item.path}
+                    description={item.description}
+                    active={location.pathname.startsWith(item.path)}
+                    collapsed={false}
+                    onNavigate={closeMobileNav}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-[hsl(var(--shell-sidebar-border))] p-3">
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
+          className="sidebar-text-muted min-h-11 w-full justify-start rounded-xl text-sm hover:bg-[hsl(var(--shell-sidebar-hover))] hover:text-[hsl(var(--shell-sidebar-fg))]"
+        >
+          <LogOut className="mr-3 h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </div>
+    </>
+  );
+
   return (
     <div className="theme-fade app-shell flex h-dvh overflow-hidden font-sans text-foreground">
       <aside
@@ -413,78 +514,34 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
         {navigationContent(isCollapsed)}
       </aside>
 
-      <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-        <SheetContent
-          side="left"
-          className={cn(
-            "app-sidebar sidebar-text-fg flex h-dvh max-h-dvh flex-col overflow-hidden border-r p-0 transition-[width,max-width] duration-300 ease-out md:hidden",
-            mobileNavExpanded ? "w-[18rem] max-w-[18rem]" : "w-28 max-w-28",
-          )}
-          onMouseEnter={() => setMobileNavExpanded(true)}
-          onMouseMove={() => setMobileNavExpanded(true)}
-          onMouseLeave={() => setMobileNavExpanded(false)}
-        >
-          <div className="relative px-3 py-5">
-            <div className={cn("mb-4 flex", mobileNavExpanded ? "justify-end" : "justify-center")}>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-9 w-9 rounded-xl"
-                aria-label={mobileNavExpanded ? "Colapsar menú móvil" : "Expandir menú móvil"}
-                onClick={() => setMobileNavExpanded((current) => !current)}
-              >
-                {mobileNavExpanded ? (
-                  <PanelLeftClose className="h-4 w-4" />
-                ) : (
-                  <PanelLeftOpen className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className={cn("relative flex", mobileNavExpanded ? "items-center gap-4 px-2" : "justify-center")}>
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary to-amber-700 shadow-lg shadow-amber-900/20">
-                <span className="text-xl font-bold text-secondary-foreground">H</span>
+      {mobileNavOpen ? <>
+        <div className="fixed inset-0 z-50 bg-black/72 md:hidden" aria-hidden="true" onMouseDown={closeMobileNav} />
+        <div ref={mobileDialogRef} role="dialog" aria-modal="true" aria-labelledby="mobile-navigation-title" className="app-sidebar sidebar-text-fg fixed inset-y-0 left-0 z-[60] flex h-dvh w-[min(22rem,calc(100vw-1rem))] max-w-[22rem] flex-col overflow-hidden border-r !bg-[hsl(var(--shell-sidebar-bg))] !text-[hsl(var(--shell-sidebar-fg))] shadow-2xl md:hidden">
+          <div className="flex items-center justify-between border-b border-[hsl(var(--shell-sidebar-border))] px-3 py-2.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="min-w-0">
+                <p id="mobile-navigation-title" className="sidebar-text-muted truncate text-[10px] font-bold uppercase tracking-[0.14em]">HMS · Menú</p>
+                <p className="sidebar-text-fg truncate text-sm font-semibold">{defaultMobilePreview.label}</p>
               </div>
-              {mobileNavExpanded ? (
-                <div>
-                  <p className="sidebar-text-fg text-sm font-black tracking-tight">
-                    HMS ELITE
-                  </p>
-                  <p className="sidebar-text-muted mt-1 text-xs font-semibold uppercase tracking-[0.18em]">
-                    Navegacion
-                  </p>
-                </div>
-              ) : null}
             </div>
-            <div className="relative mt-4 text-center">
-              <p className={cn("sidebar-text-fg font-bold", mobileNavExpanded ? "text-sm" : "text-xs")}>
-                {mobileNavPreview?.label ?? "Menu"}
-              </p>
-              <p className={cn("sidebar-text-muted mt-1 font-medium leading-4", mobileNavExpanded ? "px-3 text-xs" : "text-xs")}>
-                {mobileNavPreview?.description ?? "Navegacion principal"}
-              </p>
-            </div>
+            <Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 text-[hsl(var(--shell-sidebar-fg))] hover:bg-[hsl(var(--shell-sidebar-hover))]" aria-label="Cerrar menú móvil" onClick={closeMobileNav}><X className="h-5 w-5" /></Button>
           </div>
-          {navigationContent(
-            !mobileNavExpanded,
-            () => setMobileNavOpen(false),
-            !mobileNavExpanded,
-            !mobileNavExpanded,
-          )}
-        </SheetContent>
-      </Sheet>
+          {mobileNavigationContent}
+        </div>
+      </> : null}
 
       <main className="relative flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <header className="app-header responsive-shell-header sticky top-0 z-40 md:relative">
-          <div className="flex w-full items-center gap-3 md:max-w-xl md:flex-1">
-            <Button size="icon" variant="ghost" className="shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
+          <div className="flex min-w-0 flex-1 items-center gap-2 md:max-w-xl md:gap-3">
+            <Button ref={mobileMenuTriggerRef} size="icon" variant="ghost" aria-label="Abrir menú móvil" className="min-h-11 min-w-11 shrink-0 md:hidden" onClick={() => setMobileNavOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="group relative min-w-0 flex-1">
               <Search className="app-search-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transition-colors group-focus-within:text-foreground" />
               <Input
-                placeholder="Buscar huésped, habitación o reserva..."
-                className="app-search-input h-10 w-full min-w-0 rounded-xl pl-10 shadow-sm transition-all duration-300"
+                placeholder="Buscar huésped, reserva o habitación"
+                aria-label="Buscar huésped, reserva o habitación"
+                className="app-search-input min-h-11 w-full min-w-0 rounded-xl pl-10 shadow-sm transition-all duration-300"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={handleSearch}
@@ -492,12 +549,8 @@ const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <div className="flex w-full items-center justify-end gap-2 md:ml-4 md:w-auto md:gap-4">
+          <div className="flex shrink-0 items-center justify-end gap-1 md:ml-4 md:w-auto md:gap-4">
             <ThemeToggle className="hidden sm:inline-flex" compact />
-            <Button size="icon" variant="ghost" aria-label="Notificaciones" className="relative rounded-full text-muted-foreground hover:bg-accent hover:text-foreground">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full border border-card bg-red-500" />
-            </Button>
           </div>
         </header>
 

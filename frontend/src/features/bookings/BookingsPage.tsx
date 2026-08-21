@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useRef, useState } from "react";
 import {
   Plus,
   CheckCircle,
@@ -7,8 +7,10 @@ import {
   MoreVertical,
   Filter,
   Download,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, Column } from "@/components/ui/data-table";
 import {
@@ -21,7 +23,7 @@ import { getBookings, getFrontDeskBoard, updateBooking } from "./services/bookin
 import { Booking, BookingFrontDeskData } from "@/types/domain";
 import { useToast } from "@/components/ui/toast";
 import { downloadCSV, cn } from "@/lib/utils";
-import { invalidateResource, useResourceQuery } from "@/lib/useResourceQuery";
+import { useResourceQuery } from "@/lib/useResourceQuery";
 import { getErrorMessage } from "@/api/errors";
 import { PageHeader } from "@/components/ui/page-header";
 import { useGuidedMode } from "@/features/guided/GuidedModeContext";
@@ -61,6 +63,7 @@ const BookingsPage = () => {
   const [frontDeskQueueBookingIds, setFrontDeskQueueBookingIds] = useState<string[]>([]);
   const [guidedFocusStep, setGuidedFocusStep] = useState<ReceptionGuideStepId | null>(null);
   const [workspaceView, setWorkspaceView] = useState<ReceptionWorkspaceView>("shift");
+  const detailsReturnRef = useRef<HTMLElement | null>(null);
   const isDesktop = useMediaQuery("(min-width: 1280px)");
 
   const {
@@ -87,16 +90,8 @@ const BookingsPage = () => {
     staleTimeMs: 10_000,
   });
 
-  const refreshBookingsView = async (selectedId?: string) => {
-    invalidateResource(bookingQueryKey);
-    invalidateResource(frontDeskQueryKey);
-    await refetchBookings();
-    await refetchFrontDeskBoard();
-
-    if (!selectedId) return;
-    const refreshedBookings = await getBookings();
-    const refreshedSelected = refreshedBookings.find((item) => item.id === selectedId) ?? null;
-    setSelectedBooking(refreshedSelected);
+  const refreshBookingsView = async () => {
+    await Promise.all([refetchBookings(), refetchFrontDeskBoard()]);
   };
 
   const handleExport = () => {
@@ -168,6 +163,7 @@ const BookingsPage = () => {
   const openBookingById = (bookingId: string, queueBookingIds?: string[]) => {
     const booking = bookings.find((item) => item.id === bookingId);
     if (!booking) return;
+    detailsReturnRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const normalizedQueue = Array.from(
       new Set((queueBookingIds ?? []).filter((id) => id && id !== "")),
     );
@@ -268,7 +264,8 @@ const BookingsPage = () => {
     frontDesk?: Partial<BookingFrontDeskData>,
   ) => {
     try {
-      await updateBooking(id, { status, front_desk: frontDesk });
+      const updatedBooking = await updateBooking(id, { status, front_desk: frontDesk });
+      setSelectedBooking((current) => current?.id === id ? updatedBooking : current);
       toast({
         title: "Reserva actualizada",
         description:
@@ -283,7 +280,6 @@ const BookingsPage = () => {
                 : "Estado actualizado.",
         variant: "success",
       });
-      await refreshBookingsView(id);
     } catch (error: unknown) {
       toast({
         title: "No se pudo actualizar",
@@ -387,23 +383,87 @@ const BookingsPage = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="flex min-h-10 items-center gap-1.5 lg:hidden" aria-label="Barra de recepción móvil">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h1 className="truncate text-lg font-black tracking-tight text-foreground">Recepción</h1>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="min-h-11 min-w-11 shrink-0 rounded-lg"
+                  aria-label="Ayuda sobre recepción"
+                  title="Ayuda sobre recepción"
+                >
+                  <Info className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-72 text-sm">
+                Priorizá Nueva Reserva para iniciar una operación. Las colas de llegadas,
+                estadías y salidas están organizadas en las vistas operativas.
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="min-h-11 min-w-11 shrink-0 rounded-lg"
+              aria-label="Más acciones de recepción"
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" /> Exportar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}>
+              {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <Button
+          size="sm"
+          className="min-h-11 shrink-0 rounded-lg bg-primary px-2.5 text-primary-foreground shadow-lg hover:bg-primary/90"
+          onClick={openWalkIn}
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Nueva reserva
+        </Button>
+      </div>
+
       <PageHeader
         title="Recepción"
-        description="Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista."
+        className="hidden gap-2 sm:gap-4 lg:flex"
         actions={
           <>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="ghost" size="icon" className="min-h-11 min-w-11 rounded-xl" aria-label="Ayuda sobre recepción" title="Ayuda sobre recepción">
+                  <Info className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 text-sm">Priorizá Nueva Reserva para iniciar una operación. Las colas de llegadas, estadías y salidas están organizadas en las vistas operativas.</PopoverContent>
+            </Popover>
             <Button
               variant="outline"
               size="sm"
-              className="h-10 w-full rounded-xl border-border sm:w-auto"
+              className="hidden h-10 rounded-xl border-border sm:inline-flex sm:w-auto"
               onClick={handleExport}
             >
               <Download className="mr-2 h-4 w-4" /> Exportar
             </Button>
             <Button
               size="sm"
-              className="h-10 w-full rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 sm:w-auto"
+              className="h-10 flex-1 rounded-xl bg-primary text-primary-foreground shadow-lg hover:bg-primary/90 sm:w-auto"
               onClick={openWalkIn}
             >
               <Plus className="w-4 h-4 mr-2" /> Nueva Reserva
@@ -411,7 +471,7 @@ const BookingsPage = () => {
             <Button
               variant={guidedModeEnabled ? "secondary" : "outline"}
               size="sm"
-              className="h-10 w-full rounded-xl sm:w-auto"
+              className="hidden h-10 rounded-xl sm:inline-flex sm:w-auto"
               onClick={() => setGuidedModeEnabled(!guidedModeEnabled)}
             >
               {guidedModeEnabled ? "Salir del modo guiado" : "Iniciar guía"}
@@ -419,6 +479,9 @@ const BookingsPage = () => {
           </>
         }
       />
+      <p className="hidden text-sm font-medium text-muted-foreground sm:block">
+        Trabajo del turno: llegadas, bloqueos, cobros y seguimiento de reservas desde una sola vista.
+      </p>
 
       {guidedModeEnabled ? (
         <CompactGuideAssistant
@@ -459,7 +522,7 @@ const BookingsPage = () => {
               guidedFocusStep={guidedFocusStep}
               onUpdateStatus={handleStatusUpdate}
               onEditBooking={() => setIsEditOpen(true)}
-              onRefreshBooking={() => refreshBookingsView(selectedBooking?.id)}
+              onRefreshBooking={() => refreshBookingsView()}
             />
           ) : (
             <Suspense
@@ -598,18 +661,10 @@ const BookingsPage = () => {
         <WalkInBookingSheet
           isOpen={isWalkInOpen}
           onClose={() => setIsWalkInOpen(false)}
-          onCreated={async (booking) => {
-            invalidateResource(bookingQueryKey);
-            await refreshBookingsView(booking.id);
+          onCreated={async () => {
+            await refreshBookingsView();
             setFrontDeskQueueBookingIds([]);
-            setSelectedBooking(booking);
-            if (isDesktop && workspaceView === "shift") {
-              setGuidedFocusStep(null);
-              setIsDetailsOpen(false);
-            } else {
-              setIsDetailsOpen(true);
-            }
-            trackReceptionEvent("review_case");
+            closeSelectedCase();
           }}
         />
       </Suspense>
@@ -626,7 +681,7 @@ const BookingsPage = () => {
                 setFrontDeskQueueBookingIds([]);
               }}
               onSuccess={async () => {
-                await refreshBookingsView(selectedBooking.id);
+                await refreshBookingsView();
               }}
               onViewDetails={() => setIsDetailsOpen(true)}
             />
@@ -639,7 +694,7 @@ const BookingsPage = () => {
                 setIsEditOpen(true);
               }}
               onRefreshBooking={async () => {
-                await refreshBookingsView(selectedBooking.id);
+                await refreshBookingsView();
               }}
               guidedFocusStep={guidedFocusStep}
               queueBookingIds={frontDeskQueueBookingIds}
@@ -651,6 +706,18 @@ const BookingsPage = () => {
                 setSelectedBooking(null);
                 setFrontDeskQueueBookingIds([]);
                 setGuidedFocusStep(null);
+                const target = detailsReturnRef.current;
+                detailsReturnRef.current = null;
+                if (target) requestAnimationFrame(() => target.focus());
+              }}
+              onCheckInComplete={() => {
+                setIsDetailsOpen(false);
+                setSelectedBooking(null);
+                setFrontDeskQueueBookingIds([]);
+                setGuidedFocusStep(null);
+                const target = detailsReturnRef.current;
+                detailsReturnRef.current = null;
+                if (target) requestAnimationFrame(() => target.focus());
               }}
             />
           </>

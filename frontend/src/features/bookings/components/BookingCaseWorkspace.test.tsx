@@ -102,7 +102,7 @@ const controllerDefaults = {
   handleRegisterPayment: vi.fn(),
   handleRoomReassignment: vi.fn(),
   handleQuickCharge: vi.fn(),
-  handleStatusAction: vi.fn(),
+  handleStatusAction: vi.fn().mockResolvedValue(true),
 };
 
 const guidedModeDefault = {
@@ -153,9 +153,7 @@ describe("BookingCaseWorkspace", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Operación/i }));
 
     expect(screen.getByTestId("booking-check-in-section")).toBeDefined();
-    expect(
-      screen.getByTestId("booking-summary-metrics").closest('[role="tabpanel"]'),
-    ).toHaveAttribute("hidden");
+    expect(screen.getByTestId("booking-summary-metrics").closest('[role="tabpanel"]')).toHaveAttribute("hidden");
   });
 
   it("shows the pending control badge on the operation tab", () => {
@@ -317,5 +315,42 @@ describe("BookingCaseWorkspace", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: /Continuar con siguiente/i }));
     expect(onOpenQueuedBooking).toHaveBeenCalledWith("booking-2");
+  });
+
+  it("calls onCheckInComplete after a successful check-in from the guided CTA", async () => {
+    const trackReceptionEvent = vi.fn();
+    useGuidedModeMock.mockReturnValue({
+      ...guidedModeDefault,
+      trackReceptionEvent,
+    });
+    const onCheckInComplete = vi.fn();
+    renderWorkspace({ onCheckInComplete });
+
+    fireEvent.click(screen.getByRole("button", { name: /Registrar check-in/i }));
+
+    await waitFor(() => {
+      expect(controllerDefaults.handleStatusAction).toHaveBeenCalledWith("CheckedIn", undefined);
+      expect(trackReceptionEvent).toHaveBeenCalledWith("checkin_complete");
+      expect(onCheckInComplete).toHaveBeenCalled();
+    });
+  });
+
+  it("does not run onCheckInComplete nor track when the check-in transition fails", async () => {
+    const trackReceptionEvent = vi.fn();
+    useGuidedModeMock.mockReturnValue({
+      ...guidedModeDefault,
+      trackReceptionEvent,
+    });
+    mockController.mockReturnValue({
+      ...controllerDefaults,
+      handleStatusAction: vi.fn().mockResolvedValue(false),
+    });
+    const onCheckInComplete = vi.fn();
+    renderWorkspace({ onCheckInComplete });
+
+    fireEvent.click(screen.getByRole("button", { name: /Registrar check-in/i }));
+
+    expect(onCheckInComplete).not.toHaveBeenCalled();
+    expect(trackReceptionEvent).not.toHaveBeenCalledWith("checkin_complete");
   });
 });

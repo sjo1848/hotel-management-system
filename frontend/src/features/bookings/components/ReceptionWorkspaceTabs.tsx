@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from "react";
+import { useLayoutEffect, useRef, type KeyboardEvent } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -38,10 +38,20 @@ export const ReceptionWorkspaceTabs = ({
   idBase = "reception-workspace",
 }: ReceptionWorkspaceTabsProps) => {
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const tabRefs = useRef<Partial<Record<ReceptionWorkspaceView, HTMLButtonElement | null>>>({});
+  const pendingFocusRef = useRef<ReceptionWorkspaceView | null>(null);
+
+  useLayoutEffect(() => {
+    if (pendingFocusRef.current) {
+      const target = pendingFocusRef.current;
+      pendingFocusRef.current = null;
+      tabRefs.current[target]?.focus();
+    }
+  });
 
   const moveFocus = (view: ReceptionWorkspaceView) => {
+    pendingFocusRef.current = view;
     onViewChange(view);
-    document.getElementById(`${idBase}-tab-${view}`)?.focus();
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, current: ReceptionWorkspaceView) => {
@@ -67,6 +77,9 @@ export const ReceptionWorkspaceTabs = ({
     return (
       <button
         key={view.id}
+        ref={(node) => {
+          tabRefs.current[view.id] = node;
+        }}
         type="button"
         role="tab"
         id={`${idBase}-tab-${view.id}`}
@@ -101,33 +114,32 @@ export const ReceptionWorkspaceTabs = ({
   void moreViews;
 
   if (!isDesktop && workspaceViews.length > 3) {
-    const overflowActive = workspaceViews.slice(3).find((view) => view.id === activeView);
+    const baseVisibleViews = workspaceViews.slice(0, 3);
+    const activeIsOverflow = !baseVisibleViews.some((view) => view.id === activeView);
+    const visibleViews = activeIsOverflow
+      ? [...baseVisibleViews.slice(0, 2), workspaceViews.find((view) => view.id === activeView)!]
+      : baseVisibleViews;
+    const overflowViews = workspaceViews.filter((view) => !visibleViews.some((visible) => visible.id === view.id));
     return (
       <div
         role="tablist"
         aria-label="Vistas de recepción"
         className="flex gap-1 rounded-2xl border border-border bg-muted p-1"
       >
-        {workspaceViews.slice(0, 3).map(renderTab)}
+        {visibleViews.map(renderTab)}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               type="button"
-              role="tab"
-              aria-selected={!!overflowActive}
-              className={cn(
-                "min-h-11 flex-1 items-center justify-center gap-1 rounded-xl px-3 text-sm font-bold transition outline-none",
-                overflowActive
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
-              )}
+              aria-label="Más vistas"
+              className="min-h-11 flex-1 items-center justify-center gap-1 rounded-xl px-3 text-sm font-bold transition outline-none text-muted-foreground hover:bg-card/60 hover:text-foreground"
             >
-              {overflowActive ? overflowActive.label : "Más"}
+              Más
               <ChevronDown className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            {workspaceViews.slice(3).map((view) => {
+            {overflowViews.map((view) => {
               const active = view.id === activeView;
               const count = counts[view.id];
               return (
