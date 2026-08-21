@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY migrations ./migrations
+COPY openapi.yaml ./openapi.yaml
 RUN cargo build --locked --release --bin hms-backend
 
 FROM debian:bookworm-slim AS runtime
