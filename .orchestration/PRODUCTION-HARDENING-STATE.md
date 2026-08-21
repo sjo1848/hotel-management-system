@@ -3,9 +3,9 @@
 - task: provider-agnostic production hardening
 - base_sha: bb569d4bb35d6780c29bb55667893c5f94dc3edf
 - branch: feature/production-hardening
-- current_status: READY_FOR_PRODUCTION_HARDENING_HUMAN_GATE
+- current_status: READY_FOR_EXTERNAL_PRODUCTION_HARDENING_REVIEW
 - candidate_commit: see final HEAD reported by orchestrator (this state file is intentionally not self-referential)
-- remote_ci: PASS on the validation candidate; final state-only HEAD requires its own canonical CI run
+- remote_ci: pending for bounded external-review repair commit
 - provider_decisions: deferred
 - deployment: prohibited/not performed
 - real_data: prohibited/not used
@@ -46,6 +46,12 @@
 - production image health and synthetic smoke: PASS
 - production env profile and compose validation: PASS
 - canonical full-stack CI: PASS on validation candidate; final state-only HEAD requires recheck
+- URL restore create-db: PASS against synthetic PostgreSQL; production database smoke PASS
+- URL restore recreate-db: PASS against synthetic PostgreSQL; production database smoke PASS
+- restore safety: PASS for source/target protection and production maintenance/authorization guards
+- npm audit production profile: 4 high + 1 moderate, build/tooling dependency paths; no node_modules in nginx runtime image
+- npm audit full profile: 2 critical, 6 high, 1 moderate, 1 low; critical findings are vitest/@vitest/coverage-v8 dev/test tooling
+- RPO: NOT_MEASURED; DEFERRED_TO_REAL_OPERATIONS
 
 ## Final limitations
 
@@ -68,3 +74,4 @@ INDEPENDENCE_NOT_AVAILABLE and do not fabricate PASS.
 - deployment: not performed
 - real_data: not used
 - provider-specific work deferred: VPS/provider, VM sizing, public IP, disk product, DNS, external backup destination, final firewall implementation
+- bounded repair: scripts/restore.sh passes the admin URL through --maintenance-db for URL-mode createdb/dropdb DDL

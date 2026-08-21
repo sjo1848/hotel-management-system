@@ -41,10 +41,10 @@ if [[ -n "$CONNECTION_URL" ]]; then
   if [[ "$CREATE_DB" == true ]]; then
     database_exists="$(psql "$ADMIN_URL" -tAqc "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname='${DB_NAME}');")"
     if [[ "$database_exists" != "t" ]]; then
-      createdb "$ADMIN_URL" "$DB_NAME"
+      createdb --maintenance-db="$ADMIN_URL" "$DB_NAME"
     fi
   fi
-  if [[ "$RECREATE_DB" == true ]]; then psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" >/dev/null; dropdb --if-exists "$ADMIN_URL" "$DB_NAME"; createdb "$ADMIN_URL" "$DB_NAME"; fi
+  if [[ "$RECREATE_DB" == true ]]; then psql "$ADMIN_URL" -v ON_ERROR_STOP=1 -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='${DB_NAME}' AND pid <> pg_backend_pid();" >/dev/null; dropdb --if-exists --maintenance-db="$ADMIN_URL" "$DB_NAME"; createdb --maintenance-db="$ADMIN_URL" "$DB_NAME"; fi
   gunzip -c "$RESTORE_ARCHIVE" | psql "$CONNECTION_URL" -v ON_ERROR_STOP=1
 else
   if [[ "$CREATE_DB" == true ]]; then docker compose -f "${RESTORE_COMPOSE_FILE:-docker-compose.yml}" exec -T db psql -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -c "SELECT 'CREATE DATABASE ${DB_NAME}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname='${DB_NAME}')\\gexec"; fi
