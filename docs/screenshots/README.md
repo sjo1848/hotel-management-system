@@ -2,7 +2,18 @@
 
 Capturas verificadas del stack local con el dataset demo (hotel "Viena",
 `00000000-0000-0000-0000-000000000001`), usuario `admin` / `demo2026pass`.
-Tomadas el 2026-08-03 con Playwright headless (viewport 1440x900).
+Los PNG fueron tomados el 2026-08-03 con Playwright headless (viewport
+1440x900). Los GIF de walkthrough fueron capturados el 2026-08-22 desde el
+runtime actual, con datos sintéticos y sin información personal real.
+
+## Walkthroughs de producto
+
+- [Recepción desktop — workflow principal](../media/hms-reception-workflow.gif)
+- [Recepción mobile — navegación, walk-in y revisión](../media/hms-mobile-reception.gif)
+
+Los GIF muestran navegación y estados reales de la aplicación. El flujo desktop
+termina en el checklist de check-in; no presenta como completada una transición
+que esté bloqueada por fechas históricas del dataset demo.
 
 ## Acceso
 

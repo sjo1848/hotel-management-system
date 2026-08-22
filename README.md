@@ -1,180 +1,191 @@
 # HMS Elite
 
-**Hotel operations platform for reception, reservations, rooms, housekeeping, billing and multi-hotel administration.**
+**A production-oriented hotel management system built around real reception, room, housekeeping and billing workflows.**
 
 [![Full-stack CI](https://github.com/sjo1848/hotel-management-system/actions/workflows/full-stack-ci.yml/badge.svg)](https://github.com/sjo1848/hotel-management-system/actions/workflows/full-stack-ci.yml)
 
-HMS Elite coordinates day-to-day hotel workflows around a shared operational state: who is arriving, which rooms are available, what reception needs to do next, what housekeeping must prepare, and how charges and payments move through a stay.
+HMS Elite is a multi-hotel property management platform for reservations, arrivals, check-in, room state, charges, payments, checkout and housekeeping handoff.
 
-![HMS Elite dashboard](docs/screenshots/03-dashboard.png)
+The product combines a Rust/Axum API, React + TypeScript frontend, PostgreSQL persistence, hotel-scoped authorization and browser-tested operational journeys. The repository is production-hardened at the application/runtime level, but it is not deployed to final production infrastructure.
 
-## What it does
+## Product walkthrough
 
-- **Reception:** reservations, walk-ins, arrivals, check-in, stay operations and checkout.
-- **Rooms:** availability, status transitions, rates, holds and maintenance states.
-- **Guests:** guest records and booking context.
-- **Housekeeping:** cleaning queues and room handoff after checkout.
-- **Billing:** extra charges, invoices, payments and cash closure.
-- **Administration:** users, roles, capabilities and audit events.
-- **Multi-hotel:** hotel-scoped data plus network-level administration and reporting.
+![HMS Elite reception workflow](docs/media/hms-reception-workflow.gif)
 
-### Reception workspace
+Captured from the running application with synthetic data: reception → reservations → guest case → check-in checklist.
+
+~~~text
+Reservation / walk-in → guest and room context → check-in verification
+→ stay operations → charges and payments → checkout → housekeeping
+~~~
+
+## Product surfaces
+
+### Reception
+
+Arrivals, departures, reservations, walk-ins, guest context and operational checklists.
 
 ![HMS Elite reception](docs/screenshots/04-bookings.png)
 
-More verified product screens are available in [`docs/screenshots`](docs/screenshots/README.md).
+### Operations dashboard
 
-## Core workflow
+Occupancy, arrivals, departures, active reservations, cash activity and operational alerts.
 
-A representative reception journey is:
+![HMS Elite dashboard](docs/screenshots/03-dashboard.png)
 
-```text
-reservation / walk-in
-        ↓
-      guest
-        ↓
-   room assignment
-        ↓
-     check-in
-        ↓
- charges + payments
-        ↓
-     checkout
-        ↓
-room release → housekeeping
-```
+### Rooms
 
-The workflow is exercised through browser E2E tests on desktop and mobile widths, with the backend and PostgreSQL participating in the same journey.
+Inventory, availability, room states, rates, holds and maintenance context.
 
-## Engineering decisions
+![HMS Elite rooms](docs/screenshots/04-rooms.png)
 
-### Modular monolith
+### Housekeeping
 
-The backend keeps domain, application and infrastructure boundaries inside one deployable service. This preserves transactional consistency while the product domain is still evolving and avoids introducing distributed-system overhead without an operational reason.
+Cleaning queues, room handoff and maintenance-oriented room operations.
 
-### Tenant isolation is enforced below the UI
+![HMS Elite housekeeping](docs/screenshots/04-housekeeping.png)
 
-Hotel identity is propagated through authorization and persistence operations. Tenant boundaries are backed by repository scoping, database constraints and targeted RLS policies rather than relying on frontend filtering.
+See the [full screenshot walkthrough](docs/screenshots/README.md) for Calendar, Guests, Reports, Users/RBAC and the multi-hotel network view.
 
-### Capabilities instead of role checks scattered through the codebase
+## Mobile operations
 
-Users receive roles, but authorization is expressed through explicit capabilities. Route protection and frontend navigation are deny-by-default and the RBAC contract is checked for frontend/backend drift.
+Reception has dedicated mobile navigation, stepwise walk-in entry, guest/room selection surfaces and an explicit review state.
 
-### Operational transitions use explicit services
+![HMS Elite mobile reception workflow](docs/media/hms-mobile-reception.gif)
 
-Booking lifecycle changes are not treated as generic CRUD updates. Check-in, checkout, room changes and related side effects use transactional paths so room state, financial state and audit history stay coordinated.
+Core reception journeys are exercised at 375, 390 and 430 pixel widths in CI.
 
-### API and QA are treated as contracts
+## Key capabilities
 
-The API is versioned under `/api/v1` with an OpenAPI contract. CI checks formatting, linting, PostgreSQL integration, authorization/security regressions, browser journeys, performance smoke thresholds and contract drift.
-
-A longer discussion of these choices is available in the [engineering case study](docs/ENGINEERING_CASE_STUDY.md).
+- **Reception:** reservations, walk-ins, arrivals, check-in and checkout.
+- **Rooms:** availability, operational status, holds and maintenance states.
+- **Guests:** guest records and booking context.
+- **Housekeeping:** cleaning workflow and room release.
+- **Billing:** extra charges, invoices, payments and cash closure.
+- **Administration:** users, capabilities, RBAC and audit events.
+- **Multi-hotel:** hotel-scoped data and network-level administration surfaces.
+- **Security:** authentication, authorization, CSRF controls, rate limits and layered tenant isolation.
+- **Operations:** health/readiness, backups, restore procedures and production container profiles.
 
 ## Architecture
 
-```mermaid
+~~~mermaid
 flowchart LR
-    U[Hotel staff / SaaS admin] --> FE[React + TypeScript]
+    USER[Hotel staff] --> FE[React + TypeScript]
     FE -->|REST / JSON| API[Rust + Axum]
+    API --> APP[Application services]
+    APP --> DOMAIN[Domain]
+    APP --> INFRA[Infrastructure adapters]
+    INFRA --> DB[(PostgreSQL + SQLx)]
+    API --> SEC[Auth / RBAC / tenant context]
+~~~
 
-    subgraph Backend
-        API --> APP[Application services]
-        APP --> DOM[Domain models and ports]
-        APP --> INF[Infrastructure adapters]
-        INF --> DB[(PostgreSQL + SQLx)]
-        API --> SEC[Auth / RBAC / tenant context]
-        API --> OBS[Metrics / tracing / audit]
-    end
+The backend is a modular monolith with explicit domain, application and infrastructure boundaries:
 
-    OBS --> PROM[Prometheus]
-    OBS --> TEMPO[Tempo / OpenTelemetry]
-    PROM --> GRAF[Grafana]
-```
-
-```text
+~~~text
 backend/src/
 ├── domain/          # business models, policies and repository contracts
 ├── application/     # use cases and workflow orchestration
 └── infrastructure/  # PostgreSQL, HTTP, auth and observability adapters
-```
+~~~
 
-## Technology
+The frontend is organized by product feature with centralized API handling and capability-aware protected routes.
 
-| Area | Main tools |
+## Engineering highlights
+
+- **Tenant boundaries:** scoped repositories, tenant context, relational constraints and targeted PostgreSQL RLS. RLS is not claimed for every tenant-scoped table.
+- **Capability authorization:** explicit capabilities, backend enforcement, frontend route protection and frontend/backend drift checks.
+- **Lifecycle operations:** check-in, checkout, room reassignment and housekeeping handoff are business transitions, not generic CRUD updates.
+- **API contract:** versioned /api/v1 REST API with [canonical OpenAPI](backend/openapi.yaml) and an aligned [mirror](docs/openapi.yaml).
+
+## Technology stack
+
+| Area | Technology |
 |---|---|
 | Backend | Rust, Axum, Tokio |
-| Data | PostgreSQL 16, SQLx |
-| Frontend | React, TypeScript, Vite, Tailwind CSS |
+| Database | PostgreSQL 16, SQLx |
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS |
 | API | REST, OpenAPI / Utoipa |
-| Testing | Rust tests, Vitest, Playwright |
-| Operations | Docker Compose, GitHub Actions |
+| Testing | Rust tests, Vitest, Playwright, axe-core |
+| Containers | Docker, Docker Compose |
+| CI | GitHub Actions |
 | Observability | Prometheus, Grafana, Tempo, OpenTelemetry |
 
-## Quality gates
+## Quality and security gates
 
-The main workflow in [`.github/workflows/full-stack-ci.yml`](.github/workflows/full-stack-ci.yml) includes:
+Full-stack CI validates secret scanning, environment security, Rust format/Clippy, backend unit and SQLx integration tests, OpenAPI alignment, RBAC drift, authentication/authorization/CSRF/tenant regressions, frontend tests/build, browser E2E, mobile widths, accessibility, performance smoke and CI stability.
 
-- secret scanning and production-profile validation;
-- Rust formatting, Clippy and unit tests;
-- PostgreSQL / SQLx integration tests;
-- authentication, authorization, CSRF and tenant regression checks;
-- OpenAPI and RBAC drift checks;
-- frontend type checks, tests and production build;
-- browser E2E for core hotel journeys;
-- reception lifecycle checks at mobile widths;
-- performance smoke thresholds;
-- CI stability checks.
+~~~bash
+./scripts/ci-backend.sh
+./scripts/ci-backend-integration.sh
+./scripts/backend-security-regression.sh
+./scripts/qa-core-journeys.sh
+./scripts/check-openapi-alignment.sh
+~~~
+
+## Production engineering
+
+Provider-independent hardening on main includes pinned multi-stage images, non-root backend runtime, static nginx frontend, strict production configuration, secure cookies, explicit CORS, health/readiness, migration/release ordering, rollback procedures, PostgreSQL backup/restore tooling, synthetic restore drills and tenant/RBAC/RLS runtime validation.
+
+Infrastructure-specific work remains separate: VPS/provider selection, DNS, TLS, firewall policy, external backup destination, secret ownership and final operational RPO/RTO measurement. No deployment has been performed and no real hotel data has been used.
 
 ## Run locally
 
-### Requirements
+Requirements: Docker and Docker Compose.
 
-- Docker
-- Docker Compose
-
-```bash
+~~~bash
 git clone https://github.com/sjo1848/hotel-management-system.git
 cd hotel-management-system
 cp .env.example .env
 docker compose up --build
-```
-
-Local services:
+~~~
 
 | Service | URL |
 |---|---|
-| Frontend | `http://localhost:5173` |
-| Backend API | `http://localhost:3001` |
-| Health | `http://localhost:3001/health` |
-| Readiness | `http://localhost:3001/ready` |
-| Swagger UI | `http://localhost:3001/swagger-ui` |
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3001 |
+| Health | http://localhost:3001/health |
+| Readiness | http://localhost:3001/ready |
+| Swagger UI | http://localhost:3001/swagger-ui |
 
-## Repository layout
+The demo seed uses synthetic hotel data; credentials are documented in [the screenshot walkthrough](docs/screenshots/README.md). Do not use those defaults outside local development.
 
-```text
+## Repository structure
+
+~~~text
 .
 ├── backend/       # Rust API, domain and migrations
 ├── frontend/      # React + TypeScript application
-├── monitoring/    # Prometheus, Grafana, Tempo and OTel
+├── monitoring/    # Prometheus, Grafana, Tempo and OTel configuration
 ├── scripts/       # QA, security and operational tooling
-├── database/      # legacy bootstrap compatibility layer
-└── docs/          # architecture, API, operations and product evidence
-```
+├── database/      # database bootstrap compatibility
+└── docs/          # architecture, operations and product evidence
+~~~
 
 ## Documentation
 
 - [Engineering case study](docs/ENGINEERING_CASE_STUDY.md)
 - [Implementation status](docs/PROJECT_STATUS.md)
+- [Product screenshots and walkthrough](docs/screenshots/README.md)
 - [OpenAPI contract](backend/openapi.yaml)
-- [Changelog](docs/CHANGELOG.md)
-- [Product screenshots](docs/screenshots/README.md)
-- [ADR index](docs/adr/README.md)
+- [Architecture Decision Records](docs/adr/README.md)
 - [Operator runbook](docs/ops/operator-runbook.md)
+- [Changelog](docs/CHANGELOG.md)
 
-## Current state
+## Current status
 
-- Core reception lifecycle implemented and validated through automated and human acceptance flows.
-- Verified desktop product screenshots are committed in the repository.
-- Stable repository snapshot `v0.1.0` is tagged.
-- A public hosted demo is not linked yet.
-- Production adoption still requires environment-specific infrastructure, privacy, operational and support validation.
+Application capabilities and desktop/mobile reception workflows are implemented and exercised through browser journeys. Canonical main includes provider-independent production hardening.
+
+Pending by design:
+
+- no public hosted demo;
+- no VPS/provider selection;
+- no production deployment, DNS/TLS/firewall setup or external backup destination;
+- representative hotel-user validation and final privacy/legal/support decisions;
+- real hotel data.
+
+Current infrastructure stage: **READY_FOR_VPS_SELECTION**. This is an application/runtime readiness boundary, not live production usage or PRODUCTION_ELIGIBLE status.
+
+## Engineering method
+
+HMS has also been used to validate structured AI-assisted engineering: bounded work items, explicit evidence gates, independent-review attempts and transferable orchestration. The repository is presented first as HMS Elite and its engineering evidence.
