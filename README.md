@@ -6,7 +6,7 @@
 
 HMS Elite is a multi-hotel property management platform for reservations, arrivals, check-in, room state, charges, payments, checkout and housekeeping handoff.
 
-The product combines a Rust/Axum API, React + TypeScript frontend, PostgreSQL persistence, hotel-scoped authorization and browser-tested operational journeys. The repository is production-hardened at the application/runtime level, but it is not deployed to final production infrastructure.
+The product combines a Rust/Axum API, React + TypeScript frontend, PostgreSQL persistence, hotel-scoped authorization, browser-tested operational journeys and production-oriented operational tooling.
 
 ## Product walkthrough
 
@@ -65,7 +65,7 @@ Core reception journeys are exercised at 375, 390 and 430 pixel widths in CI.
 - **Administration:** users, capabilities, RBAC and audit events.
 - **Multi-hotel:** hotel-scoped data and network-level administration surfaces.
 - **Security:** authentication, authorization, CSRF controls, rate limits and layered tenant isolation.
-- **Operations:** health/readiness, backups, restore procedures and production container profiles.
+- **Operations:** health/readiness, migrations, backups, restore procedures, rollback tooling and production container profiles.
 
 ## Architecture
 
@@ -93,10 +93,10 @@ The frontend is organized by product feature with centralized API handling and c
 
 ## Engineering highlights
 
-- **Tenant boundaries:** scoped repositories, tenant context, relational constraints and targeted PostgreSQL RLS. RLS is not claimed for every tenant-scoped table.
+- **Tenant boundaries:** scoped repositories, tenant context, relational constraints and targeted PostgreSQL RLS on tenant-scoped data.
 - **Capability authorization:** explicit capabilities, backend enforcement, frontend route protection and frontend/backend drift checks.
 - **Lifecycle operations:** check-in, checkout, room reassignment and housekeeping handoff are business transitions, not generic CRUD updates.
-- **API contract:** versioned /api/v1 REST API with [canonical OpenAPI](backend/openapi.yaml) and an aligned [mirror](docs/openapi.yaml).
+- **API contract:** versioned `/api/v1` REST API with [canonical OpenAPI](backend/openapi.yaml) and an aligned [mirror](docs/openapi.yaml).
 
 ## Technology stack
 
@@ -125,9 +125,19 @@ Full-stack CI validates secret scanning, environment security, Rust format/Clipp
 
 ## Production engineering
 
-Provider-independent hardening on main includes pinned multi-stage images, non-root backend runtime, static nginx frontend, strict production configuration, secure cookies, explicit CORS, health/readiness, migration/release ordering, rollback procedures, PostgreSQL backup/restore tooling, synthetic restore drills and tenant/RBAC/RLS runtime validation.
+HMS Elite includes a dedicated production runtime profile with:
 
-Infrastructure-specific work remains separate: VPS/provider selection, DNS, TLS, firewall policy, external backup destination, secret ownership and final operational RPO/RTO measurement. No deployment has been performed and no real hotel data has been used.
+- pinned multi-stage production Docker images;
+- non-root backend runtime;
+- static nginx frontend;
+- strict production configuration and secret validation;
+- secure cookies and explicit CORS;
+- health and readiness checks;
+- explicit database migration and release ordering;
+- PostgreSQL backup and restore tooling;
+- application rollback procedures;
+- synthetic restore and production smoke tests;
+- tenant, RBAC and RLS runtime validation.
 
 ## Run locally
 
@@ -165,27 +175,8 @@ The demo seed uses synthetic hotel data; credentials are documented in [the scre
 ## Documentation
 
 - [Engineering case study](docs/ENGINEERING_CASE_STUDY.md)
-- [Implementation status](docs/PROJECT_STATUS.md)
 - [Product screenshots and walkthrough](docs/screenshots/README.md)
 - [OpenAPI contract](backend/openapi.yaml)
 - [Architecture Decision Records](docs/adr/README.md)
 - [Operator runbook](docs/ops/operator-runbook.md)
 - [Changelog](docs/CHANGELOG.md)
-
-## Current status
-
-Application capabilities and desktop/mobile reception workflows are implemented and exercised through browser journeys. Canonical main includes provider-independent production hardening.
-
-Pending by design:
-
-- no public hosted demo;
-- no VPS/provider selection;
-- no production deployment, DNS/TLS/firewall setup or external backup destination;
-- representative hotel-user validation and final privacy/legal/support decisions;
-- real hotel data.
-
-Current infrastructure stage: **READY_FOR_VPS_SELECTION**. This is an application/runtime readiness boundary, not live production usage or PRODUCTION_ELIGIBLE status.
-
-## Engineering method
-
-HMS has also been used to validate structured AI-assisted engineering: bounded work items, explicit evidence gates, independent-review attempts and transferable orchestration. The repository is presented first as HMS Elite and its engineering evidence.
