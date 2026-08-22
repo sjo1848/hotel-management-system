@@ -63,11 +63,12 @@ resolve_profile() {
 RUNTIME_PROFILE="$(resolve_profile)"
 ./scripts/validate-env-profile.sh --profile "$RUNTIME_PROFILE" --env-file "$ENV_FILE"
 
-COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.yml)
-if [[ "$RUNTIME_PROFILE" == "staging" ]]; then
-  COMPOSE_ARGS+=(-f docker-compose.staging.yml)
-elif [[ "$RUNTIME_PROFILE" == "prod" ]]; then
-  COMPOSE_ARGS+=(-f docker-compose.prod.yml)
+if [[ "$RUNTIME_PROFILE" == "prod" ]]; then
+  COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.prod.yml)
+elif [[ "$RUNTIME_PROFILE" == "staging" ]]; then
+  COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.yml -f docker-compose.staging.yml)
+else
+  COMPOSE_ARGS=(--env-file "$ENV_FILE" -f docker-compose.yml)
 fi
 
 docker compose "${COMPOSE_ARGS[@]}" config >/tmp/hms-prod-compose.resolved.yml

@@ -1,15 +1,38 @@
 services:
   backend:
+    build: { context: ./backend, dockerfile: Dockerfile.prod }
+    restart: unless-stopped
     environment:
-      APP_ENV: ${APP_ENV:-prod}
+      APP_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in production}
       AUTH_REQUIRED: "true"
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required in production}
       JWT_KID: ${JWT_KID:?JWT_KID is required in production}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required in production}
       CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in production}
-      METRICS_PUBLIC: ${METRICS_PUBLIC:-false}
-      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:-}
-      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      METRICS_PUBLIC: "false"
+      METRICS_AUTH_TOKEN: ${METRICS_AUTH_TOKEN:?METRICS_AUTH_TOKEN is required in production}
+      COOKIE_SECURE: "true"
       COOKIE_SAMESITE: ${COOKIE_SAMESITE:-Lax}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN:?COOKIE_DOMAIN is required in production}
-      OTEL_ENABLED: ${OTEL_ENABLED:-true}
+      OTEL_ENABLED: ${OTEL_ENABLED:-false}
+    expose: ["3001"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:3001/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+  frontend:
+    build: { context: ./frontend, dockerfile: Dockerfile.prod }
+    restart: unless-stopped
+    ports: ["${FRONTEND_PORT:-8080}:80"]
+    depends_on:
+      backend: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1/healthz || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
