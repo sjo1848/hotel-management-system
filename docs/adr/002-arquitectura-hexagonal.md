@@ -1,19 +1,39 @@
-# ADR-002: Implementación de Arquitectura Hexagonal (Puertos y Adaptadores)
+# ADR-002: Backend Boundaries and Ports/Adapters
 
-## Estado
-Aceptado
+## Status
 
-## Contexto
-Los sistemas hoteleros suelen evolucionar en su infraestructura (cambio de bases de datos, integración con APIs externas de pagos o Channel Managers). Necesitamos que la lógica de negocio sea independiente de estos detalles.
+Accepted.
 
-## Decisión
-Se ha estructurado el backend siguiendo los principios de **Arquitectura Hexagonal**.
+## Context
 
-### Estructura
-1. **Domain**: Entidades puras y reglas de negocio. Define los "Ports" (Traits en Rust).
-2. **Application**: Casos de uso que orquestan los puertos.
-3. **Infrastructure**: Implementaciones concretas ("Adapters") como PostgreSQL, servicios de hashing, etc.
+Hotel business rules should not depend directly on Axum handlers or PostgreSQL query details. Reservations, room transitions, billing and housekeeping also need to be testable independently from transport concerns.
 
-## Consecuencias
-- **Positivo**: Desacoplamiento total. Podemos testear la lógica de negocio sin tocar la base de datos (mediante Mocks).
-- **Negativo**: Requiere más código inicial ("Boilerplate") para definir las interfaces.
+## Decision
+
+Structure the backend around explicit domain, application and infrastructure boundaries:
+
+- **Domain:** business models, policies and repository/service contracts.
+- **Application:** use cases and workflow orchestration.
+- **Infrastructure:** PostgreSQL/SQLx repositories, HTTP handlers, authentication, telemetry and other adapters.
+
+The architecture is implemented as a modular monolith; these boundaries do not imply separate deployable services.
+
+## Consequences
+
+### Benefits
+
+- Domain and application rules remain less coupled to HTTP and persistence details.
+- Repository and service contracts provide clear test seams.
+- Infrastructure can evolve without moving business rules into adapters.
+
+### Costs
+
+- More interfaces/types than a small CRUD-oriented backend.
+- Boundary discipline must be maintained as new features are added.
+- Some cross-domain workflows intentionally coordinate multiple application services inside one deployment.
+
+## Evidence
+
+- `backend/src/domain`
+- `backend/src/application`
+- `backend/src/infrastructure`
