@@ -96,7 +96,7 @@ The frontend is organized by product feature with centralized API handling and c
 - **Tenant boundaries:** scoped repositories, tenant context, relational constraints and targeted PostgreSQL RLS on tenant-scoped data.
 - **Capability authorization:** explicit capabilities, backend enforcement, frontend route protection and frontend/backend drift checks.
 - **Lifecycle operations:** check-in, checkout, room reassignment and housekeeping handoff are business transitions, not generic CRUD updates.
-- **API contract:** versioned `/api/v1` REST API with [canonical OpenAPI](backend/openapi.yaml) and an aligned [mirror](docs/openapi.yaml).
+- **API contract:** versioned `/api/v1` REST API with a single [canonical OpenAPI contract](backend/openapi.yaml) validated against the router and generated client expectations.
 
 ## Technology stack
 
@@ -168,12 +168,12 @@ The demo seed uses synthetic hotel data; credentials are documented in [the scre
 ├── frontend/      # React + TypeScript application
 ├── monitoring/    # Prometheus, Grafana, Tempo and OTel configuration
 ├── scripts/       # QA, security and operational tooling
-├── database/      # database bootstrap compatibility
 └── docs/          # architecture, operations and product evidence
 ~~~
 
 ## Documentation
 
+- [Documentation index](docs/README.md)
 - [Engineering case study](docs/ENGINEERING_CASE_STUDY.md)
 - [Product screenshots and walkthrough](docs/screenshots/README.md)
 - [OpenAPI contract](backend/openapi.yaml)

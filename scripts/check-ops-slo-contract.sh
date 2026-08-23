@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOC_MAIN="docs/execution-backlog-strict.md"
 DOC_CONTRACT="docs/validation/ops-kpi-contract.md"
 
-for file in "$DOC_MAIN" "$DOC_CONTRACT"; do
-  if [[ ! -f "$file" ]]; then
-    echo "Missing required contract file: $file" >&2
-    exit 1
-  fi
-done
+if [[ ! -f "$DOC_CONTRACT" ]]; then
+  echo "Missing required contract file: $DOC_CONTRACT" >&2
+  exit 1
+fi
 
 required_thresholds=(
   "auth_refresh_error_rate < 0.5%"
@@ -21,10 +18,6 @@ required_thresholds=(
 )
 
 for line in "${required_thresholds[@]}"; do
-  if ! grep -Fq "$line" "$DOC_MAIN"; then
-    echo "execution-backlog contract missing threshold: $line" >&2
-    exit 1
-  fi
   if ! grep -Fq "$line" "$DOC_CONTRACT"; then
     echo "ops-kpi contract missing threshold: $line" >&2
     exit 1

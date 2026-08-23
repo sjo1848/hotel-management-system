@@ -4,11 +4,11 @@
 
 Hotel operations are stateful and cross-functional. Reception, housekeeping, administration and finance all act on the same stay, but they need different permissions and different views of that state.
 
-The system therefore has to solve more than record storage. It must coordinate booking transitions, room state, charges and payments, tenant boundaries, operational handoffs and auditability without coupling every rule to HTTP handlers or frontend screens.
+HMS Elite therefore coordinates booking transitions, room state, charges and payments, tenant boundaries, operational handoffs and auditability instead of treating the domain as generic CRUD.
 
 ## Product scope
 
-HMS Elite currently covers:
+HMS Elite covers:
 
 - rooms, availability and holds;
 - guests and reservations;
@@ -41,58 +41,48 @@ Business models, errors, policies and repository contracts live independently of
 
 ### Application
 
-Application services coordinate use cases such as reservations, reception transitions, billing, cash closure, housekeeping and user administration.
+Application services coordinate reservations, reception transitions, billing, cash closure, housekeeping and user administration.
 
 ### Infrastructure
 
 Adapters provide PostgreSQL persistence, HTTP handlers, authentication, authorization, telemetry and external-facing contracts.
 
-## Key decisions
+## Key engineering decisions
 
-### 1. Modular monolith before microservices
+### Modular monolith before microservices
 
-The modules share operational transactions and evolve together. A single deployable backend keeps those transactions straightforward and limits deployment complexity. Service extraction is deferred until there is evidence that an independent scaling or ownership boundary is worth the coordination cost.
+The modules share operational transactions and evolve together. A single deployable backend keeps those transactions straightforward and avoids distributed-system overhead without sacrificing internal boundaries.
 
-### 2. Booking lifecycle is not generic CRUD
+### Lifecycle operations instead of generic CRUD
 
-A reservation can affect room state, billing state, audit history and housekeeping. Operational transitions therefore use explicit services and transactional repository paths rather than allowing arbitrary status mutation through a generic update endpoint.
+A reservation can affect room state, billing state, audit history and housekeeping. Check-in, checkout and related operations therefore use explicit services and transactional repository paths rather than arbitrary status mutation.
 
-This makes the important side effects visible and testable.
+### Layered tenant isolation
 
-### 3. Tenant isolation is a backend and database concern
+Hotel identity is enforced below the UI boundary. Tenant-scoped access combines application tenant context, scoped repositories, relational constraints and PostgreSQL RLS policies on core tenant tables. Composite foreign keys protect cross-tenant relationships, while integration tests exercise tenant context and isolation behavior.
 
-The UI does not define the security boundary. Hotel identity is propagated through authorization and repository calls, with tenant-scoped queries, composite constraints and targeted RLS policies providing additional enforcement.
+### Capability-based authorization
 
-RLS is intentionally not described as universal coverage: some tenant-scoped tables still rely on repository discipline and database constraints. The repository keeps that limitation explicit instead of presenting partial RLS as complete isolation.
+Roles assign sets of capabilities; capabilities are the permission contract. The backend enforces them at route boundaries and the frontend uses the same canon for protected navigation and actions. CI checks generated frontend/backend representations for drift.
 
-### 4. Capabilities provide the authorization contract
+### One canonical API contract
 
-Roles are assignment mechanisms; capabilities are the actual permissions. The backend enforces capabilities at route boundaries and the frontend uses the same contract for navigation and protected routes.
+The public API is versioned under `/api/v1`. [`backend/openapi.yaml`](../backend/openapi.yaml) is the single canonical OpenAPI contract. CI checks route alignment, generated-client drift and contractual changelog updates.
 
-Automated checks detect drift between the canonical RBAC definition and its frontend/backend representations.
+### Workflow-level quality gates
 
-### 5. OpenAPI is a governed interface
-
-The public API is versioned under `/api/v1`. The canonical OpenAPI document is checked against its documentation mirror and frontend expectations so contract changes are visible in CI rather than discovered at runtime.
-
-### 6. Quality gates exercise workflows, not only units
-
-Unit tests are useful for local rules, but the highest-risk defects in a PMS appear across boundaries: authentication, database state, booking transitions and responsive UI.
-
-The CI pipeline therefore combines:
+The highest-risk PMS defects cross boundaries, so CI combines:
 
 - Rust formatting, Clippy and unit tests;
 - PostgreSQL / SQLx integration tests;
 - authentication, authorization, CSRF and tenant regressions;
 - frontend type checks and component tests;
 - browser E2E for core journeys;
-- mobile reception lifecycle runs;
-- performance smoke checks;
+- mobile reception lifecycle checks;
+- accessibility and performance smoke checks;
 - secret scanning and environment validation.
 
 ## Representative workflow
-
-The reception lifecycle connects multiple modules:
 
 ```text
 login
@@ -116,65 +106,33 @@ This journey is covered by browser-level tests and supporting backend integratio
 
 ## Security approach
 
-The repository includes:
+The repository includes password hashing, access/refresh-session handling, capability-based authorization, tenant-scoped data access, CSRF protection, explicit CORS and cookie controls, rate limiting, request IDs, audit events and production-profile environment validation.
 
-- password hashing and token-based authentication;
-- access and refresh-session handling;
-- capability-based authorization;
-- tenant-scoped data access;
-- CSRF regression checks;
-- CORS and security headers;
-- general and authentication-specific rate limiting;
-- request IDs and audit events;
-- production-profile environment validation.
-
-These are engineering controls, not a security certification. A real deployment still requires infrastructure hardening, secret management, privacy review, penetration testing and operational procedures appropriate to the organization using the system.
+These are engineering controls, not a certification. The repository threat model documents the implemented boundary and the operational runbooks describe the controls expected around a deployment.
 
 ## Observability and operations
 
-The local operational stack includes Prometheus, Grafana, Tempo and OpenTelemetry. The backend exposes health, readiness and metrics signals, while scripts support backup, restore, deployment rollback, environment validation and performance baselines.
+The operational stack includes Prometheus, Grafana, Tempo and OpenTelemetry. The backend exposes health, readiness and metrics signals, while scripts support backup, restore, migration control, deployment rollback, environment validation and performance baselines.
 
-This tooling exists to make runtime behavior inspectable; it is not a substitute for validating the product with real hotel operations.
+Application rollback and database restore are intentionally separate operations: a failed application deployment can revert the application version, while destructive database restore requires explicit operator action.
 
 ## Trade-offs
 
-### What the current approach buys
+The current approach provides transactional consistency across hotel workflows, clear internal boundaries, explicit tenant and authorization contracts, reproducible environments and automated evidence across backend, frontend and browser journeys.
 
-- transactional consistency across hotel workflows;
-- clear internal boundaries without distributed-system overhead;
-- explicit tenant and authorization contracts;
-- reproducible local and CI environments;
-- automated evidence across backend, frontend and browser journeys.
+The cost is a larger quality/operations surface than a simple CRUD application: more configuration, broader tests and more CI maintenance. The repository keeps that complexity tied to concrete operational and security concerns.
 
-### What it costs
-
-- more structure and CI maintenance than a small CRUD application requires;
-- additional configuration for observability and security gates;
-- broader test suites with longer execution time;
-- risk of over-engineering if infrastructure work gets ahead of product validation.
-
-The project deliberately keeps those costs visible. New infrastructure or architectural layers should be justified by an operational problem, not by novelty.
-
-## Evidence
+## Evidence map
 
 | Concern | Repository evidence |
 |---|---|
 | Domain/application separation | `backend/src/domain`, `backend/src/application` |
 | Persistence and HTTP adapters | `backend/src/infrastructure` |
+| Database evolution | `backend/migrations` |
 | API contract | `backend/openapi.yaml` |
 | CI | `.github/workflows/full-stack-ci.yml` |
 | Browser journeys | `frontend/e2e` |
 | Product screens | `docs/screenshots` |
 | Architecture decisions | `docs/adr` |
+| Validation contracts | `docs/validation` |
 | Operations | `docs/ops`, `monitoring`, `scripts` |
-
-## Current state and limitations
-
-- The core reception lifecycle has automated and human acceptance evidence.
-- Desktop product screenshots are committed and `v0.1.0` is tagged.
-- Mobile reception work has been integrated after acceptance and canonical CI validation.
-- No public hosted demo is linked yet.
-- Production use requires environment-specific infrastructure, privacy, support and operational validation.
-- Tenant protection is layered, but RLS coverage is not claimed for every tenant-scoped table.
-
-The project remains a modular monolith because that is currently the simpler architecture for the product's transaction and deployment needs.

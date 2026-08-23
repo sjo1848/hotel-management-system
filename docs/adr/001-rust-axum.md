@@ -1,19 +1,40 @@
-# ADR-001: Elección de Rust y Axum para el Backend
+# ADR-001: Rust and Axum for the Backend
 
-## Estado
-Aceptado
+## Status
 
-## Contexto
-El sistema HMS Elite requiere alta concurrencia (manejo de múltiples reservas y actualizaciones de estado en tiempo real) y una seguridad de memoria garantizada para evitar vulnerabilidades críticas en el manejo de datos de huéspedes.
+Accepted.
 
-## Decisión
-Hemos elegido **Rust** como lenguaje principal y **Axum** como framework web.
+## Context
 
-### Razonamiento Técnico
-1. **Seguridad de Memoria**: Rust elimina clases enteras de bugs (null pointers, buffer overflows) en tiempo de compilación, vital para un sistema que maneja PII (Personally Identifiable Information).
-2. **Rendimiento Predictivo**: Sin recolector de basura (GC), Rust ofrece latencias consistentes, permitiendo que las métricas de respuesta (SLOs) sean estables bajo carga.
-3. **Ecosistema Axum**: Basado en `tower`, permite una integración modular de middlewares (como el que implementamos para métricas y seguridad) de forma extremadamente eficiente.
+HMS Elite needs predictable server behavior, strong type safety and explicit control over concurrent database-backed workflows. The backend also benefits from an ecosystem that integrates cleanly with async I/O, middleware and PostgreSQL.
 
-## Consecuencias
-- **Positivo**: Infraestructura altamente eficiente y segura.
-- **Negativo**: Curva de aprendizaje más elevada para nuevos desarrolladores en comparación con Node.js o Python.
+## Decision
+
+Use **Rust** with **Axum/Tokio** for the backend API.
+
+Reasons:
+
+- Rust provides compile-time memory and type safety without a garbage collector.
+- Tokio/Axum provide an async HTTP stack built around composable `tower` middleware.
+- SQLx integrates PostgreSQL access with Rust types and async execution.
+- The stack supports the repository's modular domain/application/infrastructure separation without requiring a distributed architecture.
+
+## Consequences
+
+### Benefits
+
+- Strong compile-time guarantees around application code and data handling.
+- Predictable runtime characteristics for API and workflow execution.
+- Good fit for explicit middleware, tracing and database integration.
+
+### Costs
+
+- Higher learning curve than many dynamic-language web stacks.
+- More explicit type/model work at API and persistence boundaries.
+- Compile times and Rust-specific tooling become part of the development/CI cost.
+
+## Evidence
+
+- `backend/Cargo.toml`
+- `backend/src`
+- `.github/workflows/full-stack-ci.yml`

@@ -4,7 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ROUTES_FILE="$ROOT_DIR/backend/src/infrastructure/web/routes/mod.rs"
 OPENAPI_FILE="$ROOT_DIR/backend/openapi.yaml"
-OPENAPI_DOC_MIRROR="$ROOT_DIR/docs/openapi.yaml"
 
 if [[ ! -f "$ROUTES_FILE" ]]; then
   echo "Routes file not found: $ROUTES_FILE" >&2
@@ -13,11 +12,6 @@ fi
 
 if [[ ! -f "$OPENAPI_FILE" ]]; then
   echo "OpenAPI file not found: $OPENAPI_FILE" >&2
-  exit 1
-fi
-
-if [[ ! -f "$OPENAPI_DOC_MIRROR" ]]; then
-  echo "OpenAPI mirror not found: $OPENAPI_DOC_MIRROR" >&2
   exit 1
 fi
 
@@ -53,7 +47,7 @@ comm -23 "$routes_norm" "$docs_norm" > "$missing_in_docs"
 comm -13 "$routes_norm" "$docs_norm" > "$missing_in_routes"
 
 if [[ -s "$missing_in_docs" || -s "$missing_in_routes" ]]; then
-  echo "OpenAPI alignment check failed." >&2
+  echo "OpenAPI alignment check failed."
   if [[ -s "$missing_in_docs" ]]; then
     echo >&2
     echo "Paths present in router but missing in backend/openapi.yaml:" >&2
@@ -64,12 +58,6 @@ if [[ -s "$missing_in_docs" || -s "$missing_in_routes" ]]; then
     echo "Paths present in backend/openapi.yaml but missing in router:" >&2
     cat "$missing_in_routes" >&2
   fi
-  exit 1
-fi
-
-if ! cmp -s "$OPENAPI_FILE" "$OPENAPI_DOC_MIRROR"; then
-  echo "OpenAPI mirror mismatch: docs/openapi.yaml must match backend/openapi.yaml" >&2
-  echo "Run: cp backend/openapi.yaml docs/openapi.yaml" >&2
   exit 1
 fi
 

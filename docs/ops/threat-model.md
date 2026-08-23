@@ -1,93 +1,83 @@
 # Threat Model — HMS Elite
 
-Síntesis consolidada y accionable del modelo de amenazas del sistema. Refleja los
-controles implementados en el código actual de `main`, los gaps y las acciones
-recomendadas. No sustituye un pen-test independiente ni una certificación formal.
+This document summarizes the application-level security boundary implemented in the repository. It is an engineering threat model, not a penetration-test or compliance certification.
 
-## Alcance
+## Scope
 
-Contexto: HMS Elite (PMS SaaS multi-hotel), arquitectura hexagonal (Rust + Axum
-backend, React + TypeScript frontend, PostgreSQL). API v1, multi-tenant por
-`hotel_id`.
+HMS Elite is a multi-hotel PMS with a Rust/Axum backend, React/TypeScript frontend and PostgreSQL persistence.
 
-El modelo cubre las superficies propias del backend y su frontend. Quedan fuera de
-este documento: hardening de infraestructura específica del host, pen-test
-externo, revisión legal/privacy y certificaciones (marcados como Pending en
-`PROJECT_STATUS.md`).
+Primary assets include:
 
-## Activos
+- guest identity/contact data;
+- reservations and room inventory;
+- invoices, payments and cash activity;
+- operator accounts, sessions and capabilities;
+- audit and operational events.
 
-| Activo | Tipo | Sensibilidad |
+Primary entry points are the browser application and the versioned `/api/v1` HTTP API.
+
+## Security boundaries
+
+### Authentication
+
+Browser authentication uses HttpOnly cookies, refresh-session handling and CSRF validation. Environment-specific cookie/CORS settings are validated before non-local operation.
+
+Evidence:
+
+- `docs/adr/003-auth-strategy.md`
+- `backend/tests/csrf_authn_security.rs`
+- `scripts/validate-env-profile.sh`
+
+### Authorization
+
+Protected actions are capability based. The backend is the authorization boundary; frontend route/action hiding is usability support rather than the security control.
+
+The capability canon is stored in `docs/validation/rbac-canon-v1.json`, with generated frontend/backend representations and drift checks in CI.
+
+### Tenant isolation
+
+Tenant isolation is layered:
+
+- required `hotel_id` on tenant-bearing entities;
+- tenant-aware repository transactions;
+- composite constraints and foreign keys;
+- PostgreSQL RLS policies across core tenant tables;
+- database-backed isolation tests.
+
+`begin_tenant_tx(...)` configures the transaction tenant and disables RLS bypass. The `hotels` table is the tenant root and is handled separately from tenant-scoped child data.
+
+See [`../adr/0006-tenant-isolation-strategy.md`](../adr/0006-tenant-isolation-strategy.md).
+
+### Input and request controls
+
+The backend applies typed request validation, request-size/configuration controls, explicit CORS, security headers, rate limiting and structured request IDs. Stable error semantics are governed through [`../errors/error-codes-v1.md`](../errors/error-codes-v1.md).
+
+## Representative threats
+
+| Threat | Primary control | Residual risk |
 |---|---|---|
-| PII de huéspedes (nombre, email, teléfono, documento) | Datos | Alta |
-| Reservas y movimientos de caja | Datos transaccionales | Alta |
-| Facturación y pagos | Datos financieros | Alta |
-| Sesiones y refresh tokens | Credenciales | Critica |
-| Habitaciones e inventario | Datos operativos | Media |
-| Usuarios operadores y roles | Credenciales/privilegios | Alta |
+| Credential/session theft | HttpOnly cookies, refresh handling, secure profile validation | Browser/device compromise remains outside the application boundary |
+| CSRF on state-changing requests | CSRF token validation + cookie policy | Misconfigured origins/cookies can weaken the boundary |
+| Privilege escalation | Capability authorization + RBAC canon + regression tests | New routes require capability enforcement and drift validation |
+| Cross-hotel data access | Tenant context + scoped repositories + composite FKs + RLS | New tables/queries must preserve the same isolation contract |
+| Booking/billing tampering | AuthZ + transactional application services + tenant constraints | Application bugs can still violate business invariants without regression coverage |
+| Brute force / request abuse | Authentication/general rate limiting | In-process limits do not replace infrastructure-level traffic controls at larger scale |
+| Sensitive data in logs | Structured logging and scoped operational telemetry | Logging changes must avoid request bodies or unnecessary guest/session data |
+| Repudiation of operational actions | Audit events and request identity context | Audit integrity depends on database and deployment access controls |
 
-## Superficie de ataque (entry points)
+## Security testing
 
-- `/api/v1/auth/*` — login, refresh, logout.
-- `/api/v1/bookings/*`, `billing/*`, `rooms/*`, `guests/*`, `housekeeping/*`,
-  `cash-closure/*`, `reports/*`, `/admin`.
-- Panel frontend (SPA) y API pública.
+Repository evidence includes:
 
-## Controles existentes (en código)
+- authentication and CSRF regression tests;
+- RBAC authorization tests;
+- tenant context, relational-integrity and RLS tests;
+- environment-profile security checks;
+- secret scanning in GitHub Actions;
+- browser E2E for protected operational journeys.
 
-| Control | Implementación |
-|---|---|
-| Autenticación | Token + refresh con detección de reuso de refresh token (ADR-003) |
-| Autorización por capacidades | Desnormalización de roles por capability; deny-by-default en rutas no permitidas |
-| Aislamiento tenant | `begin_tenant_tx(...)` en repositorios tenant-scoped + RLS Fase 1 (ADR-0001) |
-| Rate limiting | `RATE_LIMIT_PER_MINUTE` (config.rs) en endpoints sensibles |
-| CORS/headers | Validación de origen + hardening de headers en respuestas |
-| Validación de input | Policy de validación y anti-escape (deploy kpi contract) |
-| Rotación de secretos | `validate-env-profile.sh` bloquea `admin123`/dev-secrets fuera de local (guard `backend-security-regression.sh`) |
+The main CI pipeline is the canonical automated gate for these controls.
 
-## Análisis STRIDE
+## Deployment boundary
 
-| Categoría | Amenaza | Assets | Control actual | Gap | Acción |
-|---|---|---|---|---|---|
-| **Spoofing** | Login con credenciales débiles o default | Sesiones | Rate limit + bloqueo de `admin123` en prod | — | Monitorear login rate (alerta `HMSAuthLoginFailureRateHigh` ya existe) |
-| **Spoofing** | Reuso de refresh token robado | Usuarios | Detección de reuso de refresh token | — | Confirmar invalidación del par al detectar reuso (tests anti-escape) |
-| **Tampering** | Modificar reserva/factura ajena | Facturación | `begin_tenant_tx` por request | RLS aún Fase 1, no todas las tablas | Completar RLS a tablas restantes; anti-escape tests en CI |
-| **Repudiation** | Negar operaciones contables | Facturación, movimientos | `audit_events` log | — | Verificar inmutabilidad/append-only de audit log |
-| **Information disclosure** | Fuga cross-tenant | PII, reservas | RLS + tenant context fail-closed | — | Test anti-escape read/write en CI (obligatorio) |
-| **Information disclosure** | IDs/emails en logs | PII | — | Logs podrían no redactar PII | Revisar formato de logs; no loguear bodies con PII |
-| **Denial of service** | Exceso de requests a auth/endpoints | Disponibilidad | Rate limiting por minuto | Reseteo/límites por usuario vs IP | Refinar rate limit por identidad + IP |
-| **Privilege escalation** | Ejecutar acción con rol distinto al autorizado | Operadores, roles | Capability-based authorization | — | Cubrir con tests RBAC canon + smoke por rol (ya en repo) |
-
-## OWASP Top 10 — mapeo resumido
-
-- A01 Broken Access Control → RBAC por capability + RLS (parcial).
-- A02 Cryptographic Failures → secretos rotados/validados; TLS a cargo del front del host.
-- A07 XSS → frameworks + no-render-HTML en React.
-- A09 Security Logging → `audit_events` para operaciones financieras.
-- A05 Misconfiguration → `validate-env-profile.sh` + guards de secretos en CI.
-
-## Gaps más relevantes
-
-1. **RLS Fase 1** (ADR-0001) pendiente de extensión a todas las tablas
-   financieras; hoy se apoya en `begin_tenant_tx` (disciplina de capa) + policies
-   parciales.
-2. **Pen-test independiente** — fuera de alcance del repo.
-3. **Hardening de infraestructura** (pod security, secretos en el host del
-   despliegue, TLS con configuración del operador).
-4. **Cobertura de anti-escape tenant** — asegurar que los tests estén en CI y
-   cubran read/write cruzados (drift=0 en `execution-backlog-strict.md`).
-
-## Decisiones asumidas / tradeoffs
-
-- Se prioriza fail-closed (denegar por defecto) antes que flexibilidad de
-  permisos: reduce superficie de filtración cross-tenant.
-- RLS fase 1 es el approach aconsejado en ADR-0001; el coste es complejidad de
-  conexión/transacciones y posible tuning de índices (tradeoff documentado).
-- Redis de refresh-rate agrega dependencia; mientras tanto el rate limit reside
-  en el proceso (in-memory) — validar en escala.
-
-## Referencias relacionadas
-
-- ADR-0001 (tenant + RLS), ADR-003 (auth), `docs/adr/`.
-- `backend-security-regression.sh`, `validate-env-profile.sh`.
-- `execution-backlog-strict.md` (anti-escape, drift=0).
+Host/network TLS termination, infrastructure firewalling, secret storage, off-host backup storage and organization-specific privacy/compliance controls are deployment concerns. The repository provides application/runtime hooks and provider-independent operational procedures without claiming those external controls as implemented by the application itself.

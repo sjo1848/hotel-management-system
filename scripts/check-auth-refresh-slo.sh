@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOC="docs/execution-backlog-strict.md"
+DOC="docs/validation/ops-kpi-contract.md"
 REPORT_FILE=""
 MAX_P95="0.25"
 MAX_ERROR_RATE="0.005"
@@ -12,38 +12,19 @@ usage() {
 Usage: $0 [--report FILE] [--max-p95 SEC] [--max-error-rate RATE] [--require-runtime]
 
 Validates:
-  1) Contract lines in docs/execution-backlog-strict.md
-  2) Optional runtime SLO evidence from perf report for auth_refresh
+  1) auth refresh SLOs in docs/validation/ops-kpi-contract.md
+  2) optional runtime SLO evidence from a perf report
 USAGE
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --report)
-      REPORT_FILE="$2"
-      shift 2
-      ;;
-    --max-p95)
-      MAX_P95="$2"
-      shift 2
-      ;;
-    --max-error-rate)
-      MAX_ERROR_RATE="$2"
-      shift 2
-      ;;
-    --require-runtime)
-      REQUIRE_RUNTIME=1
-      shift
-      ;;
-    -h|--help)
-      usage
-      exit 0
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
-      usage
-      exit 1
-      ;;
+    --report) REPORT_FILE="$2"; shift 2 ;;
+    --max-p95) MAX_P95="$2"; shift 2 ;;
+    --max-error-rate) MAX_ERROR_RATE="$2"; shift 2 ;;
+    --require-runtime) REQUIRE_RUNTIME=1; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "Unknown option: $1" >&2; usage; exit 1 ;;
   esac
 done
 
