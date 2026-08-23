@@ -1,25 +1,22 @@
 # HMS Elite Changelog
 
-This changelog records public release-level product and engineering changes. Internal task IDs, orchestration history and implementation notes are intentionally excluded.
+This changelog records public release-level changes. Internal task IDs, orchestration history and implementation notes are intentionally excluded.
 
 ## 0.1.0 — 2026-08-03
 
 ### Product
 
-- Reception workspace with reservation, check-in and checkout flows.
-- Operations dashboard with occupancy, arrivals, departures and revenue indicators.
+- Reception workspace with guided check-in/check-out operations.
+- Operations dashboard with occupancy and revenue-oriented indicators.
 - Room inventory with operational states and transitions.
-- Reservation calendar and planning board.
-- Housekeeping workflow with cleaning states and maintenance context.
-- Guest, billing, reporting, user/RBAC and multi-hotel administration surfaces.
+- Reservation calendar/planning board.
+- Housekeeping workspace with cleaning states and room-detail context.
 
-### Engineering
+### Quality
 
-- Rust/Axum backend with PostgreSQL/SQLx persistence and versioned migrations.
-- React + TypeScript frontend with feature-oriented organization.
-- Versioned `/api/v1` contract with OpenAPI governance.
-- Capability-based authorization and tenant-scoped data controls.
-- Full-stack CI covering backend, frontend, browser journeys, security checks and performance smoke tests.
-- Docker-based local runtime and operational tooling for health, backup, restore and rollback procedures.
+- Browser coverage for core payment/checkout and operational journeys.
+- Backend lint/format hardening.
+- Consolidated full-stack CI across backend, frontend, browser journeys and stability checks.
+- Protected `main` workflow with the CI stability guard.
 
-Subsequent changes on `main` continue to be validated by the repository CI; release entries are added here when a public release is cut.
+Changes after this tagged release remain visible in Git history and are added here when a new public release is cut.
