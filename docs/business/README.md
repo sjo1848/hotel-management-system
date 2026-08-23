@@ -5,17 +5,14 @@ Este bloque ordena la documentacion que hace falta para vender, implementar y op
 Objetivo:
 - alinear producto, comercial y delivery
 - evitar documentos sueltos o duplicados
-- dejar una base mantenible para roadmap, backlog y operacion con cliente
+- dejar una base mantenible para roadmap y operacion con cliente
 
 Documentos:
 - [roadmap.md](roadmap.md)
-- [backlog.md](backlog.md)
 - [pricing.md](pricing.md)
 - [onboarding.md](onboarding.md)
 - [support.md](support.md)
-- [bitacora.md](bitacora.md)
 - [entregables.md](entregables.md)
-- [commercial-deck-outline.md](commercial-deck-outline.md)
 - [commercial-deck-final.md](commercial-deck-final.md)
 - [commercial-kit.md](commercial-kit.md)
 - [commercial-terms.md](commercial-terms.md)
@@ -45,9 +42,7 @@ Fuentes canonicas relacionadas:
 
 Reglas de mantenimiento:
 - roadmap: actualizacion mensual o cuando cambie una fase comercial
-- backlog: actualizacion semanal
 - pricing: actualizar solo con decision comercial explicita
 - onboarding y soporte: actualizar cuando cambie el proceso real
 - workflows por usuario: actualizar cuando cambien roles, handoffs o cobertura
-- bitacora: actualizar por hito, cierre de sprint o decision relevante
 - entregables: actualizar cuando cambie el alcance de implementacion
