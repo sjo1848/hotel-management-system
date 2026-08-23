@@ -1,392 +1,169 @@
-# HMS Elite — Runbook de QA Manual V1
+# Manual QA Runbook — HMS Elite
 
-## 1. Objetivo
+This runbook provides a reproducible manual pass for the application. It complements automated CI; it does not replace backend, frontend or browser tests.
 
-Ejecutar una validación manual reproducible de la aplicación web antes de una
-demo o de un go-live controlado. Este documento valida comportamiento observable
-por usuario, permisos, mutaciones críticas y layout responsive. No reemplaza
-`./scripts/gate.sh`, los tests automatizados ni los contratos OpenAPI.
+## Exit criteria
 
-La matriz detallada de cobertura está en
-[`manual-qa-role-checklist.md`](manual-qa-role-checklist.md). Este runbook define
-el orden exacto para ejecutarla y cómo dejar evidencia.
+A manual run is `PASS` when:
 
-## 2. Criterio de salida
+- core reception, housekeeping and role-boundary scenarios complete without critical/high defects;
+- protected routes/actions remain denied for unauthorized roles;
+- persisted state remains correct after refresh;
+- mobile task flows remain usable at the supported widths;
+- no real personal or production data is used.
 
-La corrida es `PASS` únicamente si:
+## Environment
 
-- todos los casos críticos QA-01 a QA-08 están `PASS`;
-- ningún rol puede acceder a una ruta o mutación fuera de su alcance;
-- no hay defectos `Critical` o `High` abiertos;
-- las seis anchuras tienen evidencia o una razón explícita de bloqueo;
-- cada `FAIL` tiene defecto registrado, severidad, evidencia y decisión;
-- la evidencia queda asociada a un commit o versión identificable.
+Default local stack:
 
-Un test automatizado en `PASS` no marca automáticamente una casilla manual como
-ejecutada: la persona debe observar la UI y registrar resultado.
+| Item | Value |
+|---|---|
+| Frontend | `http://localhost:5173` |
+| Backend | `http://localhost:3001` |
+| Tenant | synthetic demo hotel |
+| Viewports | `375`, `390`, `430`, `768`, `1024`, `1440` |
+| Browser | Chromium/Chrome, zoom 100% |
 
-## 3. Preparación
+Use the synthetic users created by the repository demo seed. Credentials are local/demo-only and must never be reused as production secrets.
 
-### 3.1 Gate previo
+## Preflight
 
-Ejecutar antes de abrir el navegador:
+From the repository root:
 
 ```bash
 ./scripts/gate.sh
 ```
 
-Registrar el resultado. Si falla un gate, detener la corrida y abrir un defecto de
-infraestructura; no mezclarlo con defectos visuales.
+For a focused browser smoke:
 
-### 3.2 Entorno
-
-| Dato | Valor |
-| --- | --- |
-| URL | `http://localhost:5173` |
-| Tenant | `00000000-0000-0000-0000-000000000001` |
-| Password demo | consultar la configuración local; no copiar credenciales al registro |
-| Anchos | `375`, `390`, `430`, `768`, `1024`, `1440` |
-| Navegador | Chromium/Chrome estable, zoom 100% |
-| Evidencia | screenshot y/o video por defecto; trace solo si aplica |
-
-Usuarios demo:
-
-| Usuario | Rol | Foco |
-| --- | --- | --- |
-| `admin` | `admin` | gobierno completo del hotel |
-| `recepcion_demo` | `receptionist` | reservas, llegadas, estadías y salidas |
-| `ops_demo` | `ops` | inventario, excepciones y coordinación |
-| `housekeeping_demo` | `housekeeping` | limpieza e incidencias |
-| `saas_admin_demo` | `saas_admin` | red global y alta de hotel |
-
-### 3.3 Datos de prueba
-
-Usar primero datos demo existentes. Antes de mutar una reserva o habitación,
-anotar su identificador y estado inicial. Para un caso repetible, preparar:
-
-- una reserva `Confirmed` con llegada futura dentro de la fecha de prueba;
-- una reserva `Confirmed` cuya fecha de llegada sea hoy para no-show;
-- una habitación `Available` y una `Dirty`;
-- una habitación que pueda llevarse a `Maintenance` sin afectar una demo activa;
-- un huésped existente y un nombre nuevo para walk-in.
-
-No usar datos personales reales, credenciales reales ni producción.
-
-## 4. Reglas de observación
-
-En cada pantalla verificar simultáneamente:
-
-- no hay texto cortado, superpuesto o ilegible;
-- los CTA primarios y el cierre son alcanzables;
-- drawers/sheets mantienen header, body con scroll interno y footer usable;
-- después de guardar, la UI refleja el estado persistido al refrescar;
-- errores de validación explican qué corregir y no borran datos válidos;
-- la navegación no pierde el tenant ni deja una mutación duplicada;
-- un refresh o back no reabre una acción terminal.
-
-En mobile, probar interacción táctil equivalente (tap, scroll, cierre) y no solo
-el cambio de viewport.
-
-## 5. Casos de ejecución
-
-### QA-01 — Smoke y sesión
-
-Roles: todos. Prioridad: crítica.
-
-1. Abrir la URL en ventana limpia.
-2. Iniciar sesión con cada usuario de la tabla.
-3. Confirmar landing, sidebar, header y ausencia de errores visibles.
-4. Cerrar sesión y confirmar que una URL protegida devuelve a login.
-5. Repetir en `375`, `768` y `1440`.
-
-`PASS` si cada rol entra solo a su superficie esperada y la sesión no cruza
-tenants. Evidencia: una captura por rol y una captura de la redirección.
-
-### QA-02 — RBAC por ruta y mutación
-
-Roles: `recepcion_demo`, `ops_demo`, `housekeeping_demo`, `saas_admin_demo`.
-Prioridad: crítica.
-
-1. Intentar abrir directamente `/users`, `/network`, `/rooms`, `/reports` y
-   `/bookings` según el rol que no corresponda.
-2. Confirmar que la ruta prohibida termina en `/forbidden` o en la pantalla de
-   acceso denegado.
-3. Verificar que la acción prohibida no aparece en UI.
-4. Si se puede reproducir con DevTools, repetir la mutación y confirmar `403`.
-
-`PASS` si ocultar el CTA no es la única defensa y no queda un cambio persistido.
-
-### QA-03 — Recepción: walk-in a checkout
-
-Rol: `recepcion_demo`. Prioridad: crítica.
-
-1. Abrir `/bookings` y localizar o crear un huésped.
-2. Crear walk-in con fechas válidas y habitación disponible.
-3. Abrir el detalle y verificar huésped, habitación, estado y total persistidos.
-4. Ejecutar check-in formal.
-5. Agregar un cargo y registrar un pago.
-6. Ejecutar checkout.
-7. Confirmar reserva `CheckedOut`, saldo esperado y habitación `Dirty`.
-8. Refrescar y comprobar que el estado no se perdió.
-
-`PASS` si el handoff a housekeeping es visible y no se puede repetir una
-transición terminal.
-
-### QA-04 — Recepción: excepciones de llegada
-
-Rol: `recepcion_demo`. Prioridad: crítica.
-
-1. En una reserva `Confirmed`, abrir llegada tardía.
-2. Intentar ETA pasada y ETA fuera de la estadía: ambas deben bloquearse.
-3. Usar ETA futura dentro de la estadía y una nota válida.
-4. Confirmar que conserva `Confirmed` y registra actor, hora y nota.
-5. En otra reserva cuya llegada sea hoy, marcar no-show con motivo.
-6. Intentar no-show antes de la fecha: debe bloquearse.
-7. En una tercera reserva confirmada, cancelar con motivo.
-8. Confirmar que cancelación y no-show liberan disponibilidad y son terminales.
-
-`PASS` si los motivos son obligatorios, las reglas temporales se respetan y no
-se confunden `Cancelled` y `NoShow`.
-
-### QA-05 — Habitaciones e inventario
-
-Roles: `ops_demo` y `admin`. Prioridad: crítica.
-
-1. Abrir `/rooms` y validar planner en `grid` y `list`.
-2. Cambiar una habitación `Available -> Dirty -> Cleaning -> Available` según
-   las acciones permitidas.
-3. Abrir `RoomAdminSheet` y verificar que el estado actualizado persiste.
-4. Ejecutar una acción masiva sobre habitaciones de prueba.
-5. Con `admin`, crear o editar un hold y confirmar fechas y habitación.
-6. Intentar check-in sobre una habitación `Dirty` o `Maintenance`: debe
-   bloquearse y explicar el motivo.
-
-`PASS` si ninguna acción publica como vendible una habitación no liberada.
-
-### QA-06 — Housekeeping e incidencia
-
-Rol: `housekeeping_demo`. Prioridad: crítica.
-
-1. Abrir `/housekeeping` y revisar salidas del día.
-2. Mover una habitación `Dirty -> Cleaning -> Available`.
-3. Crear una incidencia desde una habitación de prueba.
-4. Confirmar que exige motivo, prioridad y responsable.
-5. Verificar que la habitación queda `Maintenance` y no vendible.
-6. Resolver con nota de trabajo.
-7. Confirmar auditoría y retorno obligatorio a `Dirty`.
-
-`PASS` si no se puede saltar `Maintenance` con una acción genérica o masiva.
-
-### QA-07 — Huespedes y drawers
-
-Rol: `admin`. Prioridad: alta.
-
-1. Abrir `GuestCreateDrawer` y crear un huésped de prueba.
-2. Abrir `GuestDetailsSheet` en cada ancho.
-3. Confirmar header visible, body con scroll interno y CTA/cierre accesibles.
-4. Verificar que solo muestra contacto y fecha realmente persistidos.
-5. Confirmar que no afirma verificación, categoría premium, preferencias o
-   historial si esos datos no existen.
-
-`PASS` si la ficha es veraz y usable sin scroll de toda la aplicación.
-
-### QA-08 — Administración del hotel y red global
-
-Roles: `admin` y `saas_admin_demo`. Prioridad: crítica.
-
-1. Con `admin`, abrir `/users`, crear un usuario de prueba y revisar roles.
-2. Confirmar que el selector tenant expone solo `admin`, `ops`, `receptionist`
-   y `housekeeping`.
-3. Con `saas_admin_demo`, abrir `/network` y revisar KPIs globales.
-4. Abrir el sheet de alta de hotel y revisar layout, validaciones y cierre sin
-   completar un alta real.
-5. Confirmar que `saas_admin` no aparece como rol asignable del tenant.
-
-`PASS` si la administración tenant y la administración global permanecen
-separadas.
-
-### QA-09 — Responsive dirigido
-
-Ejecutar después de QA-01 a QA-08. Prioridad: alta.
-
-| Ancho | Pantallas mínimas | Qué observar |
-| --- | --- | --- |
-| `375` | recepción, housekeeping, huésped | CTA, sheets y scroll interno |
-| `390` | recepción, habitaciones | board, filtros y acciones |
-| `430` | drawers, planner | botones y cards legibles |
-| `768` | housekeeping, habitaciones | columnas y grids |
-| `1024` | recepción, reportes | sidebar y jerarquía |
-| `1440` | dashboard, reportes | aire y no estiramiento pobre |
-
-`PASS` requiere captura de cada ancho y ninguna condición global de la sección 4.
-
-### QA-10 — Regresión de navegación
-
-Rol: `admin`. Prioridad: alta.
-
-1. Navegar por sidebar entre `/`, `/bookings`, `/calendar`, `/rooms`,
-   `/guests`, `/housekeeping`, `/reports` y `/users`.
-2. Abrir y cerrar un drawer en cada módulo.
-3. Usar back, refresh y volver a la ruta original.
-4. Confirmar que no aparecen overlays huérfanos, spinners infinitos ni errores.
-
-### QA-11 — Estados de error y doble acción
-
-Roles: `recepcion_demo` y `ops_demo`. Prioridad: alta.
-
-1. En formularios, enviar campos obligatorios vacíos.
-2. Hacer doble click/tap en guardar o confirmar.
-3. Intentar una mutación sobre un registro que cambió en otra pestaña o tras
-   refrescar.
-4. Confirmar mensaje accionable, una sola mutación y estado consistente.
-
-### QA-12 — Cierre y handoff
-
-Todos los roles. Prioridad: crítica.
-
-1. Revisar la lista de defectos creados durante la corrida.
-2. Repetir cada caso corregido.
-3. Adjuntar capturas, URL/ruta, rol, ancho, pasos y resultado esperado/actual.
-4. Registrar commit, fecha, entorno y responsable.
-5. Marcar corrida global `PASS` o `FAIL` según la sección 2.
-
-## 6. Registro por caso
-
-Copiar esta tabla para cada ejecución:
-
-| Campo | Valor |
-| --- | --- |
-| Caso | `QA-__` |
-| Rol/usuario | |
-| Ancho | |
-| Fecha/hora | |
-| Commit | |
-| Resultado | `PASS` / `FAIL` / `BLOCKED` |
-| Evidencia | ruta a screenshot/trace/video |
-| Defecto | ID o `N/A` |
-| Observaciones | |
-
-## 7. Registro de defectos
-
-```text
-ID: QA-YYYYMMDD-NNN
-Severidad: Critical | High | Medium | Low
-Caso:
-Rol/usuario:
-Ancho:
-Ruta o pantalla:
-Precondiciones:
-Pasos para reproducir:
-Resultado esperado:
-Resultado actual:
-Frecuencia: siempre | intermitente | una vez
-Evidencia:
-Commit/versión:
-Owner:
-Estado: abierto | corregido | verificado | diferido
-Riesgo de producción:
+```bash
+./scripts/playwright-smoke.sh
+./scripts/playwright-reception-smoke.sh
 ```
 
-## 8. Convención de evidencia
+If the automated preflight is red, separate that failure from the manual product result.
 
-Guardar artefactos fuera del código fuente, por ejemplo:
+## QA-01 — Session and navigation
 
-```text
-artifacts/manual-qa/2026-08-01/
-  QA-03-reception-390-pass.png
-  QA-06-housekeeping-375-pass.png
-  QA-02-rbac-reception-forbidden.png
-  defects/QA-20260801-001.md
-```
+For each synthetic role:
 
-No incluir tokens, contraseñas, datos personales reales ni cookies en capturas,
-videos o traces. Si una evidencia los contiene, eliminarla del artefacto y
-repetir la captura antes de compartirla.
+1. Sign in.
+2. Confirm the expected landing/navigation surfaces.
+3. Open a permitted route directly by URL.
+4. Attempt at least one route that the role must not access.
+5. Sign out and revisit a protected URL.
 
-## 9. Ejecuciones registradas
+PASS when protected routes do not become accessible merely because their URL is known and logout invalidates the browser session as expected.
 
-### Ejecución 2026-08-01 — Validación WF-013 (UX guiada recepción y housekeeping)
+## QA-02 — Reception: reservation / walk-in
 
-Entorno local, branch `feature/gate-hardening-rbac-e2e`, sin commit (implementación
-local pendiente de commit intencional).
+At desktop and at least one mobile width:
 
-| Gate | Comando | Resultado |
-| --- | --- | --- |
-| Unit tests focalizados (guías, board, excepciones, sheet) | `docker compose exec -T frontend npm run test -- --run src/features/guided/receptionGuide.test.ts src/features/guided/components/GuideRail.test.tsx src/features/guided/components/GuideHint.test.tsx src/features/bookings/components/FrontDeskBoardPanel.test.tsx src/features/bookings/components/BookingDetailsSheet.test.tsx src/features/bookings/components/BookingArrivalExceptionActions.test.tsx` | `PASS` (16/16) |
-| Suite unit frontend | `docker compose exec -T frontend npm run test -- --run` | `PASS` (21 archivos, 81 tests) |
-| Lint/typecheck | `docker compose exec -T frontend npm run lint` | `PASS` |
-| Build | `docker compose exec -T frontend npm run build` | `PASS` |
-| Contract | `./scripts/check-openapi-alignment.sh` | `PASS` (sin cambios de contrato v1) |
-| Journeys core | `./scripts/qa-core-journeys.sh` | `PASS` (HMS-QA-010) |
-| Smoke E2E recepción | `./scripts/playwright-reception-smoke.sh` | `PASS` (6/6, incluye sweep 375/390/430/768/1024/1440 sin overflow) |
-| Smoke E2E housekeeping | `./scripts/playwright-housekeeping-smoke.sh` | `PASS` (4/4, incluye foco de rail a columna dirty y sweep de anchos) |
-| Gate completo | `LC_ALL=C HMS_KPI_RUNNER=docker ./scripts/gate.sh` | `PASS` (incluye coverage frontend >= 80%) |
-| Whitespace | `git diff --check` sobre el conjunto WF-013 | `PASS` |
+1. Open Reception.
+2. Start a new reservation/walk-in.
+3. Select or create a synthetic guest.
+4. Select dates and an available room.
+5. Review the booking context.
+6. Save and return to Reception.
+7. Re-open the created booking and confirm the persisted values.
 
-Cobertura específica de WF-013 verificada:
+PASS when completing reservation creation returns to the reception task context rather than automatically starting check-in.
 
-- `receptionGuide.test.ts` (4): acción de navegación por paso, progreso solo vía
-  eventos operativos, activación de pasos según estado de booking, guía completa.
-- `GuideRail.test.tsx` (6): `aria-current` solo en paso activo, estados
-  `Ahora/Pendiente/Completado`, clic navega sin marcar progreso, toggle/reset/CTA.
-- `GuideHint.test.tsx` (3): `aria-live="polite"`, CTA navega sin transición crítica.
-- `FrontDeskBoardPanel.test.tsx` (7): cola completa sin truncar, deduplicación de
-  casos, acción primaria por lane, dispatch con contexto de cola, filtros y
-  búsqueda con normalización de acentos, estados vacíos.
-- `BookingDetailsSheet.test.tsx` (4): pill de cola, foco guiado al montar (rAF),
-  CTA guiado no ejecuta check-in, continuación al siguiente caso.
-- `BookingArrivalExceptionActions.test.tsx` (5): confirmación explícita de
-  2 clics, motivo conservado al volver, sin doble envío con estado cargando, ETA
-  futura obligatoria, no-show bloqueado antes de la llegada.
+## QA-03 — Reception: check-in
 
-Smokes E2E actualizados en esta ejecución:
+1. Open a valid `Confirmed` booking.
+2. Complete the required guest/contact/stay checks.
+3. Change the selected room once before final confirmation when an alternative is available.
+4. Confirm that changing room does not reset unrelated validations.
+5. Complete check-in.
+6. Return to Reception and confirm the booking/room state after refresh.
 
-- `reception-role-smoke.spec.ts`: centro operativo con encabezado
-  huésped/habitación, rail guiado navega sin marcar progreso (`0/5 completado`
-  estable), búsqueda sin coincidencias, sweep de anchos sin overflow.
-- `housekeeping-role-smoke.spec.ts`: locator `Salir del modo guiado`, clic en
-  tarjeta del rail enfoca `housekeeping-column-dirty` sin ejecutar acción, sweep
-  de anchos sin overflow.
-
-Defectos registrados durante la corrida:
+Expected transition:
 
 ```text
-ID: QA-20260801-001
-Severidad: Low (preexistente, no de WF-013)
-Caso: Gates de CI
-Ruta o pantalla: DashboardHome.test.tsx
-Detalle: Flake de carga paralela: 2 tests de cierre de caja excedían timeouts
-  (10s/5s) con userEvent.type bajo carga. Ajustado timeout a 20s (robustez, sin
-  cambio de comportamiento). Verificado: standalone y suite completa en green.
-Estado: corregido
+Booking: Confirmed → CheckedIn
+Room:    Available → Occupied
 ```
+
+PASS when the check-in task ends cleanly and later stay/checkout work remains a separate task.
+
+## QA-04 — Charges, payment and checkout
+
+1. Open an active checked-in stay.
+2. Add a synthetic extra charge.
+3. Review invoice/balance information.
+4. Register payment through the supported flow.
+5. Complete checkout when financial conditions allow it.
+6. Refresh and verify the persisted result.
+
+Expected normal transition:
 
 ```text
-ID: QA-20260801-002
-Severidad: Medium (UX, aceptado como diseño en WF-013)
-Caso: QA-09
-Ruta o pantalla: BookingsPage / HousekeepingPage
-Detalle: Doble toggle del modo guiado (header "Salir del modo guiado" + rail
-  "Ocultar guía"). Ambos apagan el modo; validado en smoke E2E.
-Estado: diferido (decisión de diseño documentada)
+Booking: CheckedIn → CheckedOut
+Room:    Occupied → Dirty
 ```
 
-Nota operativa: `./scripts/gate.sh` requiere `LC_ALL=C` en máquinas con locale
-decimal (p.ej. `es_AR`) para la comparación de tamaño de bundles, y PostgreSQL
-levantado (`docker compose up -d db backend frontend`).
+If testing a pending-balance override, use only a role with the dedicated override capability and verify unauthorized roles receive a backend denial.
 
-## 10. Firma de cierre
+## QA-05 — Housekeeping
 
-```text
-Ejecutado por:
-Fecha:
-Commit/versión:
-Entorno:
-Casos PASS:
-Casos FAIL:
-Casos BLOCKED:
-Defectos Critical/High abiertos:
-Decisión: PASS | FAIL | BLOCKED
-Firma QA:
-Firma Product/Operations:
-```
+1. Open Housekeeping with a room in `Dirty`.
+2. Move it to `Cleaning`.
+3. Complete cleaning and confirm `Available`.
+4. Repeat with a maintenance case:
+   - create the case;
+   - verify the room becomes non-sellable;
+   - resolve the case;
+   - verify it returns to `Dirty` before normal cleaning.
+
+PASS when housekeeping cannot skip the required lifecycle through a generic state action.
+
+## QA-06 — Role and capability boundaries
+
+Use at least `receptionist`, `housekeeping`, `ops`, `admin` and `saas_admin` synthetic roles.
+
+Validate both UI visibility and backend denial for representative restricted actions. The permission source of truth is [`rbac-canon-v1.json`](rbac-canon-v1.json).
+
+PASS requires the backend to reject an unauthorized mutation even when the UI also hides the control.
+
+## QA-07 — Mobile behavior
+
+Run the reception journey at `375`, `390` and `430` pixels.
+
+Check:
+
+- one clear primary action per task step;
+- sheets/dialogs remain closable and scroll internally;
+- primary CTA is reachable without layout breakage;
+- touch targets are usable;
+- focus returns to a sensible trigger/target after closing a temporary surface;
+- back/close does not accidentally cancel business data;
+- completed task state is preserved when returning to Reception.
+
+Desktop behavior must remain unaffected by the mobile composition.
+
+## QA-08 — Error and recovery states
+
+Exercise at least one validation or authorization failure:
+
+- invalid/missing booking input;
+- unavailable room;
+- forbidden action;
+- failed/refused lifecycle transition.
+
+PASS when the user receives an actionable error, valid input is not silently discarded and no partial critical mutation remains persisted.
+
+## Evidence record
+
+For each defect record:
+
+- commit/ref;
+- role;
+- viewport;
+- route/task;
+- expected result;
+- actual result;
+- severity;
+- screenshot/video when useful.
+
+Do not retain one-off execution evidence in the public repository after the finding is resolved. Durable behavior belongs in tests, runbooks, ADRs or product documentation; historical execution records belong in issue/PR/Git history.
