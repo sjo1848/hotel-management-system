@@ -5,6 +5,7 @@ This directory contains current product, engineering, API, validation and operat
 ## Product and engineering
 
 - [Engineering case study](ENGINEERING_CASE_STUDY.md)
+- [Guest lifecycle](ops/guest-lifecycle-workflow.md)
 - [Product screenshots](screenshots/README.md)
 - [Release changelog](CHANGELOG.md)
 
