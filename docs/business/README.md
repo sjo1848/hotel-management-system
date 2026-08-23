@@ -19,7 +19,6 @@ Documentos:
 - [commercial-deck-final.md](commercial-deck-final.md)
 - [commercial-kit.md](commercial-kit.md)
 - [commercial-terms.md](commercial-terms.md)
-- [two-week-execution-plan.md](two-week-execution-plan.md)
 - [sales-process.md](sales-process.md)
 - [discovery-script.md](discovery-script.md)
 - [demo-script.md](demo-script.md)
@@ -39,7 +38,6 @@ Plantillas:
 - [templates/discovery-notes-template.md](templates/discovery-notes-template.md)
 
 Fuentes canonicas relacionadas:
-- plan maestro tecnico: [PLAN_MAESTRO_UNIFICADO_2026-02-14.md](../PLAN_MAESTRO_UNIFICADO_2026-02-14.md)
 - backlog tecnico estricto: [execution-backlog-strict.md](../execution-backlog-strict.md)
 - roadmap operativo de huesped: [guest-lifecycle-p0-roadmap.md](../ops/guest-lifecycle-p0-roadmap.md)
 - flujo operativo de huesped: [guest-lifecycle-workflow.md](../ops/guest-lifecycle-workflow.md)

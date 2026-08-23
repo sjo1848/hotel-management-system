@@ -64,7 +64,7 @@ Impacto:
 Evidencia:
 - commit tecnico `24eff0e024aaf1c00baa81d8caa358f0da533dc5`
 - [workflows canonicos](../ops/user-workflows-v1.md)
-- [resultado de gates](../validation/gate-evidence-2026-07-31.md)
+- [Engineering Case Study](../ENGINEERING_CASE_STUDY.md)
 
 Proximo paso:
 - completar QA manual por rol y ancho, validar con un hotel objetivo y ejecutar staging/onboarding antes de ampliar alcance.

@@ -12,7 +12,7 @@ Fecha de referencia: 2026-08-01
 
 Evidencia tecnica:
 - [workflows canonicos](../ops/user-workflows-v1.md)
-- [evidencia de gates](../validation/gate-evidence-2026-07-31.md)
+- [Engineering Case Study](../ENGINEERING_CASE_STUDY.md)
 
 ## P0 — Tiene impacto directo en venta o implementacion
 
