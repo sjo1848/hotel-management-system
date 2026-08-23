@@ -19,7 +19,7 @@ Este documento rastrea los cambios importantes realizados en el proyecto.
 
 ### 📋 Proceso
 - Método de integración: rebase de PRs sobre `main`, retrigger de checks con empty commit tras cambio de base.
-- Handoff documentado en `docs/ops/HANDOFF-2026-08-03-CI-and-PR-consolidation.md`.
+- La cadena de workspaces quedó consolidada en `main` con `full-stack-ci` verde.
 
 ## [2.1.0] - 2026-02-11 (Refactor & Premium UI)
 

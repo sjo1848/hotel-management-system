@@ -61,7 +61,6 @@ Antes de armar paquete:
 
 Usar:
 - [commercial-deck-final.md](commercial-deck-final.md)
-- [commercial-deck-outline.md](commercial-deck-outline.md)
 - [pricing.md](pricing.md)
 - [economic-proposal-template.md](economic-proposal-template.md)
 - [proposals/basic-small-independent-hotel.md](proposals/basic-small-independent-hotel.md)

@@ -38,6 +38,10 @@ frontend/output/playwright/
 opencode-hms-project-method.zip
 opencode-hms-project-method/
 
+# Local orchestration/runtime state
+.orchestration/
+ORCHESTRATION-MANIFEST.md
+
 # --- OS ---
 .DS_Store
 Thumbs.db
