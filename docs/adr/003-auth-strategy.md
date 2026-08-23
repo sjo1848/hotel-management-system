@@ -1,19 +1,42 @@
-# ADR-003: Estrategia de Autenticación mediante Cookies HttpOnly y CSRF
+# ADR-003: Browser Authentication and CSRF Strategy
 
-## Estado
-Aceptado
+## Status
 
-## Contexto
-La persistencia del JWT en el frontend debe ser segura frente a ataques de robo de tokens (XSS).
+Accepted.
 
-## Decisión
-Se ha optado por un sistema **Cookie-Only** con tokens divididos y protección CSRF.
+## Context
 
-### Medidas de Seguridad
-1. **HttpOnly**: El token no es accesible mediante JavaScript, mitigando el robo vía ataques XSS.
-2. **SameSite=Lax/Strict**: Restringe el envío de la cookie a contextos de primer nivel, mitigando ataques de Cross-Site Request Forgery (CSRF).
-3. **Double-Submit Cookie (CSRF Header)**: Exigimos un header `x-csrf-token` que debe coincidir con una cookie de seguridad para todas las peticiones que mutan datos (POST, PATCH, DELETE).
+HMS Elite is a browser-based operational application. Authentication must avoid exposing session credentials to application JavaScript while protecting state-changing requests against cross-site request forgery.
 
-## Consecuencias
-- **Positivo**: Seguridad de grado bancario para la sesión del usuario.
-- **Negativo**: Mayor complejidad en la configuración de CORS y en los interceptores de Axios del frontend.
+## Decision
+
+Browser sessions use HttpOnly cookies together with explicit CSRF validation.
+
+### Controls
+
+1. **HttpOnly session cookies** keep authentication tokens out of normal JavaScript access.
+2. **Secure/SameSite cookie configuration** is environment validated and tightened for production profiles.
+3. **CSRF token validation** requires the client-provided `x-csrf-token` to match the expected CSRF cookie/token for protected mutations.
+4. **Refresh-token handling** includes rotation/reuse protections exercised by backend security tests.
+5. **Explicit CORS configuration** limits accepted browser origins rather than relying on permissive defaults.
+
+## Consequences
+
+### Benefits
+
+- Reduces direct token exposure to browser JavaScript.
+- Adds an explicit anti-CSRF control for authenticated mutations.
+- Keeps authentication behavior testable at HTTP and browser boundaries.
+
+### Costs
+
+- Requires coordinated cookie, CORS and CSRF configuration across frontend and backend.
+- Local, staging and production profiles need different secure-cookie settings.
+- Authentication tests must exercise cookies and CSRF behavior rather than only bearer-token parsing.
+
+## Evidence
+
+- Auth/session configuration: `backend/src/config.rs`
+- Auth middleware/handlers: `backend/src/infrastructure/web`
+- Security regression tests: `backend/tests/csrf_authn_security.rs`
+- Environment validation: `scripts/validate-env-profile.sh`
